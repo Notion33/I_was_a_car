@@ -641,50 +641,87 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 
 void Find_Center(IplImage* imgResult, IplImage* imgCenter)		//TY add 6.27
 {
-	int first_line = 120;
-	int second_line = 100;
-	int first_left,first_right,second_left,second_right = 0;
-	float x_left_diff,x_right_diff = 0;
+
 	float left_slope, right_slope = 0;
 	float control_angle = 0;
-	float y_diff = first_line - second_line;
 	int i=0;
-	int angle=1500;
-	float weight = 1.30; // control angle weight
-
-
-	for(i=150 ; i>0 ; i--){
-		first_left = i;
-		if(imgResult->imageData[first_line*imgResult->widthStep + i] == 255)
-			break;
-	}
-	for(i=150 ; i<300 ; i++){
-		first_right = i;
-		if(imgResult->imageData[first_line*imgResult->widthStep + i] == 255)
-			break;
-	}	
-	for(i=150 ; i>0 ; i--){
-		second_left = i;
-		if(imgResult->imageData[second_line*imgResult->widthStep + i] == 255)
-			break;
-	}	
-	for(i=150 ; i<300 ; i++){
-		second_right = i;
-		if(imgResult->imageData[second_line*imgResult->widthStep + i] == 255)
-			break;
-	}
+    int j=0;
 	
-	x_left_diff = second_left - first_left;
-	x_right_diff = -(second_right - first_right);
+    int *line, *left, *right;
+    int y_start_line = 100;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
+    int y_end_line = 200;
+    int present_line = y_start_line;    // 현재 작업 처리중인 라인 (i와 같은 역할)
 
-	printf("%d,	%d\n",second_left,second_right);
-	printf("%d,	%d\n",first_left,first_right);
-	
-	left_slope = x_left_diff/y_diff ;
-	right_slope = x_right_diff/y_diff ;
-	
-	printf("left_slope : %f	,right_slope : %f \n",left_slope,right_slope);
-	control_angle = (left_slope - right_slope)*weight;	//positive : turn right , negative : turn left
+    int valid_left_amount = 0;
+    int valid_right_amount = 0;
+
+    int left_line_start = 0;
+    int left_line_end = 0;
+    int right_line_start = 0;
+    int right_line_end = 0;
+
+    int line_gap = 20;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
+    int tolerance = 30; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
+    int angle=1500;
+    float weight = 1.30; // control angle weight
+
+    int line_amount = 0                                 //전체 서칭하는 라인의 갯수
+    line_amount = (y_end_line-y_start_line)/line_gap;
+
+    left = (int*)calloc(line_amount*sizeof(int)); //left_line_point array allocation
+    right = (int*)calloc(line_amount*sizeof(int)); //right_line_point array allocation
+    left_slope = (int*)calloc(line_amount*sizeof(float)); //left_diff array allocation
+    right_slope = (int*)calloc(line_amount*sizeof(float)); //right_diff array allocation
+
+    for(i=y_start_line ; i<line_amount ; i=i++){
+        for(j=(imgResult->width/2) ; j>=0 ; j--){                            //Searching the left line point
+            left[i] = j;
+            if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                valid_left_amount++;
+                break;
+            }
+        }
+        for(j=(imgResult->width/2) ; j<=imgResult->width ; j++){             //Searching the right line point
+            right[i] = j;
+            if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                valid_right_amount++;
+                break;
+            }
+        }
+        if(left[i]>imgResult->width-tolerance&&right[i]<imgResult->width+tolerance) //검출된 좌측혹은 우측차선이 화면중앙에 있는경우, for 종료
+            break;
+    }
+
+	///////////////////////////////////////////////////////
+    //하단부 for문에서 추가되어야 할 사항
+    //1. line_gap 별 각각의 기울기는 계산되어 있음. 이 계산값을 이용해서 직선구간인지 곡선구간인지 판별하는 함수 필요
+    //2. 현재 구현은 좌측 첫번째 기울기만 이용해서 조향하도록 되어있음. 
+
+    for(i=0;i<=line_amount;i++){                        //좌측 유효 라인 포인트 범위 계산
+        if(left[i]!=0){
+            left_line_start = i;
+            left_line_end = i + valid_left_amount;
+            continue;
+        }
+        if(right[i]!=imgResult->width){
+            right_line_start = i;
+            right_line_end = i + valid_right_amount;
+            continue;
+        }
+    }
+
+    if(valid_left_amount !=0){
+        for(i=left_line_start;i<=valid_left_amount;i++)                         //left,right 유효 라인 포인트만 직선 기울기들 계산
+                left_slope[i] = (left[i] - left[i-1])/line_gap;
+    }
+
+    if(valid_right_amount !=0){
+        for(i=right_line_start;i<=valid_right_amount;i++)                         //left,right 유효 라인 포인트만 직선 기울기들 계산
+                right_slope[i] = (right[i] - right[i-1])/line_gap;
+    }
+
+	printf("left_slope : %f	,right_slope : %f \n",left_slope[valid_left_amount],right_slope[valid_right_amount]);
+	control_angle = (left_slope[valid_left_amount] - right_slope[valid_right_amount])*weight;	//positive : turn right , negative : turn left
 	printf("Control_Angle : %f \n",control_angle);
 
 		//steer servo set
@@ -695,6 +732,12 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)		//TY add 6.27
 					
 	SteeringServoControl_Write(angle);
 
+    scanf();        //디버깅용 일시정지
+
+    free(left);
+    free(right);
+    free(left_slope);
+    free(right_slope)
 }
 
 
