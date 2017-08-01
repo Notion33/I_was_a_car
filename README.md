@@ -1,4 +1,4 @@
 # This repository is for I_was_a_car Team
 # You can use Hangul
 # This page will be updated soon.
-# Hangeul wae an chyeojiji
+# Hangeul andwaeseo english lo sseodubnida..
