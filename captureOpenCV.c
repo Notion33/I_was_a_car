@@ -653,58 +653,115 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 ////////////////////////////////////////////////////////////////////////////////////////////
 void Find_Center(IplImage* imgResult, IplImage* imgCenter)      //TY add 6.27
 {
-    int first_line = 120;
-    int second_line = 100;
-    int first_left,first_right,second_left,second_right = 0;
-    float x_left_diff,x_right_diff = 0;
-    float left_slope, right_slope = 0;
-    float control_angle = 0;
-    float y_diff = first_line - second_line;
     int i=0;
+    int j=0;
+
+    int y_start_line = 100;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
+    int y_end_line = 200;
+
+    int valid_left_amount = 0;
+    int valid_right_amount = 0;
+
+    int left_line_start = 0;
+    int left_line_end = 0;
+    int right_line_start = 0;
+    int right_line_end = 0;
+
+    int line_gap = 20;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
+    int tolerance = 10; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
     int angle=1500;
-    float weight = 1.30; // control angle weight
+    float weight = 500; // control angle weight
+    float control_angle = 0;
 
-
-    for(i=150 ; i>0 ; i--){
-        first_left = i;
-        if(imgResult->imageData[first_line*imgResult->widthStep + i] == 255)
+    int left[400] = {0};
+    int right[400] = {0};
+    float left_slope[200] = {0.0};
+    float right_slope[200] = {0.0};
+    
+    bool turn_left_max = false;
+    bool turn_right_max = false;
+    
+    for(i = y_start_line ; i<y_end_line ; i=i+line_gap){
+        for(j=(imgResult->width/2) ; j>=0 ; j--){                            //Searching the left line point
+            left[i] = j;
+            if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                valid_left_amount++;
+                break;
+            }
+        }
+        for(j=(imgResult->width/2) ; j<=imgResult->width ; j++){             //Searching the right line point
+            right[i] = j;
+            if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                valid_right_amount++;;
+                break;
+            }
+        }
+        if(left[i]>((imgResult->width/2)-tolerance)||right[i]<((imgResult->width/2)+tolerance)){                    //검출된 좌측혹은 우측차선이 화면중앙에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
+            if(valid_left_amount == 1)
+                turn_right_max = true;
+            else if(valid_right_amount == 1)
+                turn_left_max = true;
             break;
+            }
     }
-    for(i=150 ; i<300 ; i++){
-        first_right = i;
-        if(imgResult->imageData[first_line*imgResult->widthStep + i] == 255)
+
+//printf("turn_right : %d , turn_left : %d \n",turn_right_max,turn_left_max);
+
+    ///////////////////////////////////////////////////////
+    //하단부 for문에서 추가되어야 할 사항
+    //1. line_gap 별 각각의 기울기는 계산되어 있음. 이 계산값을 이용해서 직선구간인지 곡선구간인지 판별하는 함수 필요
+    //2. 현재 구현은 좌측 첫번째 기울기만 이용해서 조향하도록 되어있음. 
+
+    for(i=0;i<=valid_left_amount;i++){                        //좌측 유효 라인 포인트 범위 계산
+        if(left[y_start_line+i*line_gap]!=0){
+            left_line_start = y_start_line+i*line_gap;
+            left_line_end = y_start_line + (i + valid_left_amount)*line_gap;
             break;
-    }   
-    for(i=150 ; i>0 ; i--){
-        second_left = i;
-        if(imgResult->imageData[second_line*imgResult->widthStep + i] == 255)
-            break;
-    }   
-    for(i=150 ; i<300 ; i++){
-        second_right = i;
-        if(imgResult->imageData[second_line*imgResult->widthStep + i] == 255)
-            break;
+        }
     }
     
-    x_left_diff = second_left - first_left;
-    x_right_diff = -(second_right - first_right);
+    for(i=0;i<=valid_right_amount;i++){                        //우측 유효 라인 포인트 범위 계산
+        if(right[y_start_line+i*line_gap]!=imgResult->width){
+            right_line_start = y_start_line+i*line_gap;
+            right_line_end = y_start_line + (i + valid_right_amount)*line_gap;
+            break;
+        }
+    }
 
-    printf("%d, %d\n",second_left,second_right);
-    printf("%d, %d\n",first_left,first_right);
+    printf("\nleft line = ");
+    for(i=0;i<valid_left_amount;i++)printf("%d  ",left[left_line_start+i*line_gap]);
+    printf("\nright line = ");
+    for(i=0;i<valid_right_amount;i++)printf("%d ",right[right_line_start+i*line_gap]);
+    printf("\n");
+
+    if(valid_left_amount > 1){
+        //for(i=left_line_start;i<=valid_left_amount;i++)                         //left,right 유효 라인 포인트만 직선 기울기들 계산
+                left_slope[0] = (float)(left[left_line_start] - left[left_line_start+(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
+    }
+    else left_slope[0] = 0;
+    if(valid_right_amount > 1){
+        //for(i=right_line_start;i<=valid_right_amount;i++)                         //left,right 유효 라인 포인트만 직선 기울기들 계산
+                right_slope[0] = (float)(right[right_line_start] - right[right_line_start+(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
+    }
+    else right_slope[0] = 0;
     
-    left_slope = x_left_diff/y_diff ;
-    right_slope = x_right_diff/y_diff ;
-    
-    printf("left_slope : %f ,right_slope : %f \n",left_slope,right_slope);
-    control_angle = (left_slope - right_slope)*weight;  //positive : turn right , negative : turn left
+    control_angle = (left_slope[0] + right_slope[0])*weight;        //positive : turn right , negative : turn left
+
+    printf("%d ,%d, %d, %d \n",left[left_line_start] , left[left_line_start+(valid_left_amount-1)*line_gap],right[right_line_start] , right[right_line_start+(valid_right_amount-1)*line_gap]);
+    printf("left_slope : %f ,right_slope : %f   ",left_slope[0],right_slope[0]);
+    printf("\nvalid amount // left : %d , right : %d\n",valid_left_amount,valid_right_amount);
     printf("Control_Angle : %f \n",control_angle);
 
-        //steer servo set
-    angle = 1500 - control_angle*200 ;      // Range : 1000(Right)~1500(default)~2000(Left)
+    //steer servo set
+    if (turn_left_max == true)
+        angle = 2000;
+    else if (turn_right_max == true)
+        angle = 1000;
+    else{
+        angle = 1500 - control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
+        angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
+    }
     
-    angle = angle>2000? 2000 : angle<1000 ? 1000 : angle; // Bounding the angle range
-
-                    
     SteeringServoControl_Write(angle);
 
 }
