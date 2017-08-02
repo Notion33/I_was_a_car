@@ -24,11 +24,21 @@
 
 #include "nvthread.h"
 
+
 #include <highgui.h>
 #include <cv.h>
 #include <ResTable_720To320.h>
 #include <pthread.h>
 #include <unistd.h>     // for sleep
+
+////////////////////////////////////////////////////////////////////////////
+
+
+
+//#define IMGSAVE           // TY 디버깅용 이미지 저장하려면 주석해제
+
+////////////////////////////////////////////////////////////////////////////
+
 
 #define VIP_BUFFER_SIZE 6
 #define VIP_FRAME_TIMEOUT_MS 100
@@ -40,6 +50,7 @@
 
 #define RESIZE_WIDTH  320
 #define RESIZE_HEIGHT 240
+
 
 static NvMediaVideoSurface *capSurf = NULL;
 
@@ -344,11 +355,10 @@ static int DumpFrame(FILE *fout, NvMediaVideoSurface *surf)
     return 1;
 }
 
-static int Frame2Ipl(IplImage* img)
+static int Frame2Ipl(IplImage* img, IplImage* imgResult)
 {
     NvMediaVideoSurfaceMap surfMap;
     unsigned int resWidth, resHeight;
-    int r,g,b;
     unsigned char y,u,v;
     int num;
 
@@ -366,6 +376,8 @@ static int Frame2Ipl(IplImage* img)
     unsigned int pitchV[2] = {surfMap.pitchV, surfMap.pitchV2};
     unsigned int i, j, k, x;
     unsigned int stepY, stepU, stepV;
+
+    unsigned int bin_num=0;
     
     resWidth = RESIZE_WIDTH;
     resHeight = RESIZE_HEIGHT;
@@ -403,7 +415,7 @@ static int Frame2Ipl(IplImage* img)
     stepV = 0;
     i = 0;
     
-    for(j = 0; j < resHeight; j++)
+     for(j = 0; j < resHeight; j++)
     {
         for(k = 0; k < resWidth; k++)
         {
@@ -411,27 +423,23 @@ static int Frame2Ipl(IplImage* img)
             y = pY[i][stepY+x];
             u = pU[i][stepU+x/2];
             v = pV[i][stepV+x/2];
-            
-            // YUV to RGB
-            r = y + 1.4075*(v-128);
-            g = y - 0.34455*(u-128) - 0.7169*(v-128);
-            b = y + 1.779*(u-128);
 
-
-            r = r>255? 255 : r<0 ? 0 : r;
-            g = g>255? 255 : g<0 ? 0 : g;
-            b = b>255? 255 : b<0 ? 0 : b;
-		  
-
+            // - 39 , 111 , 51, 241 
             num = 3*k+3*resWidth*(j);
-            img->imageData[num] = b;
-            img->imageData[num+1] = g;
-            img->imageData[num+2] = r;
-            //img->imageDataOrigin[num] = b;
-            //img->imageDataOrigin[num+1] = g;
-            //img->imageDataOrigin[num+2] = r;
-            
-            
+            bin_num = j*imgResult->widthStep + k;
+            if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+                // 흰색으로
+                imgResult->imageData[bin_num] = (char)255;
+            }
+            else {
+                // 검정색으로
+                imgResult->imageData[bin_num] = (char)0;
+            }            
+
+            img->imageData[num] = y;
+            img->imageData[num+1] = u;
+            img->imageData[num+2] = v;
+
         }
         stepY += pitchY[i];
         stepU += pitchU[i];
@@ -482,7 +490,7 @@ static unsigned int CaptureThread(void *params)
     {
         GetTime(&ct);
         ctime = (NvU64)ct.tv_sec * 1000000000LL + (NvU64)ct.tv_nsec;
-        printf("frame=%3d, time=%llu.%09llu[s] \n", i, (ctime-stime)/1000000000LL, (ctime-stime)%1000000000LL);
+        //printf("frame=%3d, time=%llu.%09llu[s] \n", i, (ctime-stime)/1000000000LL, (ctime-stime)%1000000000LL);
 
         pthread_mutex_lock(&mutex);            // for ControlThread()
         
@@ -631,48 +639,65 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
     free(outputParams);
 }
 
+
 void *ControlThread(void *unused)
 {
     int i=0;
     char fileName[30];
+    char fileName1[30];         // TY add 6.27
+    //char fileName2[30];           // TY add 6.27
     NvMediaTime pt1 ={0}, pt2 = {0};
     NvU64 ptime1, ptime2;
     struct timespec;
  
     IplImage* imgOrigin;
-    IplImage* imgCanny;
+    IplImage* imgResult;            // TY add 6.27
+    //IplImage* imgCenter;          // TY add 6.27
     
     // cvCreateImage
     imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
-    imgCanny = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+    imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+    //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
+
+    cvZero(imgResult);          // TY add 6.27
+    //cvZero(imgCenter);            // TY add 6.27
  
     while(1)
     {
         pthread_mutex_lock(&mutex);
         pthread_cond_wait(&cond, &mutex);
         
-        
         GetTime(&pt1);
         ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
-        
-        Frame2Ipl(imgOrigin); // save image to IplImage structure & resize image from 720x480 to 320x240
+        Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
+                                         // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
+
         pthread_mutex_unlock(&mutex);     
         
-           
-        cvCanny(imgOrigin, imgCanny, 100, 100, 3);
-        
-        sprintf(fileName, "captureImage/imgCanny%d.png", i);
-        cvSaveImage(fileName , imgCanny, 0); 
-        
-        //sprintf(fileName, "captureImage/imgOrigin%d.png", i);
-        //cvSaveImage(fileName, imgOrigin, 0);
-        
-        
         // TODO : control steering angle based on captured image ---------------
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
+//
+    #ifdef IMGSAVE              
+        sprintf(fileName, "captureImage/imgOrigin%d.png", i);
+        sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
+        //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
+
         
-        
-        
+        cvSaveImage(fileName, imgOrigin, 0);
+        cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
+        //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
+        #endif  
+
+        //TY설명 내용
+        //imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
+        //imgCenter는 아직 구현 안되어있으며 필요시 아래의 코드 주석처리 해제시 사용가능
+        //char fileName2[30] , IplImage* imgCenter, imgCenter = cvCreateImage(cvGetSize(imgOrigin),
+        //IPL_DEPTH_8U, 1), cvZero(imgCenter), sprintf(fileName2, "captureImage/imgCenter%d.png", i), cvSaveImage(fileName2, imgCenter, 0)
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
         // ---------------------------------------------------------------------
             
         GetTime(&pt2);
@@ -712,6 +737,7 @@ int main(int argc, char *argv[])
     memset(&testArgs, 0, sizeof(TestArgs));
     if(!ParseOptions(argc, argv, &testArgs))
         return -1;
+
 
     printf("1. Create NvMedia capture \n");
     // Create NvMedia capture(s)
