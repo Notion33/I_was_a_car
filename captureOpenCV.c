@@ -32,10 +32,14 @@
 #include <unistd.h>     // for sleep
 
 ////////////////////////////////////////////////////////////////////////////
+#include "car_lib.h"    //TY add 6.27
 
 
+////////////////////////////////////////////////////////////////////////////
 
-//#define IMGSAVE           // TY 디버깅용 이미지 저장하려면 주석해제
+#define SERVO_CONTROL     // TY add 6.27
+              // To servo control(steering & camera position)
+//#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -714,6 +718,20 @@ int main(int argc, char *argv[])
     int err = -1;
     TestArgs testArgs;
 
+    //////////////////////////////// TY add 6.27
+    unsigned char status;         // To using CAR Control
+    short speed;
+    unsigned char gain;
+    int position, position_now;
+    short angle;
+    int channel;
+    int data;
+    char sensor;
+    int i, j;
+    int tol;
+    char byte = 0x80;
+    ////////////////////////////////
+
     CaptureInputHandle handle;
 
     NvMediaVideoCapture *vipCapture = NULL;
@@ -738,6 +756,32 @@ int main(int argc, char *argv[])
     if(!ParseOptions(argc, argv, &testArgs))
         return -1;
 
+
+
+// 3. servo control ----------------------------------------------------------
+#ifdef SERVO_CONTROL                                    //TY add 6.27
+
+    printf("0. Car initializing \n");
+    CarControlInit();
+
+    
+    printf("\n\n 0.1 servo control\n");
+
+    //camera x servo set
+    angle = 1500;                       // Range : 600(Right)~1200(default)~1800(Left)
+    CameraXServoControl_Write(angle);
+    //camera y servo set
+    
+    angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
+    CameraYServoControl_Write(angle);    
+    
+    /*                              //Servo restoration(disable)
+    angle = 1500;
+    SteeringServoControl_Write(angle);
+    CameraXServoControl_Write(angle);
+    CameraYServoControl_Write(angle); 
+    */
+#endif  
 
     printf("1. Create NvMedia capture \n");
     // Create NvMedia capture(s)
