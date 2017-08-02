@@ -644,6 +644,20 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 }
 
 
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////  Find_Center : TY 영상처리하여 조향값 찾아내는 알고리즘.
+/////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
+/////////////////////////////////////  빈공간에 원형만 선언해둠.
+////////////////////////////////////////////////////////////////////////////////////////////
+void Find_Center(IplImage* imgResult, IplImage* imgCenter)      
+{
+    int angle=1500;
+    SteeringServoControl_Write(angle);
+}
+
+
 void *ControlThread(void *unused)
 {
     int i=0;
@@ -684,7 +698,11 @@ void *ControlThread(void *unused)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
-    #ifdef IMGSAVE              
+
+        Find_Center(imgResult, imgCenter); // TY Centerline 검출해서 조향해주는 알고리즘
+        /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
+
+        #ifdef IMGSAVE              
         sprintf(fileName, "captureImage/imgOrigin%d.png", i);
         sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
         //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
