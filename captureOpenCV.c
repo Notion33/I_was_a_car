@@ -651,10 +651,62 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 /////////////////////////////////////  빈공간에 원형만 선언해둠.
 ////////////////////////////////////////////////////////////////////////////////////////////
-void Find_Center(IplImage* imgResult, IplImage* imgCenter)      
+void Find_Center(IplImage* imgResult, IplImage* imgCenter)      //TY add 6.27
 {
+    int first_line = 120;
+    int second_line = 100;
+    int first_left,first_right,second_left,second_right = 0;
+    float x_left_diff,x_right_diff = 0;
+    float left_slope, right_slope = 0;
+    float control_angle = 0;
+    float y_diff = first_line - second_line;
+    int i=0;
     int angle=1500;
+    float weight = 1.30; // control angle weight
+
+
+    for(i=150 ; i>0 ; i--){
+        first_left = i;
+        if(imgResult->imageData[first_line*imgResult->widthStep + i] == 255)
+            break;
+    }
+    for(i=150 ; i<300 ; i++){
+        first_right = i;
+        if(imgResult->imageData[first_line*imgResult->widthStep + i] == 255)
+            break;
+    }   
+    for(i=150 ; i>0 ; i--){
+        second_left = i;
+        if(imgResult->imageData[second_line*imgResult->widthStep + i] == 255)
+            break;
+    }   
+    for(i=150 ; i<300 ; i++){
+        second_right = i;
+        if(imgResult->imageData[second_line*imgResult->widthStep + i] == 255)
+            break;
+    }
+    
+    x_left_diff = second_left - first_left;
+    x_right_diff = -(second_right - first_right);
+
+    printf("%d, %d\n",second_left,second_right);
+    printf("%d, %d\n",first_left,first_right);
+    
+    left_slope = x_left_diff/y_diff ;
+    right_slope = x_right_diff/y_diff ;
+    
+    printf("left_slope : %f ,right_slope : %f \n",left_slope,right_slope);
+    control_angle = (left_slope - right_slope)*weight;  //positive : turn right , negative : turn left
+    printf("Control_Angle : %f \n",control_angle);
+
+        //steer servo set
+    angle = 1500 - control_angle*200 ;      // Range : 1000(Right)~1500(default)~2000(Left)
+    
+    angle = angle>2000? 2000 : angle<1000 ? 1000 : angle; // Bounding the angle range
+
+                    
     SteeringServoControl_Write(angle);
+
 }
 
 
