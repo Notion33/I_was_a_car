@@ -686,11 +686,11 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	{
 		angle = 1500;
 	}
-	else if (Left_Down - Right_Down > 0) // turn right
+	else if (Dif > 0) // turn right
 	{
 		angle = 1500 - Dif * weight;;  // angle < 1500 turn right
 	}
-	else if (Left_Down - Right_Down < 0) // turn left 
+	else if (Dif < 0) // turn left 
 	{
 		angle = 1500 - Dif * weight;; // angle > 1500 turn left
 	}
