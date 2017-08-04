@@ -660,6 +660,7 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)
 // NYC 추가
 // Starting Mission 함수
 // 작업중
+// TODO 방향따라 다른 속도 플래그 추가
 int Start_Mission(IplImage* imgResult){
   int flag = 0; // Stop상태
   int startpx;
@@ -718,6 +719,28 @@ int Start_Mission(IplImage* imgResult){
     cvZero(imgResult);          // TY add 6.27
     //cvZero(imgCenter);            // TY add 6.27
 
+    // Check if start Mission
+    // NYC add 8.4
+    int flag = 0;       //stop flag
+    int ready = 0;      //ready는 손으로 가리고 있을때
+    int go = 5;         //ready가 시작할 threshold
+    while(flag == 0){   //flag가 정지(0)인 동안 계속 검사
+      pthread_mutex_lock(&mutex);
+      pthread_cond_wait(&cond, &mutex);
+      GetTime(&pt1);
+      ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+      Frame2Ipl(imgOrigin, imgResult);
+      pthread_mutex_unlock(&mutex);
+
+      if(Start_Mission(imgResult)){ // 손으로 가린 것을 확인
+        ready += 1;
+        printf("ready : %d / %d\n", ready, go);
+      } else if (ready >= go){        // 손으로 일정 시간 가리다 떼는 것을 확인
+        flag = 1;
+        printf("\n\nCar is Ready! Start the Mission!!\n\n");
+      }
+    }
+
     while(1)
     {
         pthread_mutex_lock(&mutex);
@@ -727,7 +750,7 @@ int Start_Mission(IplImage* imgResult){
         ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
         Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
-                                         // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
+                                       // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
 
         pthread_mutex_unlock(&mutex);
 
