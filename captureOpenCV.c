@@ -665,7 +665,6 @@ int Start_Mission(IplImage* imgResult){
   int flag = 0; // Stop상태
   int startpx;
 
-
   //픽셀 수 Check
   for(i=imgResult->height/3; i<imgResult->height*2/3; i++){
 		for(j=imgResult->width/3; j<imgResult->width*2/3; j++){
