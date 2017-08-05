@@ -39,7 +39,7 @@
 
 #define SERVO_CONTROL     // TY add 6.27
               // To servo control(steering & camera position)
-//#define IMGSAVE
+#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -431,13 +431,14 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
             // - 39 , 111 , 51, 241
             num = 3*k+3*resWidth*(j);
             bin_num = j*imgResult->widthStep + k;
-            if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
-                // 흰색으로
-                imgResult->imageData[bin_num] = (char)255;
+            if(v>45   &&   v<130  ) {
+            //if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+                // 검은색
+                imgResult->imageData[bin_num] = (char)0;
             }
             else {
-                // 검정색으로
-                imgResult->imageData[bin_num] = (char)0;
+                // 흰색
+                imgResult->imageData[bin_num] = (char)255;
             }
 
             img->imageData[num] = y;
@@ -663,10 +664,12 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)
 // TODO 방향따라 다른 속도 플래그 추가
 int Start_Mission(IplImage* imgResult){
   int flag = 0; // Stop상태
-  int startpx;
+  int index = 0;
+  int startpx = 0;
 
   //픽셀 수 Check
-  for(i=imgResult->height/3; i<imgResult->height*2/3; i++){
+  int i,j;
+  for(i=imgResult->height*2/4; i<imgResult->height*3/4; i++){
 		for(j=imgResult->width/3; j<imgResult->width*2/3; j++){
 			index = j+i*imgResult->widthStep;
 			unsigned char value = imgResult->imageData[index];
@@ -682,13 +685,13 @@ int Start_Mission(IplImage* imgResult){
 		flag = 1;
 		printf("startpx : %d, area: %d, threshold : %d\n",
 			   	startpx,
-			   	imgResult->height*imgResult->width/9,
+			   	imgResult->height*imgResult->width/12,
 			   	imgResult->height*imgResult->width/16);
 		printf("flag is true! Run the car\n");
 	} else {
 		printf("startpx : %d, area: %d, threshold : %d\n",
 			   	startpx,
-			   	imgResult->height*imgResult->width/9,
+			   	imgResult->height*imgResult->width/12,
 			   	imgResult->height*imgResult->width/16);
 		printf("flag is false! Stop the car\n");
 	}
@@ -732,6 +735,16 @@ int Start_Mission(IplImage* imgResult){
       Frame2Ipl(imgOrigin, imgResult);
       pthread_mutex_unlock(&mutex);
 
+      //이미지 디버깅
+      #ifdef IMGSAVE
+      sprintf(fileName, "captureImage/imgOrigin%d.png", i);
+      sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
+    //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
+      cvSaveImage(fileName, imgOrigin, 0);
+      cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
+      //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
+      #endif
+
       if(Start_Mission(imgResult)){ // 손으로 가린 것을 확인
         ready += 1;
         printf("ready : %d / %d\n", ready, go);
@@ -739,6 +752,8 @@ int Start_Mission(IplImage* imgResult){
         flag = 1;
         printf("\n\nCar is Ready! Start the Mission!!\n\n");
       }
+
+      i++;
     }
 
     while(1)
@@ -760,7 +775,7 @@ int Start_Mission(IplImage* imgResult){
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
 
-        Find_Center(imgResult, imgCenter); // TY Centerline 검출해서 조향해주는 알고리즘
+        //Find_Center(imgResult, imgCenter); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
         #ifdef IMGSAVE
