@@ -503,7 +503,7 @@ static unsigned int CaptureThread(void *params)
             break;
         }
       
-        if(i%3 == 0)                        // once in three loop = 10 Hz
+        if(i%1 == 0)                        // once in three loop = 10 Hz
             pthread_cond_signal(&cond);        // ControlThread() is called
 
         pthread_mutex_unlock(&mutex);        // for ControlThread()
