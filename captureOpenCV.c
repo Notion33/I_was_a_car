@@ -36,6 +36,7 @@
 #include "stdbool.h"	//TY add
 
 #define SERVO_CONTROL     // TY add 6.27
+#define SPEED_CONTROL
 //#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
@@ -702,13 +703,6 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)      //TY add 6.27
             }
     }
 
-//printf("turn_right : %d , turn_left : %d \n",turn_right_max,turn_left_max);
-
-    ///////////////////////////////////////////////////////
-    //하단부 for문에서 추가되어야 할 사항
-    //1. line_gap 별 각각의 기울기는 계산되어 있음. 이 계산값을 이용해서 직선구간인지 곡선구간인지 판별하는 함수 필요
-    //2. 현재 구현은 좌측 첫번째 기울기만 이용해서 조향하도록 되어있음. 
-
     for(i=0;i<=valid_left_amount;i++){                        //좌측 유효 라인 포인트 범위 계산
         if(left[y_start_line+i*line_gap]!=0){
             left_line_start = y_start_line+i*line_gap;
@@ -882,30 +876,52 @@ int main(int argc, char *argv[])
 
 
 
-// 3. servo control ----------------------------------------------------------
-#ifdef SERVO_CONTROL                                    //TY add 6.27
+	// 3. servo control ----------------------------------------------------------
+	#ifdef SERVO_CONTROL                                    //TY add 6.27
 
-    printf("0. Car initializing \n");
-    CarControlInit();
+	    printf("0. Car initializing \n");
+	    CarControlInit();
 
-    
-    printf("\n\n 0.1 servo control\n");
+	    
+	    printf("\n\n 0.1 servo control\n");
 
-    //camera x servo set
-    angle = 1500;                       // Range : 600(Right)~1200(default)~1800(Left)
-    CameraXServoControl_Write(angle);
-    //camera y servo set
-    
-    angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
-    CameraYServoControl_Write(angle);    
-    
-    /*                              //Servo restoration(disable)
-    angle = 1500;
-    SteeringServoControl_Write(angle);
-    CameraXServoControl_Write(angle);
-    CameraYServoControl_Write(angle); 
-    */
-#endif  
+	    //camera x servo set
+	    angle = 1500;                       // Range : 600(Right)~1200(default)~1800(Left)
+	    CameraXServoControl_Write(angle);
+	    //camera y servo set
+	    
+	    angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
+	    CameraYServoControl_Write(angle);    
+	    
+	    /*                              //Servo restoration(disable)
+	    angle = 1500;
+	    SteeringServoControl_Write(angle);
+	    CameraXServoControl_Write(angle);
+	    CameraYServoControl_Write(angle); 
+	    */
+	#endif  
+
+
+	#ifdef SPEED_CONTROL
+	    // 2. speed control ---------------------------------------------------------- TY
+	    printf("\n\nspeed control\n");
+	    PositionControlOnOff_Write(UNCONTROL); // 엔코더 안쓰고 주행할 경우 UNCONTROL세팅
+	    //control on/off
+	    SpeedControlOnOff_Write(CONTROL);
+	    //speed controller gain set 		   // PID range : 1~50 default : 20
+	    //P-gain
+	    gain = 20;
+	    SpeedPIDProportional_Write(gain);
+	    //I-gain
+	    gain = 20;
+	    SpeedPIDIntegral_Write(gain);
+	    //D-gain
+	    gain = 20;
+	    SpeedPIDDifferential_Write(gain);
+	    //speed set
+	    speed = 60;
+	    DesireSpeed_Write(speed);
+	#endif
 
     printf("1. Create NvMedia capture \n");
     // Create NvMedia capture(s)
@@ -1091,8 +1107,12 @@ int main(int argc, char *argv[])
     // Wait for completion
     NvSemaphoreDecrement(vipDoneSem, NV_TIMEOUT_INFINITE);
 
-
     err = 0;
+
+    #ifdef SPEED_CONTROL	//TY ADD
+    	speed = 0;
+		DesireSpeed_Write(speed);
+	#endif
 
 fail: // Run down sequence
     // Destroy vip threads and stream start/done semaphores
