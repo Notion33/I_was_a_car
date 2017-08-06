@@ -655,7 +655,7 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)      //TY add 6.27
     int j=0;
 
     int y_start_line = 100;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
-    int y_end_line = 200;
+    int y_end_line = 140;
 
     int valid_left_amount = 0;
     int valid_right_amount = 0;
@@ -665,8 +665,8 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)      //TY add 6.27
     int right_line_start = 0;
     int right_line_end = 0;
 
-    int line_gap = 20;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
-    int tolerance = 10; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
+    int line_gap = 2;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
+    int tolerance = 20; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
     int angle=1500;
     float weight = 500; // control angle weight
     float control_angle = 0;
