@@ -655,7 +655,7 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	int Dif = 0, Dif1 = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
 	int Left_Sum = 0, Right_Sum = 0; //왼쪽, 오른쪽 픽셀 갯수
 	int Gap = 0; // 왼쪽 - 오른쪽 픽셀 갯수;
-	float weight = 0.5;// control angle weight
+	float weight = 0.8;// control angle weight
 
 					   //총 픽셀은 320 *240 = 76800
 
@@ -720,23 +720,37 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 
 
 
-	if ((Dif <= 50 && Dif >= -50) && (Dif1 <= 50 && Dif >= -50))
+	//if ((Dif <= 50 && Dif >= -50) && (Dif1 <= 50 && Dif >= -50))
+	if (Left_Sum < = 50 && Left_Sum > = -50 && Right_Sum <= 50 && Right_Sum >=-50)
 	{
+		/*if (Dif <= 50 && Dif >= -50 && Dif1 > 0)
+		{
+			angle = 1500 - Dif1 * weight;
+		}// turn right
+		else if (Dif <= 50 && Dif >= -50 && Dif1 < 0)
+		{
+			angle = 1500 + Dif1 * weight;
+		}
+		else*/
 		angle = 1500;
 	}
 	else if (Gap > 0) // turn right
 	{
-		if (Left_Down > Right_Down && Left_Up < Right_Up)
+		if (Left_Down >= Right_Down && Left_Up <= Right_Up)
 			angle = 1500 - Gap * weight;
-		else if (Left_Down > Right_Down && Left_Up > Right_Up)
+		else if (Left_Down >= Right_Down && Left_Up >= Right_Up)
 			angle = 1500 - Gap * weight;//대부분 왼쪽 화면에만 픽셀이 보이는 경우
+		else if (Left_Sum + Right_Up > Right_Down)
+			angle = 1500 - Gap * weight;//1,2,3 사분면에 대부분의 픽셀이 있는 경우 오른쪽으로 틀어라!
 	}// angle < 1500 turn right
 	else if (Gap < 0) // turn left 
 	{
-		if (Left_Down < Right_Down && Left_Up > Right_Up)
+		if (Left_Down <= Right_Down && Left_Up >= Right_Up)
 			angle = 1500 - Gap * weight;
-		else if (Left_Down < Right_Down && Left_Up < Right_Up)
+		else if (Left_Down <= Right_Down && Left_Up <= Right_Up)
 			angle = 1500 - Gap * weight;//대부분 오른쪽 화면에만 픽셀이 보이는 경우
+		else if (Right_Sum + Left_Up > Left_Down)
+			angle = 1500 + Gap * weight;//1,2,4 사분면에 대부분의 픽셀이 있는 경우 왼쪽으로 틀어라!
 	}// angle > 1500 turn left
 
 	angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
