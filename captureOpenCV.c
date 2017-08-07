@@ -643,18 +643,21 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 {
 	int width = 320;
 	int height = 135;
-	int Left_Down = 0; // left white pixels numbers
-	int Right_Down = 0; // right white pixels numbers
+	int Left_Down = 0; // 3 사분면
+	int Right_Down = 0; // 4 사분면
+	int Left_Up = 0; // 2 사분면
+	int Right_Up = 0; // 1 사분면
 	int x = 0;
 	int y = 0;
 	int angle = 0;
-	int Dif = 0; // 왼쪽 - 오른쪽 (픽셀) 차이값;
+	int Dif = 0, Dif1 = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
+	int Left_Sum = 0, Right_Sum = 0; //왼쪽, 오른쪽 픽셀 갯수
 	float weight = 0.3;// control angle weight
 
 					   //총 픽셀은 320 *240 = 76800
 
 
-	for (y = 0; y < height; y++)
+	for (y = 0; y < height / 2; y++)
 	{
 		for (x = 0; x < width / 2; x++)
 		{
@@ -662,31 +665,54 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 			{
 				Left_Down++;
 
-			}
+			}// 3사분면
 		}
 		for (x = width - 1; x > width / 2; x--)
 		{
 			if (Image_copy->imageData[y * width + x] == 255)
 			{
 				Right_Down++;
-
-			}
+			}// 4사분면
 		}
 		printf("Left_Down = %d\n", Left_Down);
 		printf("Right_Down = %d\n", Right_Down);
 		Dif = Left_Down - Right_Down;
 		printf("Difference is %d\n", Dif);
-
 	}
 
 
+	for (y = (height / 2) +1; y < height; y++)
+	{
+		for (x = 0; x < width / 2; x++)
+		{
+			if (Image_copy->imageData[y * width + x] == 255)//Find white pixels 
+			{
+				Left_Up++;
 
+			}// 2사분면
+		}
+		for (x = width - 1; x > width / 2; x--)
+		{
+			if (Image_copy->imageData[y * width + x] == 255)
+			{
+				Right_Up++;
+			}// 1사분면
+		}
+		printf("Left_Up = %d\n", Left_Up);
+		printf("Right_Up = %d\n", Right_Up);
+		Dif1 = Left_Up - Right_Up;
+		printf("Difference1 is %d\n", Dif1);
+	}
 
-	if (Dif <= 200 && Dif >= -200)
+	Left_Sum = Left_Down + Left_Up;
+	Right_Sum = Right_Down + Right_Up;
+	
+	
+	if ((Dif <= 200 && Dif >= -200) || (Dif1 <= 200 && Dif >= -200) ||)
 	{
 		angle = 1500;
 	}
-	else if (Dif > 0) // turn right
+	else if (Right_) // turn right
 	{
 		angle = 1500 - Dif * weight;;  // angle < 1500 turn right
 	}
