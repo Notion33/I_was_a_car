@@ -649,13 +649,13 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 /////////////////////////////////////  빈공간에 원형만 선언해둠.
 ////////////////////////////////////////////////////////////////////////////////////////////
-void Find_Center(IplImage* imgResult, IplImage* imgCenter)      //TY add 6.27
+void Find_Center(IplImage* imgResult)      //TY add 6.27
 {
     int i=0;
     int j=0;
 
-    int y_start_line = 100;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
-    int y_end_line = 140;
+    int y_start_line = 140;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
+    int y_end_line = 160;
 
     int valid_left_amount = 0;
     int valid_right_amount = 0;
@@ -664,6 +664,7 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)      //TY add 6.27
     int left_line_end = 0;
     int right_line_start = 0;
     int right_line_end = 0;
+	int speed = 0;
 
     int line_gap = 2;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
     int tolerance = 20; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
@@ -755,6 +756,12 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)      //TY add 6.27
     
     SteeringServoControl_Write(angle);
 
+	#ifdef SPEED_CONTROL
+	    // 2. speed control ---------------------------------------------------------- TY
+	    speed = 100;
+	    DesireSpeed_Write(speed);
+	#endif
+
 }
 
 
@@ -799,7 +806,7 @@ void *ControlThread(void *unused)
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
 
-        Find_Center(imgResult, imgCenter); // TY Centerline 검출해서 조향해주는 알고리즘
+        Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
         #ifdef IMGSAVE              
@@ -919,7 +926,7 @@ int main(int argc, char *argv[])
 	    gain = 20;
 	    SpeedPIDDifferential_Write(gain);
 	    //speed set
-	    speed = 60;
+	    speed = 0;
 	    DesireSpeed_Write(speed);
 	#endif
 
@@ -1167,4 +1174,3 @@ fail: // Run down sequence
     
     return err;
 }
-
