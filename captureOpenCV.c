@@ -35,7 +35,8 @@
 
 #define SERVO_CONTROL     // TY add 6.27
 // To servo control(steering & camera position)
-//#define IMGSAVE
+#define IMGSAVE
+//#define SPEED_CONTROL
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -501,7 +502,7 @@ static unsigned int CaptureThread(void *params)
 			break;
 		}
 
-		if (i % 1 == 0)                        // once in three loop = 10 Hz
+		if (i % 10 == 0)                        // once in three loop = 10 Hz
 			pthread_cond_signal(&cond);        // ControlThread() is called
 
 		pthread_mutex_unlock(&mutex);        // for ControlThread()
@@ -639,6 +640,7 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 	free(outputParams);
 }
 
+
 void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 {
 	int width = 320;
@@ -675,15 +677,15 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 				Right_Up++;
 			}// 1사분면
 		}
-		
+
 	}
-	printf("Left_Down = %d\n", Left_Down);
-	printf("Right_Down = %d\n", Right_Down);
-	Dif = Left_Down - Right_Down;
-	printf("Difference is %d\n", Dif);
+	printf("Left_Up = %d\n", Left_Up);
+	printf("Right_Up = %d\n", Right_Up);
+	Dif1 = Left_Up - Right_Up;
+	printf("Difference1 is %d\n", Dif1);
 
 
-	for (y = (height / 2) +1; y < height; y++)
+	for (y = (height / 2) + 1; y < height; y++)
 	{
 		for (x = 0; x < width / 2; x++)
 		{
@@ -700,12 +702,12 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 				Right_Down++;
 			}// 4사분면
 		}
-		
+
 	}
-	printf("Left_Up = %d\n", Left_Up);
-	printf("Right_Up = %d\n", Right_Up);
-	Dif1 = Left_Up - Right_Up;
-	printf("Difference1 is %d\n", Dif1);
+	printf("Left_Down = %d\n", Left_Down);
+	printf("Right_Down = %d\n", Right_Down);
+	Dif = Left_Down - Right_Down;
+	printf("Difference is %d\n", Dif);
 
 
 	Left_Sum = Left_Down + Left_Up;
@@ -713,7 +715,7 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	Gap = Left_Sum - Right_Sum;
 
 	printf("left_sum=%d, Right_sum=%d, gap=%d\n", Left_Sum, Right_Sum, Gap);
-	
+
 	if ((Dif <= 200 && Dif >= -200) || (Dif1 <= 200 && Dif >= -200))
 	{
 		angle = 1500;
@@ -721,16 +723,16 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	else if (Gap > 0) // turn right
 	{
 		if (Left_Down > Right_Down || Left_Up < Right_Up)
-		angle = 1500 - Gap * weight;
+			angle = 1500 - Gap * weight;
 		else if (Left_Down > Right_Down || Left_Up > Right_Up)
-		angle = 1500 - Left_Down * weight;//대부분 왼쪽 화면에만 픽셀이 보이는 경우
+			angle = 1500 - Left_Down * weight;//대부분 왼쪽 화면에만 픽셀이 보이는 경우
 	}// angle < 1500 turn right
 	else if (Gap < 0) // turn left 
 	{
 		if (Left_Down < Right_Down || Left_Up > Right_Up)
-		angle = 1500 - Gap * weight; 
+			angle = 1500 - Gap * weight;
 		else if (Left_Down < Right_Down || Left_Up < Right_Up)
-		angle = 1500 - Right_Down * weight;//대부분 오른쪽 화면에만 픽셀이 보이는 경우
+			angle = 1500 - Right_Down * weight;//대부분 오른쪽 화면에만 픽셀이 보이는 경우
 	}// angle > 1500 turn left
 
 	angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
@@ -740,7 +742,6 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 
 	SteeringServoControl_Write(angle);
 }
-
 
 
 void *ControlThread(void *unused)
@@ -890,7 +891,24 @@ int main(int argc, char *argv[])
 	*/
 #endif  
 
+#ifdef SPEED_CONTROL
+	// 2. speed control ----------------------------------------------------------
+	printf("\n\n 2. speed control\n");
 
+	//jobs to be done beforehand;
+	PositionControlOnOff_Write(UNCONTROL); // position controller must be OFF !!!
+										   //control on/off
+	SpeedControlOnOff_Write(CONTROL);
+
+	//speed controller gain set
+	//P-gain
+	gain = 20;
+	SpeedPIDProportional_Write(gain);
+
+	speed = 40;
+	DesireSpeed_Write(speed);
+
+#endif
 
 	printf("1. Create NvMedia capture \n");
 	// Create NvMedia capture(s)
@@ -1076,6 +1094,8 @@ int main(int argc, char *argv[])
 	// Wait for completion
 	NvSemaphoreDecrement(vipDoneSem, NV_TIMEOUT_INFINITE);
 
+	speed = 0;
+	DesireSpeed_Write(speed);
 
 	err = 0;
 
