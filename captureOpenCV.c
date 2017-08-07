@@ -718,14 +718,14 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 		if (Left_Down > Right_Down || Left_Up < Right_Up)
 		angle = 1500 - Gap * weight;
 		else if (Left_Down > Right_Down || Left_Up > Right_Up)
-		angle = 1500 - Gap * weight;
+		angle = 1500 - Left_Down * weight;//대부분 왼쪽 화면에만 픽셀이 보이는 경우
 	}// angle < 1500 turn right
 	else if (Gap < 0) // turn left 
 	{
 		if (Left_Down < Right_Down || Left_Up > Right_Up)
 		angle = 1500 - Gap * weight; 
 		else if (Left_Down < Right_Down || Left_Up < Right_Up)
-		angle = 1500 - Gap * weight;
+		angle = 1500 - Right_Down * weight;//대부분 오른쪽 화면에만 픽셀이 보이는 경우
 	}// angle > 1500 turn left
 
 	angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
