@@ -709,18 +709,24 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	Right_Sum = Right_Down + Right_Up;
 	Gap = Left_Sum - Right_Sum;
 	
-	if ((Dif <= 200 && Dif >= -200) || (Dif1 <= 200 && Dif >= -200) ||)
+	if ((Dif <= 200 && Dif >= -200) || (Dif1 <= 200 && Dif >= -200))
 	{
 		angle = 1500;
 	}
 	else if (Gap > 0) // turn right
 	{
-		angle = 1500 - Gap * weight;;  // angle < 1500 turn right
-	}
+		if (Left_Down > Right_Down || Left_Up < Right_Up)
+		angle = 1500 - Gap * weight;
+		else if (Left_Down > Right_Down || Left_Up > Right_Up)
+		angle = 1500 - Gap * weight;
+	}// angle < 1500 turn right
 	else if (Gap < 0) // turn left 
 	{
-		angle = 1500 - Gap * weight;; // angle > 1500 turn left
-	}
+		if (Left_Down < Right_Down || Left_Up > Right_Up)
+		angle = 1500 - Gap * weight; 
+		else if (Left_Down < Right_Down || Left_Up < Right_Up)
+		angle = 1500 - Gap * weight;
+	}// angle > 1500 turn left
 
 	angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
 
