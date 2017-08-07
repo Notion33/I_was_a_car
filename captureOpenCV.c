@@ -652,6 +652,7 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	int angle = 0;
 	int Dif = 0, Dif1 = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
 	int Left_Sum = 0, Right_Sum = 0; //왼쪽, 오른쪽 픽셀 갯수
+	int Gap = 0; // 왼쪽 - 오른쪽 픽셀 갯수;
 	float weight = 0.3;// control angle weight
 
 					   //총 픽셀은 320 *240 = 76800
@@ -706,19 +707,19 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 
 	Left_Sum = Left_Down + Left_Up;
 	Right_Sum = Right_Down + Right_Up;
-	
+	Gap = Left_Sum - Right_Sum;
 	
 	if ((Dif <= 200 && Dif >= -200) || (Dif1 <= 200 && Dif >= -200) ||)
 	{
 		angle = 1500;
 	}
-	else if (Right_) // turn right
+	else if (Gap > 0) // turn right
 	{
-		angle = 1500 - Dif * weight;;  // angle < 1500 turn right
+		angle = 1500 - Gap * weight;;  // angle < 1500 turn right
 	}
-	else if (Dif < 0) // turn left 
+	else if (Gap < 0) // turn left 
 	{
-		angle = 1500 - Dif * weight;; // angle > 1500 turn left
+		angle = 1500 - Gap * weight;; // angle > 1500 turn left
 	}
 
 	angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
