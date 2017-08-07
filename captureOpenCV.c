@@ -664,30 +664,6 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 		{
 			if (Image_copy->imageData[y * width + x] == 255)//Find white pixels 
 			{
-				Left_Down++;
-
-			}// 3사분면
-		}
-		for (x = width - 1; x > width / 2; x--)
-		{
-			if (Image_copy->imageData[y * width + x] == 255)
-			{
-				Right_Down++;
-			}// 4사분면
-		}
-		printf("Left_Down = %d\n", Left_Down);
-		printf("Right_Down = %d\n", Right_Down);
-		Dif = Left_Down - Right_Down;
-		printf("Difference is %d\n", Dif);
-	}
-
-
-	for (y = (height / 2) +1; y < height; y++)
-	{
-		for (x = 0; x < width / 2; x++)
-		{
-			if (Image_copy->imageData[y * width + x] == 255)//Find white pixels 
-			{
 				Left_Up++;
 
 			}// 2사분면
@@ -699,15 +675,44 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 				Right_Up++;
 			}// 1사분면
 		}
-		printf("Left_Up = %d\n", Left_Up);
-		printf("Right_Up = %d\n", Right_Up);
-		Dif1 = Left_Up - Right_Up;
-		printf("Difference1 is %d\n", Dif1);
+		
 	}
+	printf("Left_Down = %d\n", Left_Down);
+	printf("Right_Down = %d\n", Right_Down);
+	Dif = Left_Down - Right_Down;
+	printf("Difference is %d\n", Dif);
+
+
+	for (y = (height / 2) +1; y < height; y++)
+	{
+		for (x = 0; x < width / 2; x++)
+		{
+			if (Image_copy->imageData[y * width + x] == 255)//Find white pixels 
+			{
+				Left_Down++;
+
+			}// 3사분면
+		}
+		for (x = width - 1; x > width / 2; x--)
+		{
+			if (Image_copy->imageData[y * width + x] == 255)
+			{
+				Right_Down++;
+			}// 4사분면
+		}
+		
+	}
+	printf("Left_Up = %d\n", Left_Up);
+	printf("Right_Up = %d\n", Right_Up);
+	Dif1 = Left_Up - Right_Up;
+	printf("Difference1 is %d\n", Dif1);
+
 
 	Left_Sum = Left_Down + Left_Up;
 	Right_Sum = Right_Down + Right_Up;
 	Gap = Left_Sum - Right_Sum;
+
+	printf("left_sum=%d, Right_sum=%d, gap=%d\n", Left_Sum, Right_Sum, Gap);
 	
 	if ((Dif <= 200 && Dif >= -200) || (Dif1 <= 200 && Dif >= -200))
 	{
