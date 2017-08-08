@@ -431,8 +431,104 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
             // - 39 , 111 , 51, 241
             num = 3*k+3*resWidth*(j);
             bin_num = j*imgResult->widthStep + k;
+            if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+                // 흰색으로
+                imgResult->imageData[bin_num] = (char)255;
+            }
+            else {
+                // 검정색으로
+                imgResult->imageData[bin_num] = (char)0;
+            }
+
+            img->imageData[num] = y;
+            img->imageData[num+1] = u;
+            img->imageData[num+2] = v;
+
+        }
+        stepY += pitchY[i];
+        stepU += pitchU[i];
+        stepV += pitchV[i];
+    }
+
+
+    NvMediaVideoSurfaceUnlock(capSurf);
+
+    return 1;
+}
+
+static int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
+{
+    NvMediaVideoSurfaceMap surfMap;
+    unsigned int resWidth, resHeight;
+    unsigned char y,u,v;
+    int num;
+
+    if(NvMediaVideoSurfaceLock(capSurf, &surfMap) != NVMEDIA_STATUS_OK)
+    {
+        MESSAGE_PRINTF("NvMediaVideoSurfaceLock() failed in Frame2Ipl()\n");
+        return 0;
+    }
+
+    unsigned char *pY[2] = {surfMap.pY, surfMap.pY2};
+    unsigned char *pU[2] = {surfMap.pU, surfMap.pU2};
+    unsigned char *pV[2] = {surfMap.pV, surfMap.pV2};
+    unsigned int pitchY[2] = {surfMap.pitchY, surfMap.pitchY2};
+    unsigned int pitchU[2] = {surfMap.pitchU, surfMap.pitchU2};
+    unsigned int pitchV[2] = {surfMap.pitchV, surfMap.pitchV2};
+    unsigned int i, j, k, x;
+    unsigned int stepY, stepU, stepV;
+
+    unsigned int bin_num=0;
+
+    resWidth = RESIZE_WIDTH;
+    resHeight = RESIZE_HEIGHT;
+
+    // Frame2Ipl
+    img->nSize = 112;
+    img->ID = 0;
+    img->nChannels = 3;
+    img->alphaChannel = 0;
+    img->depth = IPL_DEPTH_8U;    // 8
+    img->colorModel[0] = 'R';
+    img->colorModel[1] = 'G';
+    img->colorModel[2] = 'B';
+    img->channelSeq[0] = 'B';
+    img->channelSeq[1] = 'G';
+    img->channelSeq[2] = 'R';
+    img->dataOrder = 0;
+    img->origin = 0;
+    img->align = 4;
+    img->width = resWidth;
+    img->height = resHeight;
+    img->imageSize = resHeight*resWidth*3;
+    img->widthStep = resWidth*3;
+    img->BorderMode[0] = 0;
+    img->BorderMode[1] = 0;
+    img->BorderMode[2] = 0;
+    img->BorderMode[3] = 0;
+    img->BorderConst[0] = 0;
+    img->BorderConst[1] = 0;
+    img->BorderConst[2] = 0;
+    img->BorderConst[3] = 0;
+
+    stepY = 0;
+    stepU = 0;
+    stepV = 0;
+    i = 0;
+
+     for(j = 0; j < resHeight; j++)
+    {
+        for(k = 0; k < resWidth; k++)
+        {
+            x = ResTableX_720To320[k];
+            y = pY[i][stepY+x];
+            u = pU[i][stepU+x/2];
+            v = pV[i][stepV+x/2];
+
+            // - 39 , 111 , 51, 241
+            num = 3*k+3*resWidth*(j);
+            bin_num = j*imgResult->widthStep + k;
             if(v>45   &&   v<130  ) {
-            //if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
                 // 검은색
                 imgResult->imageData[bin_num] = (char)0;
             }
@@ -450,10 +546,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
         stepU += pitchU[i];
         stepV += pitchV[i];
     }
-
-
     NvMediaVideoSurfaceUnlock(capSurf);
-
     return 1;
 }
 
@@ -688,7 +781,14 @@ int Start_Mission(IplImage* imgResult){
 			   	imgResult->height*imgResult->width/12,
 			   	imgResult->height*imgResult->width/16);
 		printf("flag is true! Run the car\n");
-	} else {
+	} else if(startpx > imgResult->height*imgResult->width/32){  //NYC added 8.5
+    flag = 2; //히스테리시스 적용을 위한 ready 상태
+		printf("startpx : %d, area: %d, threshold : %d\n",
+			   	startpx,
+			   	imgResult->height*imgResult->width/12,
+			   	imgResult->height*imgResult->width/16);
+		printf("flag is not enough! But Ready the car\n");
+  } else {
 		printf("startpx : %d, area: %d, threshold : %d\n",
 			   	startpx,
 			   	imgResult->height*imgResult->width/12,
@@ -699,8 +799,57 @@ int Start_Mission(IplImage* imgResult){
   return flag;
 }
 
+//NYC added 8.5
+void RunTheMission(){
+  int status, gain, speed;
+  // 2. speed control ----------------------------------------------------------
+  printf("\n\n 2. speed control\n");
 
-  void *ControlThread(void *unused)
+  //jobs to be done beforehand;
+  PositionControlOnOff_Write(UNCONTROL); // position controller must be OFF !!!
+
+  //control on/off
+  status=SpeedControlOnOff_Read();
+  printf("SpeedControlOnOff_Read() = %d\n", status);
+  SpeedControlOnOff_Write(CONTROL);
+
+  //speed controller gain set
+  //P-gain
+  gain = SpeedPIDProportional_Read();        // default value = 10, range : 1~50
+  printf("SpeedPIDProportional_Read() = %d \n", gain);
+  gain = 20;
+  SpeedPIDProportional_Write(gain);
+
+  //I-gain
+  gain = SpeedPIDIntegral_Read();        // default value = 10, range : 1~50
+  printf("SpeedPIDIntegral_Read() = %d \n", gain);
+  gain = 20;
+  SpeedPIDIntegral_Write(gain);
+
+  //D-gain
+  gain = SpeedPIDDifferential_Read();        // default value = 10, range : 1~50
+  printf("SpeedPIDDefferential_Read() = %d \n", gain);
+  gain = 20;
+  SpeedPIDDifferential_Write(gain);
+
+  //speed set
+  speed = DesireSpeed_Read();
+  printf("DesireSpeed_Read() = %d \n", speed);
+  speed = 100;
+  DesireSpeed_Write(speed);
+
+  sleep(2);  //run time
+
+  speed = DesireSpeed_Read();
+  printf("DesireSpeed_Read() = %d \n", speed);
+
+  speed = 0;
+  DesireSpeed_Write(speed);
+  sleep(1);
+}
+
+
+void *ControlThread(void *unused)
 {
     int i=0;
     char fileName[30];
@@ -726,13 +875,13 @@ int Start_Mission(IplImage* imgResult){
     // NYC add 8.4
     int flag = 0;       //stop flag
     int ready = 0;      //ready는 손으로 가리고 있을때
-    int go = 5;         //ready가 시작할 threshold
+    int go = 7;         //ready가 시작할 threshold
     while(flag == 0){   //flag가 정지(0)인 동안 계속 검사
       pthread_mutex_lock(&mutex);
       pthread_cond_wait(&cond, &mutex);
       GetTime(&pt1);
       ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
-      Frame2Ipl(imgOrigin, imgResult);
+      Frame2Ipl_Start(imgOrigin, imgResult);
       pthread_mutex_unlock(&mutex);
 
       //이미지 디버깅
@@ -745,17 +894,24 @@ int Start_Mission(IplImage* imgResult){
       //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
       #endif
 
-      if(Start_Mission(imgResult)){ // 손으로 가린 것을 확인
+      if(Start_Mission(imgResult)==1){ // 손으로 가린 것을 확인
         ready += 1;
         printf("ready : %d / %d\n", ready, go);
-      } else if (ready >= go){        // 손으로 일정 시간 가리다 떼는 것을 확인
+      } else if (ready >= go && Start_Mission(imgResult)==0){        // 손으로 일정 시간 가리다 떼는 것을 확인
         flag = 1;
-        printf("\n\nCar is Ready! Start the Mission!!\n\n");
+        printf("\n\nCar is now Ready! Start the Mission!!\n\n");
+        RunTheMission();
       }
+      // else {
+      //   flag = 1;
+      //   printf("\n\nCar is Ready! Start the Mission!!\n\n");
+      //   RunTheMission();
+      // }
 
       i++;
     }
 
+    //Start of Mission
     while(1)
     {
         pthread_mutex_lock(&mutex);
@@ -877,6 +1033,12 @@ int main(int argc, char *argv[])
     CameraYServoControl_Write(angle);
     */
 #endif
+
+    //Start Mission
+    Winker_Write(ALL_ON);   //NYC added 8.5
+    Alarm_Write(ON);
+    usleep(1000000);
+    Alarm_Write(OFF);
 
     printf("1. Create NvMedia capture \n");
     // Create NvMedia capture(s)
