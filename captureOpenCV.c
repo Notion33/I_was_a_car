@@ -65,6 +65,9 @@ int table_100[256];
 int table_208[256];
 int table_516[256];
 
+bool turn_left_max = false;         //TY add
+bool turn_right_max = false;
+
 typedef struct
 {
     I2cId i2cDevice;
@@ -672,29 +675,51 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     float weight = 500; // control angle weight
     float control_angle = 0;
 
-    int left[400] = {0};
-    int right[400] = {0};
-    float left_slope[200] = {0.0};
-    float right_slope[200] = {0.0};
+    int left[240] = {0};
+    int right[240] = {imgResult->width-1};
+    float left_slope[2] = {0.0};
+    float right_slope[2] = {0.0};
     
-    bool turn_left_max = false;
-    bool turn_right_max = false;
     
     for(i = y_start_line ; i<y_end_line ; i=i-line_gap){
-        for(j=(imgResult->width/2) ; j>=0 ; j--){                            //Searching the left line point
-            left[y_start_line-i] = j;
-            if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                valid_left_amount++;
-                break;
+        if (turn_right_max || turn_left_max == true){           //직전 프레임이 최대조향각도로 주행중인 경우, 서칭 시작을 화면중심이 아닌 화면 가장자리에서 시작
+            if (turn_right_max == true){
+                j = imgResult->width;
+                for( ; j>=0 ; j--){                            //Searching the left line point
+                    left[y_start_line-i] = j;
+                    if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                        valid_left_amount++;
+                        break;
+                    }
+                }
+            }
+            else if (turn_left_max == true){
+                j = 0 ;
+                for( ; j<=imgResult->width ; j++){             //Searching the right line point
+                    right[y_start_line-i] = j;
+                    if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                        valid_right_amount++;;
+                        break;
+                    }
+                }
             }
         }
-        for(j=(imgResult->width/2) ; j<=imgResult->width ; j++){             //Searching the right line point
-            right[y_start_line-i] = j;
-            if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                valid_right_amount++;;
-                break;
+        else
+            for(j=imgResult->width ; j>=0 ; j--){                            //Searching the left line point
+                    left[y_start_line-i] = j;
+                    if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                        valid_left_amount++;
+                        break;
+                    }
             }
-        }
+            for(j=0 ; j<=imgResult->width ; j++){             //Searching the right line point
+                    right[y_start_line-i] = j;
+                    if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                        valid_right_amount++;;
+                        break;
+                    }
+            }
+
         if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){                    //검출된 좌측혹은 우측차선이 화면중앙에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
             if(valid_left_amount > valid_right_amount)
                 turn_right_max = true;
@@ -713,7 +738,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     }
     
     for(i=0;i<=valid_right_amount;i++){                        //우측 유효 라인 포인트 범위 계산
-        if(right[i*line_gap]!=imgResult->width){
+        if(right[i*line_gap]!=imgResult->width-1){
             right_line_start = y_start_line - i * line_gap;
             right_line_end = y_start_line - (i + valid_right_amount) * line_gap;
             break;
