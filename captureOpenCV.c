@@ -751,11 +751,13 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)
     SteeringServoControl_Write(angle);
 }
 
+////////////////////////////////////
 // NYC 추가
 // Starting Mission 함수
 // 작업중
 // TODO 방향따라 다른 속도 플래그 추가
-int Start_Mission(IplImage* imgResult){
+////////////////////////////////////
+int isStart(IplImage* imgResult){
   int flag = 0; // Stop상태
   int index = 0;
   int startpx = 0;
@@ -767,7 +769,7 @@ int Start_Mission(IplImage* imgResult){
 			index = j+i*imgResult->widthStep;
 			unsigned char value = imgResult->imageData[index];
 			//printf("%d",value);
-			if(value > 128){
+			if(value > 128){ //흰 픽셀만 count
 				startpx = startpx+1;
 			}
 		}
@@ -802,8 +804,6 @@ int Start_Mission(IplImage* imgResult){
 //NYC added 8.5
 void RunTheMission(){
   int status, gain, speed;
-  // 2. speed control ----------------------------------------------------------
-  printf("\n\n 2. speed control\n");
 
   //jobs to be done beforehand;
   PositionControlOnOff_Write(UNCONTROL); // position controller must be OFF !!!
@@ -848,6 +848,68 @@ void RunTheMission(){
   sleep(1);
 }
 
+void PrepareMission(){
+  Winker_Write(ALL_ON);   //NYC added 8.5
+  Alarm_Write(ON);
+  usleep(1000000);
+  Alarm_Write(OFF);
+}
+
+void StartMission(){
+
+  int i=0;
+  char fileName[30];
+  char fileName_result[30];
+  NvMediaTime pt1 ={0}, pt2 = {0};
+  NvU64 ptime1, ptime2;
+  struct timespec;
+
+  IplImage* imgOrigin;
+  IplImage* imgResult;
+
+  // cvCreateImage
+  imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
+  imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+
+  cvZero(imgResult);          // TY add 6.27
+
+  int flag = 0;       //stop flag
+  int ready = 0;      //ready는 손으로 가리고 있을때
+  int go = 7;         //ready가 시작할 threshold
+  while(flag == 0){   //flag가 정지(0)인 동안 계속 검사
+    pthread_mutex_lock(&mutex);
+    pthread_cond_wait(&cond, &mutex);
+    GetTime(&pt1);
+    ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+    Frame2Ipl_Start(imgOrigin, imgResult);
+    pthread_mutex_unlock(&mutex);
+
+    //이미지 디버깅
+    #ifdef IMGSAVE
+    sprintf(fileName, "captureImage/Start_imgOrigin%d.png", i);
+    sprintf(fileName_result, "captureImage/Start_imgResult%d.png", i);
+    cvSaveImage(fileName, imgOrigin, 0);
+    cvSaveImage(fileName_result, imgResult, 0);
+    #endif
+
+    if(isStart(imgRe sult)==1){ // 손으로 가린 것을 확인
+      ready += 1;
+      printf("ready : %d / %d\n", ready, go);
+    } else if (ready >= go && isStart(imgResult)==0){   // 손으로 일정 시간 가리다 떼는 것을 확인
+      flag = 1;
+      printf("\n\nCar is now Ready! Start the Mission!!\n\n");
+      RunTheMission();
+    }
+    // else {
+    //   flag = 1;
+    //   printf("\n\nCar is Ready! Start the Mission!!\n\n");
+    //   RunTheMission();
+    // }
+
+    i++;
+  }
+}
+
 
 void *ControlThread(void *unused)
 {
@@ -872,44 +934,8 @@ void *ControlThread(void *unused)
     //cvZero(imgCenter);            // TY add 6.27
 
     // Check if start Mission
-    // NYC add 8.4
-    int flag = 0;       //stop flag
-    int ready = 0;      //ready는 손으로 가리고 있을때
-    int go = 7;         //ready가 시작할 threshold
-    while(flag == 0){   //flag가 정지(0)인 동안 계속 검사
-      pthread_mutex_lock(&mutex);
-      pthread_cond_wait(&cond, &mutex);
-      GetTime(&pt1);
-      ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
-      Frame2Ipl_Start(imgOrigin, imgResult);
-      pthread_mutex_unlock(&mutex);
-
-      //이미지 디버깅
-      #ifdef IMGSAVE
-      sprintf(fileName, "captureImage/imgOrigin%d.png", i);
-      sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
-    //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
-      cvSaveImage(fileName, imgOrigin, 0);
-      cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
-      //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
-      #endif
-
-      if(Start_Mission(imgResult)==1){ // 손으로 가린 것을 확인
-        ready += 1;
-        printf("ready : %d / %d\n", ready, go);
-      } else if (ready >= go && Start_Mission(imgResult)==0){        // 손으로 일정 시간 가리다 떼는 것을 확인
-        flag = 1;
-        printf("\n\nCar is now Ready! Start the Mission!!\n\n");
-        RunTheMission();
-      }
-      // else {
-      //   flag = 1;
-      //   printf("\n\nCar is Ready! Start the Mission!!\n\n");
-      //   RunTheMission();
-      // }
-
-      i++;
-    }
+    // NYC add 8.9
+    StartMission();
 
     //Start of Mission
     while(1)
@@ -1034,11 +1060,8 @@ int main(int argc, char *argv[])
     */
 #endif
 
-    //Start Mission
-    Winker_Write(ALL_ON);   //NYC added 8.5
-    Alarm_Write(ON);
-    usleep(1000000);
-    Alarm_Write(OFF);
+    //Flash and prepae for the first Mission    NYC added 8.9
+    PrepareMission();
 
     printf("1. Create NvMedia capture \n");
     // Create NvMedia capture(s)
