@@ -641,7 +641,9 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 
 void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
-	int width = 320;//data of the input image
+		float angle = 0;
+		
+		int width = 320;//data of the input image
 		int height = 240;
 		
 		int x = 0;//for cycle
@@ -664,7 +666,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		int  finl = 0;//whether line of leftside detected
 		int finr = 0;
 		
-		float angle = 0;
+		int centerofpixel = 0;//centerlinepixel
 		
 		for (y = height-1-cutdown; y >=0; y-=5){//cut down bumper pixel 
 			if(finl||finr)break;
@@ -687,7 +689,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			
 			for (x = width/2; x<width; x++){
 				if (imgResult->imageData[y * width + x] == 255){//Search pixels
-					if(befline){//if there was white pixels right before
+					if(befline){			//if there was white pixels right before
 						if(counr==5){// if counl>4 -> regarded as line
 						finr = 1;
 						rightpixel = x-4;
@@ -699,7 +701,13 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 				}
 				else befline = 0;
 			}
-		}	
+		}
+
+		for(y = 10;y<200;y++)
+			if (imgResult->imageData[y * width + 160] == 255)
+				centerofpixel++;
+
+
 		if(!(finl||finr)){ //선 탐지 x인 경우 
 			Alarm_Write(ON);
     		usleep(100000);
@@ -708,23 +716,18 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		
 		printf("Left_line = %d\n", leftpixel);
 		printf("Right_line = %d\n", rightpixel);
+		printf("Centerofpixle = %d\n",centerofpixel);
 		centerpixel = finl&&finr? (rightpixel+leftpixel)/2:(finl==0?rightpixel-distance:leftpixel+distance);
 		
-
-		if(centerpixel-160<10&&centerpixel-160>-10)angle = 1500;
+		if(centerofpixel>=7){
+			if(centerpixel>160)angle = 1000;	//turn right maximize
+			else angle = 2000;//turn left maximize
+				}
+		else if(centerpixel-160<10&&centerpixel-160>-10)angle = 1500;
 		else
 		angle = 1500 - weight*(centerpixel-160);
 		
-		SteeringServoControl_Write(angle);//motor control ;
-	#ifdef SPEED_CONTROL
-	   SpeedControlOnOff_Write(CONTROL);
-	
-	
-	    speed = 40;
-	    DesireSpeed_Write(speed);
-	    sleep(1);
-	#endif
-
+		SteeringServoControl_Write(angle);//motor control 
 }
 
 
@@ -811,6 +814,17 @@ int main(int argc, char *argv[])
     char byte = 0x80;
     ////////////////////////////////
 
+#ifdef SPEED_CONTROL	
+			PositionControlOnOff_Write(UNCONTROL); // position controller must be OFF !!!
+			SpeedControlOnOff_Write(CONTROL);
+			gain = 20;
+   		 	SpeedPIDProportional_Write(gain);
+			//SpeedPIDIntegral_Write(gain);
+			//SpeedPIDDifferential_Write(gain);
+			speed = 50;
+	
+	    		DesireSpeed_Write(speed);			
+			#endif
 
 
     CaptureInputHandle handle;
@@ -1067,7 +1081,7 @@ fail: // Run down sequence
     // Close output file(s)
     if(vipFile)
         fclose(vipFile);
-        
+        DesireSpeed_Write(0);
     // Unbind NvMedia mixer(s) and output(s) and destroy them
     if(vipOutput[0])
     {
