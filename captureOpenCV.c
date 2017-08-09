@@ -654,8 +654,8 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int i=0;
     int j=0;
 
-    int y_start_line = 140;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
-    int y_end_line = 160;
+    int y_start_line = 160;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
+    int y_end_line = 140;
 
     int valid_left_amount = 0;
     int valid_right_amount = 0;
@@ -680,7 +680,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     bool turn_left_max = false;
     bool turn_right_max = false;
     
-    for(i = y_start_line ; i<y_end_line ; i=i+line_gap){
+    for(i = y_start_line ; i<y_end_line ; i=i-line_gap){
         for(j=(imgResult->width/2) ; j>=0 ; j--){                            //Searching the left line point
             left[i] = j;
             if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
