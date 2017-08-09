@@ -696,9 +696,9 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             }
         }
         if(left[i]>((imgResult->width/2)-tolerance)||right[i]<((imgResult->width/2)+tolerance)){                    //검출된 좌측혹은 우측차선이 화면중앙에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
-            if(valid_left_amount == 1)
+            if(valid_left_amount > valid_right_amount)
                 turn_right_max = true;
-            else if(valid_right_amount == 1)
+            else if(valid_right_amount > valid_left_amount)
                 turn_left_max = true;
             break;
             }
