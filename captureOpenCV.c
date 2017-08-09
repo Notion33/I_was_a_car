@@ -774,7 +774,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     else if (turn_right_max == true)
         angle = 1000;
     else{
-        angle = 1500 - control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
+        angle = 1500 + control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
         angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
     }
     
