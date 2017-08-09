@@ -682,20 +682,20 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     
     for(i = y_start_line ; i<y_end_line ; i=i-line_gap){
         for(j=(imgResult->width/2) ; j>=0 ; j--){                            //Searching the left line point
-            left[i] = j;
+            left[y_start_line-i] = j;
             if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
                 valid_left_amount++;
                 break;
             }
         }
         for(j=(imgResult->width/2) ; j<=imgResult->width ; j++){             //Searching the right line point
-            right[i] = j;
+            right[y_start_line-i] = j;
             if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
                 valid_right_amount++;;
                 break;
             }
         }
-        if(left[i]>((imgResult->width/2)-tolerance)||right[i]<((imgResult->width/2)+tolerance)){                    //검출된 좌측혹은 우측차선이 화면중앙에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
+        if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){                    //검출된 좌측혹은 우측차선이 화면중앙에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
             if(valid_left_amount > valid_right_amount)
                 turn_right_max = true;
             else if(valid_right_amount > valid_left_amount)
@@ -705,17 +705,17 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     }
 
     for(i=0;i<=valid_left_amount;i++){                        //좌측 유효 라인 포인트 범위 계산
-        if(left[y_start_line+i*line_gap]!=0){
-            left_line_start = y_start_line+i*line_gap;
-            left_line_end = y_start_line + (i + valid_left_amount)*line_gap;
+        if(left[i*line_gap]!=0){
+            left_line_start = y_start_line - i * line_gap;
+            left_line_end = y_start_line - (i + valid_left_amount) * line_gap;
             break;
         }
     }
     
     for(i=0;i<=valid_right_amount;i++){                        //우측 유효 라인 포인트 범위 계산
-        if(right[y_start_line+i*line_gap]!=imgResult->width){
-            right_line_start = y_start_line+i*line_gap;
-            right_line_end = y_start_line + (i + valid_right_amount)*line_gap;
+        if(right[i*line_gap]!=imgResult->width){
+            right_line_start = y_start_line - i * line_gap;
+            right_line_end = y_start_line - (i + valid_right_amount) * line_gap;
             break;
         }
     }
@@ -727,13 +727,12 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     printf("\n");
 
     if(valid_left_amount > 1){
-        //for(i=left_line_start;i<=valid_left_amount;i++)                         //left,right 유효 라인 포인트만 직선 기울기들 계산
-                left_slope[0] = (float)(left[left_line_start] - left[left_line_start+(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
+        left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
     }
     else left_slope[0] = 0;
+
     if(valid_right_amount > 1){
-        //for(i=right_line_start;i<=valid_right_amount;i++)                         //left,right 유효 라인 포인트만 직선 기울기들 계산
-                right_slope[0] = (float)(right[right_line_start] - right[right_line_start+(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
+        right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
     }
     else right_slope[0] = 0;
     
@@ -757,8 +756,10 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     SteeringServoControl_Write(angle);
 
 	#ifdef SPEED_CONTROL
-	    // 2. speed control ---------------------------------------------------------- TY
-	    speed = 100;
+        if(angle<1200&&angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
+	       speed = 50;
+       else
+            speed = 100;
 	    DesireSpeed_Write(speed);
 	#endif
 
