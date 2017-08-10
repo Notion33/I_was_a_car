@@ -642,7 +642,7 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
 		float angle = 0;
-		
+		int speed = 0;
 		int width = 320;//data of the input image
 		int height = 240;
 		
@@ -703,7 +703,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			}
 		}
 
-		for(y = 10;y<200;y++)
+		for(y = 50;y<180;y++)
 			if (imgResult->imageData[y * width + 160] == 255)
 				centerofpixel++;
 
@@ -719,7 +719,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		printf("Centerofpixle = %d\n",centerofpixel);
 		centerpixel = finl&&finr? (rightpixel+leftpixel)/2:(finl==0?rightpixel-distance:leftpixel+distance);
 		
-		if(centerofpixel>=7){
+		if(centerofpixel>=5){
 			if(centerpixel>160)angle = 1000;	//turn right maximize
 			else angle = 2000;//turn left maximize
 				}
@@ -728,6 +728,9 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		angle = 1500 - weight*(centerpixel-160);
 		
 		SteeringServoControl_Write(angle);//motor control 
+
+		speed = 40;
+		DesireSpeed_Write(speed);
 }
 
 
@@ -821,8 +824,7 @@ int main(int argc, char *argv[])
    		 	SpeedPIDProportional_Write(gain);
 			//SpeedPIDIntegral_Write(gain);
 			//SpeedPIDDifferential_Write(gain);
-			speed = 50;
-	
+			speed = 0;
 	    		DesireSpeed_Write(speed);			
 			#endif
 
