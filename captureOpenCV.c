@@ -668,11 +668,11 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int right_line_start = 0;
     int right_line_end = 0;
 	int speed = 0;
-	int curve_speed = 60;
-	int straight_speed = 100;
+	int curve_speed = 60;		//default : 60
+	int straight_speed = 60;	//default : 90
 
     int line_gap = 4;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
-    int tolerance = 20; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
+    int tolerance = 40; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
     int angle=1500;
     float weight = 300; // control angle weight
     float control_angle = 0;
@@ -788,11 +788,11 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     SteeringServoControl_Write(angle);
 
 	#ifdef SPEED_CONTROL
-        if(angle<1200&&angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
+        if(angle<1200||angle>1700)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
 	       speed = curve_speed;
-       else
+        else
            speed = straight_speed;
-	    DesireSpeed_Write(speed);
+	DesireSpeed_Write(speed);
 	#endif
 
 }
