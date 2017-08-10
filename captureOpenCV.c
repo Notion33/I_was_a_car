@@ -668,11 +668,13 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int right_line_start = 0;
     int right_line_end = 0;
 	int speed = 0;
+	int curve_speed = 60;
+	int straight_speed = 100;
 
-    int line_gap = 2;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
+    int line_gap = 4;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
     int tolerance = 20; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
     int angle=1500;
-    float weight = 500; // control angle weight
+    float weight = 300; // control angle weight
     float control_angle = 0;
 
     int left[240] = {0};
@@ -681,7 +683,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     float right_slope[2] = {0.0};
     
     
-    for(i = y_start_line ; i<y_end_line ; i=i-line_gap){
+    for(i = y_start_line ; i>y_end_line ; i=i-line_gap){
         if (turn_right_max || turn_left_max == true){           //직전 프레임이 최대조향각도로 주행중인 경우, 서칭 시작을 화면중심이 아닌 화면 가장자리에서 시작
             if (turn_right_max == true){
                 j = imgResult->width;
@@ -705,14 +707,14 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             }
         }
         else
-            for(j=imgResult->width ; j>=0 ; j--){                            //Searching the left line point
+            for(j=(imgResult->width)/2 ; j>0 ; j--){                            //Searching the left line point
                     left[y_start_line-i] = j;
                     if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
                         valid_left_amount++;
                         break;
                     }
             }
-            for(j=0 ; j<=imgResult->width ; j++){             //Searching the right line point
+            for(j=(imgResult->width)/2 ; j<imgResult->width ; j++){             //Searching the right line point
                     right[y_start_line-i] = j;
                     if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
                         valid_right_amount++;;
@@ -727,6 +729,9 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
                 turn_left_max = true;
             break;
             }
+        else
+        	turn_right_max = false;
+        	turn_left_max = false;
     }
 
     for(i=0;i<=valid_left_amount;i++){                        //좌측 유효 라인 포인트 범위 계산
@@ -736,6 +741,8 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             break;
         }
     }
+
+    printf("%d , %d\n",valid_left_amount,valid_right_amount);
     
     for(i=0;i<=valid_right_amount;i++){                        //우측 유효 라인 포인트 범위 계산
         if(right[i*line_gap]!=imgResult->width-1){
@@ -746,9 +753,9 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     }
 
     printf("\nleft line = ");
-    for(i=0;i<valid_left_amount;i++)printf("%d  ",left[left_line_start+i*line_gap]);
+    for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
     printf("\nright line = ");
-    for(i=0;i<valid_right_amount;i++)printf("%d ",right[right_line_start+i*line_gap]);
+    for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
     printf("\n");
 
     if(valid_left_amount > 1){
@@ -763,7 +770,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     
     control_angle = (left_slope[0] + right_slope[0])*weight;        //positive : turn right , negative : turn left
 
-    printf("%d ,%d, %d, %d \n",left[left_line_start] , left[left_line_start+(valid_left_amount-1)*line_gap],right[right_line_start] , right[right_line_start+(valid_right_amount-1)*line_gap]);
+    printf("%d ,%d, %d, %d \n",left[0] , left[(valid_left_amount-1)*line_gap],right[0] , right[(valid_right_amount-1)*line_gap]);
     printf("left_slope : %f ,right_slope : %f   ",left_slope[0],right_slope[0]);
     printf("\nvalid amount // left : %d , right : %d\n",valid_left_amount,valid_right_amount);
     printf("Control_Angle : %f \n",control_angle);
@@ -782,9 +789,9 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
 
 	#ifdef SPEED_CONTROL
         if(angle<1200&&angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
-	       speed = 50;
+	       speed = curve_speed;
        else
-            speed = 100;
+           speed = straight_speed;
 	    DesireSpeed_Write(speed);
 	#endif
 
