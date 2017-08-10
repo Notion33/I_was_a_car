@@ -643,8 +643,8 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 
 void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 {
-	int width = 320;
-	int height = 135;
+	int width = 60;
+	int height = 80;
 	int Left_Down = 0; // 3 사분면
 	int Right_Down = 0; // 4 사분면
 	int Left_Up = 0; // 2 사분면
@@ -655,8 +655,9 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	int Dif = 0, Dif1 = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
 	int Left_Sum = 0, Right_Sum = 0; //왼쪽, 오른쪽 픽셀 갯수
 	int Gap = 0; // 왼쪽 - 오른쪽 픽셀 갯수;
-	float weight = 0.5, weight2 = 0.2;// control angle weight
-
+	float weight = 1.5, weight2 = 0.8;// control angle weight
+	int straight_speed = 60;
+	int curve_speed = 40;
 									  //총 픽셀은 320 *240 = 76800
 
 
@@ -706,6 +707,7 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	}
 	printf("Left_Down = %d\n", Left_Down);
 	printf("Right_Down = %d\n", Right_Down);
+
 	Dif = Left_Down - Right_Down;
 	printf("Difference is %d\n", Dif);
 
@@ -721,34 +723,41 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	{
 		if (Dif1 <= 50 && Dif <= 50)
 		{
-			angle = 1500;
+				angle = 1500;
 		}
 
 		else if (Left_Down >= Right_Down && Left_Up <= Right_Up)
+		{
 			angle = 1500 - Gap * weight;
+		}
 		else if (Left_Sum + Right_Up > Right_Down && Dif1 > Dif && Dif1 > 0 && Left_Sum > Right_Sum)
 		{
-			angle = 1050;//1,2,3 사분면에 대부분의 픽셀이 있는 경우 오른쪽으로 틀어라!
+			angle = 1150;//1,2,3 사분면에 대부분의 픽셀이 있는 경우 오른쪽으로 틀어라!
 		}
 		else if (Left_Down >= Right_Down && Left_Up >= Right_Up)
+		{
 			angle = 1500 - Gap * weight2;//대부분 왼쪽 화면에만 픽셀이 보이는 경우
-
+		}
 	}// angle < 1500 turn right
 	else if (Gap < 0) // turn left 
 	{
 		if (Dif1 >= -50 && Dif >= -50)
 		{
-			angle = 1500;
+				angle = 1500;
 		}
 
 		else if (Left_Down <= Right_Down && Left_Up >= Right_Up)
+		{
 			angle = 1500 - Gap * weight;
+		}
 		else if (Right_Sum + Left_Up > Left_Down && Dif1 > Dif && Dif1 < 0 && Left_Sum < Right_Sum)
 		{
-			angle = 1950;//1,2,4 사분면에 대부분의 픽셀이 있는 경우 왼쪽으로 틀어라!
+			angle = 1850;//1,2,4 사분면에 대부분의 픽셀이 있는 경우 왼쪽으로 틀어라!
 		}
 		else if (Left_Down <= Right_Down && Left_Up <= Right_Up)
+		{
 			angle = 1500 - Gap * weight2;//대부분 오른쪽 화면에만 픽셀이 보이는 경우
+		}
 
 	}// angle > 1500 turn left
 
@@ -758,6 +767,15 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	angle = angle < 1000 ? 1000 : angle;*/
 
 	SteeringServoControl_Write(angle);
+
+#ifdef SPEED_CONTROL
+	if (angle<1200 || angle>1700)     
+		speed = curve_speed;
+	else
+		speed = straight_speed;
+	DesireSpeed_Write(speed);
+#endif
+
 }
 
 
@@ -802,7 +820,7 @@ void *ControlThread(void *unused)
 		// TODO : control steering angle based on captured image ---------------
 
 		IplImage * Image_copy = (IplImage*)cvClone(imgResult);
-		cvSetImageROI(Image_copy, cvRect(0, 45, 320, 180)); //x축 최소, y축 최소, x축 최대, y축 최대 순으로 
+		cvSetImageROI(Image_copy, cvRect(130, 100, 190, 180)); //x축 최소, y축 최소, x축 최대, y축 최대 순으로 
 
 		Find_Center(Image_copy, imgCenter); // TY add 6.27
 											// to find the center line
@@ -900,10 +918,10 @@ int main(int argc, char *argv[])
 	CameraYServoControl_Write(angle);
 
 	sleep(1);
-	/*								//Servo restoration(disable)
+							//Servo restoration(disable)
 	angle = 1500;
 	SteeringServoControl_Write(angle);
-	CameraXServoControl_Write(angle);
+	/*CameraXServoControl_Write(angle);
 	CameraYServoControl_Write(angle);
 	*/
 #endif  
@@ -922,7 +940,7 @@ int main(int argc, char *argv[])
 	gain = 20;
 	SpeedPIDProportional_Write(gain);
 
-	speed = 40;
+	speed = 0;
 	DesireSpeed_Write(speed);
 
 #endif
