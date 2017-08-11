@@ -33,7 +33,7 @@
 
 ////////////////////////////////////////////////////////////////////////////
 #include "car_lib.h"    //TY add 6.27
-#include "stdbool.h"	//TY add
+#include "stdbool.h"    //TY add
 
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL
@@ -667,9 +667,10 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int left_line_end = 0;
     int right_line_start = 0;
     int right_line_end = 0;
-	int speed = 0;
-	int curve_speed = 60;		//default : 60
-	int straight_speed = 60;	//default : 90
+    int bottom_line = 200;
+    int speed = 0;
+    int curve_speed = 60;       //default : 60
+    int straight_speed = 60;    //default : 90
 
     int line_gap = 4;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
     int tolerance = 40; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
@@ -681,102 +682,92 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int right[240] = {imgResult->width-1};
     float left_slope[2] = {0.0};
     float right_slope[2] = {0.0};
-    
-    
+
+    bool continue_turn_left = false;
+    bool continue_turn_right = false;
+
     for(i = y_start_line ; i>y_end_line ; i=i-line_gap){
-        if (turn_right_max || turn_left_max == true){           //직전 프레임이 최대조향각도로 주행중인 경우, 서칭 시작을 화면중심이 아닌 화면 가장자리에서 시작
-            if (turn_right_max == true){
-                j = imgResult->width;
-                for( ; j>=0 ; j--){                            //Searching the left line point
-                    left[y_start_line-i] = j;
-                    if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                        valid_left_amount++;
-                        break;
-                    }
+        for(j=(imgResult->width)/2 ; j>0 ; j--){                            //Searching the left line point
+                left[y_start_line-i] = j;
+                if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                    valid_left_amount++;
+                    break;
                 }
-            }
-            else if (turn_left_max == true){
-                j = 0 ;
-                for( ; j<=imgResult->width ; j++){             //Searching the right line point
-                    right[y_start_line-i] = j;
-                    if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                        valid_right_amount++;;
-                        break;
-                    }
-                }
-            }
         }
-        else
-            for(j=(imgResult->width)/2 ; j>0 ; j--){                            //Searching the left line point
-                    left[y_start_line-i] = j;
-                    if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                        valid_left_amount++;
-                        break;
-                    }
-            }
-            for(j=(imgResult->width)/2 ; j<imgResult->width ; j++){             //Searching the right line point
-                    right[y_start_line-i] = j;
-                    if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                        valid_right_amount++;;
-                        break;
-                    }
-            }
-
-        if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){                    //검출된 좌측혹은 우측차선이 화면중앙에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
+        for(j=(imgResult->width)/2 ; j<imgResult->width ; j++){             //Searching the right line point
+                right[y_start_line-i] = j;
+                if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                    valid_right_amount++;;
+                    break;
+                }
+        }
+        if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
             if(valid_left_amount > valid_right_amount)
-                turn_right_max = true;
+                continue_turn_right = true;
             else if(valid_right_amount > valid_left_amount)
-                turn_left_max = true;
+                continue_turn_left = true;
             break;
+        }
+    }
+
+    if (continue_turn_left||continue_turn_right == false){          //turn max flag가 false인 경우 1. 직선 2. 과다곡선
+        if(turn_left_max == true){                                  //2. 과다곡선인 경우, 차선이 정상검출범위내로 돌아올때까지 턴 유지
+            if(left[0]<(imgResult->width/2)-tolerance)
+                continue_turn_left = false;
+            else
+                continue_turn_left = true;
+        }
+        else if (turn_right_max ==true){
+            if(right[0]>(imgResult->width/2)+tolerance)
+                continue_turn_right = false;
+            else
+                continue_turn_right - true
+        }
+        else{                                                         //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
+            for(i=0;i<=valid_left_amount;i++){                        //좌측 차선 검출
+                if(left[i*line_gap]!=0){
+                    left_line_start = y_start_line - i * line_gap;
+                    left_line_end = y_start_line - (i + valid_left_amount) * line_gap;
+                    break;
+                }
             }
-        else
-        	turn_right_max = false;
-        	turn_left_max = false;
-    }
+            for(i=0;i<=valid_right_amount;i++){                        //우측 차선 검출
+                if(right[i*line_gap]!=imgResult->width-1){
+                    right_line_start = y_start_line - i * line_gap;
+                    right_line_end = y_start_line - (i + valid_right_amount) * line_gap;
+                    break;
+                }
+            }
 
-    for(i=0;i<=valid_left_amount;i++){                        //좌측 유효 라인 포인트 범위 계산
-        if(left[i*line_gap]!=0){
-            left_line_start = y_start_line - i * line_gap;
-            left_line_end = y_start_line - (i + valid_left_amount) * line_gap;
-            break;
+            printf("\nleft line = ");
+            for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
+            printf("    valid left line = %d\n",valid_left_amount)
+            printf("right line = ");
+            for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
+            printf("    valid left line = %d\n",valid_left_amount)
+
+            if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
+                left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
+            }
+            else left_slope[0] = 0;
+
+            if(valid_right_amount > 1){                                          //우측 차선 기울기 계산
+                right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
+            }
+            else right_slope[0] = 0;
+            
+            control_angle = (left_slope[0] + right_slope[0])*weight;        //차량 조향 기울기 계산
+
+            printf("left[0] = %d left[last] = %d right[0] = %d right[last] = %d \n",left[0] , left[(valid_left_amount-1)*line_gap],right[0] , right[(valid_right_amount-1)*line_gap]);
+            printf("left_slope : %f ,right_slope : %f   \n",left_slope[0],right_slope[0]);
+            printf("Control_Angle : %f \n",control_angle);
         }
     }
 
-    printf("%d , %d\n",valid_left_amount,valid_right_amount);
-    
-    for(i=0;i<=valid_right_amount;i++){                        //우측 유효 라인 포인트 범위 계산
-        if(right[i*line_gap]!=imgResult->width-1){
-            right_line_start = y_start_line - i * line_gap;
-            right_line_end = y_start_line - (i + valid_right_amount) * line_gap;
-            break;
-        }
-    }
+    turn_left_max = continue_turn_left;             //현재 프레임에서 최대조향이라고 판단할 경우, 최대조향 전역변수 set.
+    turn_right_max = continue_turn_right;
 
-    printf("\nleft line = ");
-    for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
-    printf("\nright line = ");
-    for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
-    printf("\n");
-
-    if(valid_left_amount > 1){
-        left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
-    }
-    else left_slope[0] = 0;
-
-    if(valid_right_amount > 1){
-        right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
-    }
-    else right_slope[0] = 0;
-    
-    control_angle = (left_slope[0] + right_slope[0])*weight;        //positive : turn right , negative : turn left
-
-    printf("%d ,%d, %d, %d \n",left[0] , left[(valid_left_amount-1)*line_gap],right[0] , right[(valid_right_amount-1)*line_gap]);
-    printf("left_slope : %f ,right_slope : %f   ",left_slope[0],right_slope[0]);
-    printf("\nvalid amount // left : %d , right : %d\n",valid_left_amount,valid_right_amount);
-    printf("Control_Angle : %f \n",control_angle);
-
-    //steer servo set
-    if (turn_left_max == true)
+    if (turn_left_max == true)                      //차량 조향각도 판별
         angle = 2000;
     else if (turn_right_max == true)
         angle = 1000;
@@ -784,16 +775,15 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
         angle = 1500 + control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
         angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
     }
-    
     SteeringServoControl_Write(angle);
 
-	#ifdef SPEED_CONTROL
-        if(angle<1200||angle>1700)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
-	       speed = curve_speed;
+    #ifdef SPEED_CONTROL
+        if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
+           speed = curve_speed;
         else
-           speed = straight_speed;
-	DesireSpeed_Write(speed);
-	#endif
+           speed = straight_speed
+    DesireSpeed_Write(speed);
+    #endif
 
 }
 
@@ -916,52 +906,52 @@ int main(int argc, char *argv[])
 
 
 
-	// 3. servo control ----------------------------------------------------------
-	#ifdef SERVO_CONTROL                                    //TY add 6.27
+    // 3. servo control ----------------------------------------------------------
+    #ifdef SERVO_CONTROL                                    //TY add 6.27
 
-	    printf("0. Car initializing \n");
-	    CarControlInit();
+        printf("0. Car initializing \n");
+        CarControlInit();
 
-	    
-	    printf("\n\n 0.1 servo control\n");
+        
+        printf("\n\n 0.1 servo control\n");
 
-	    //camera x servo set
-	    angle = 1500;                       // Range : 600(Right)~1200(default)~1800(Left)
-	    CameraXServoControl_Write(angle);
-	    //camera y servo set
-	    
-	    angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
-	    CameraYServoControl_Write(angle);    
-	    
-	    /*                              //Servo restoration(disable)
-	    angle = 1500;
-	    SteeringServoControl_Write(angle);
-	    CameraXServoControl_Write(angle);
-	    CameraYServoControl_Write(angle); 
-	    */
-	#endif  
+        //camera x servo set
+        angle = 1500;                       // Range : 600(Right)~1200(default)~1800(Left)
+        CameraXServoControl_Write(angle);
+        //camera y servo set
+        
+        angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
+        CameraYServoControl_Write(angle);    
+        
+        /*                              //Servo restoration(disable)
+        angle = 1500;
+        SteeringServoControl_Write(angle);
+        CameraXServoControl_Write(angle);
+        CameraYServoControl_Write(angle); 
+        */
+    #endif  
 
 
-	#ifdef SPEED_CONTROL
-	    // 2. speed control ---------------------------------------------------------- TY
-	    printf("\n\nspeed control\n");
-	    PositionControlOnOff_Write(UNCONTROL); // 엔코더 안쓰고 주행할 경우 UNCONTROL세팅
-	    //control on/off
-	    SpeedControlOnOff_Write(CONTROL);
-	    //speed controller gain set 		   // PID range : 1~50 default : 20
-	    //P-gain
-	    gain = 20;
-	    SpeedPIDProportional_Write(gain);
-	    //I-gain
-	    gain = 20;
-	    SpeedPIDIntegral_Write(gain);
-	    //D-gain
-	    gain = 20;
-	    SpeedPIDDifferential_Write(gain);
-	    //speed set
-	    speed = 0;
-	    DesireSpeed_Write(speed);
-	#endif
+    #ifdef SPEED_CONTROL
+        // 2. speed control ---------------------------------------------------------- TY
+        printf("\n\nspeed control\n");
+        PositionControlOnOff_Write(UNCONTROL); // 엔코더 안쓰고 주행할 경우 UNCONTROL세팅
+        //control on/off
+        SpeedControlOnOff_Write(CONTROL);
+        //speed controller gain set            // PID range : 1~50 default : 20
+        //P-gain
+        gain = 20;
+        SpeedPIDProportional_Write(gain);
+        //I-gain
+        gain = 20;
+        SpeedPIDIntegral_Write(gain);
+        //D-gain
+        gain = 20;
+        SpeedPIDDifferential_Write(gain);
+        //speed set
+        speed = 0;
+        DesireSpeed_Write(speed);
+    #endif
 
     printf("1. Create NvMedia capture \n");
     // Create NvMedia capture(s)
@@ -1149,10 +1139,10 @@ int main(int argc, char *argv[])
 
     err = 0;
 
-    #ifdef SPEED_CONTROL	//TY ADD
-    	speed = 0;
-		DesireSpeed_Write(speed);
-	#endif
+    #ifdef SPEED_CONTROL    //TY ADD
+        speed = 0;
+        DesireSpeed_Write(speed);
+    #endif
 
 fail: // Run down sequence
     // Destroy vip threads and stream start/done semaphores
