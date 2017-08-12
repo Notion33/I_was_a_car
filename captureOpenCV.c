@@ -710,6 +710,7 @@ void StartMission(){
     } else if (go >= go_th){
       printf("\n\nCar is now Ready! Start the Mission!!\n\n");
       RunTheMission();
+      flag = 1;
     }else if (ready >= ready_th && isStart(imgResult)==0){   // 손으로 일정 시간 가리다 떼는 것을 확인
       go += 1;
       printf("go : %d / %d\n", go, go_th);
@@ -756,7 +757,7 @@ int isStart(IplImage* imgResult){
 		printf("startpx : %d, area: %d, threshold : %d\n",
 			   	startpx,
 			   	imgResult->height*imgResult->width/12,
-			   	imgResult->height*imgResult->width/48);
+			   	imgResult->height*imgResult->width/32);
 		printf("Hysteresis!!!\n");
   } else {
 		printf("startpx : %d, area: %d, threshold : %d\n",
@@ -769,7 +770,7 @@ int isStart(IplImage* imgResult){
   return flag;
 }
 
-static int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
+int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
 {
     NvMediaVideoSurfaceMap surfMap;
     unsigned int resWidth, resHeight;
@@ -915,6 +916,7 @@ void PrepareMission(){
   Alarm_Write(ON);
   usleep(1000000);
   Alarm_Write(OFF);
+  Winker_Write(ALL_OFF);
 }
 
 //END OF StartMission
@@ -1267,6 +1269,8 @@ int main(int argc, char *argv[])
     #ifdef SPEED_CONTROL
       speed = 0;
       DesireSpeed_Write(speed);
+
+      Winker_Write(ALL_OFF);
     #endif
 
 fail: // Run down sequence
