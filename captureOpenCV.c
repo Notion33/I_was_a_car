@@ -661,8 +661,8 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)
 void *ControlThread(void *unused)
 {
     int i=0;
-    char fileName[30];
-    char fileName1[30];         // TY add 6.27
+    char fileName[40];
+    char fileName1[40];         // TY add 6.27
     //char fileName2[30];           // TY add 6.27
     NvMediaTime pt1 ={0}, pt2 = {0};
     NvU64 ptime1, ptime2;
