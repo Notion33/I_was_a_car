@@ -668,9 +668,10 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int right_line_start = 0;
     int right_line_end = 0;
     int bottom_line = 200;
+    int line_width = 70;
     int speed = 0;
-    int curve_speed = 40;       //default : 60
-    int straight_speed = 40;    //default : 90
+    int curve_speed = 70;       //default : 60
+    int straight_speed = 100;    //default : 90
 
     int line_gap = 4;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
     int tolerance = 40; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
@@ -702,28 +703,53 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
                 }
         }
         if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
-            if(valid_left_amount > valid_right_amount)
+            if(valid_left_amount > valid_right_amount && turn_left_max == false){
+            	printf("continue_turn_right set!\n");
                 continue_turn_right = true;
-            else if(valid_right_amount > valid_left_amount)
+            }
+            else if(valid_right_amount > valid_left_amount && turn_right_max == false){
+            	printf("continue_turn_left set!\n");
                 continue_turn_left = true;
+            }
+            printf("valid_left_amount = %d , valid_right_amount = %d \n",valid_left_amount,valid_right_amount);
             break;
         }
     }
 
     if (continue_turn_left == false && continue_turn_right == false){          //turn max flag가 false인 경우 1. 직선 2. 과다곡선
+        printf("continue_turn_flag_off__1__\n");
         if(turn_left_max == true){                                  //2. 과다곡선인 경우, 차선이 정상검출범위내로 돌아올때까지 턴 유지
-            if(left[0]<(imgResult->width/2)-tolerance)
-                continue_turn_left = false;
-            else
-                continue_turn_left = true;
+            for(i = imgResult->widthStep -1 ; i > (imgResult->width/2) + line_width ; i--){
+            	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255){
+                	continue_turn_left = false;
+                	printf("continue_turn_flag_off__2_left__\n");
+                    break;
+                }
+                else{
+                	printf("continue_turn_flag_on__2_left__\n");
+                	continue_turn_left = true;
+                	break;
+                }
+            }
         }
         else if (turn_right_max ==true){
-            if(right[0]>(imgResult->width/2)+tolerance)
-                continue_turn_right = false;
-            else
-                continue_turn_right - true;
+            for(i = 0 ; i < (imgResult->width/2) - line_width ; i++){
+            	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255){
+                	continue_turn_right = false;
+                	printf("continue_turn_flag_off__2_right__\n");
+                    break;
+                }
+                else{
+                	printf("continue_turn_flag_on__2_right__\n");
+                	continue_turn_right = true;
+                	break;
+                }
+            }
         }
-        else{                                                         //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
+    }
+
+    if (continue_turn_left == false && continue_turn_right == false){   //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
+            printf("continue_turn_flag_off__3__\n");
             for(i=0;i<=valid_left_amount;i++){                        //좌측 차선 검출
                 if(left[i*line_gap]!=0){
                     left_line_start = y_start_line - i * line_gap;
@@ -759,10 +785,9 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             control_angle = (left_slope[0] + right_slope[0])*weight;        //차량 조향 기울기 계산
 
             printf("left[0] = %d left[last] = %d right[0] = %d right[last] = %d \n",left[0] , left[(valid_left_amount-1)*line_gap],right[0] , right[(valid_right_amount-1)*line_gap]);
-            printf("left_slope : %f ,right_slope : %f   \n",left_slope[0],right_slope[0]);
+            printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
             printf("Control_Angle : %f \n",control_angle);
         }
-    }
 
     turn_left_max = continue_turn_left;             //현재 프레임에서 최대조향이라고 판단할 경우, 최대조향 전역변수 set.
     turn_right_max = continue_turn_right;
@@ -785,14 +810,18 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     DesireSpeed_Write(speed);
     #endif
 
+    for(i=0;i<imgResult->widthStep;i++){
+    	imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
+    }
+
 }
 
 
 void *ControlThread(void *unused)
 {
     int i=0;
-    char fileName[30];
-    char fileName1[30];         // TY add 6.27
+    char fileName[40];
+    char fileName1[40];         // TY add 6.27
     //char fileName2[30];           // TY add 6.27
     NvMediaTime pt1 ={0}, pt2 = {0};
     NvU64 ptime1, ptime2;
