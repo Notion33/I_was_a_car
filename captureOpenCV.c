@@ -428,11 +428,11 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
             num = 3*k+3*resWidth*(j);
             bin_num = j*imgResult->widthStep + k;
             if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
-                // í°ìƒ‰ìœ¼ë¡œ
+                // Èò»öÀ¸·Î
                 imgResult->imageData[bin_num] = (char)255;
             }
             else {
-                // ê²€ì •ìƒ‰ìœ¼ë¡œ
+                // °ËÁ¤»öÀ¸·Î
                 imgResult->imageData[bin_num] = (char)0;
             }            
 
@@ -703,12 +703,12 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			}
 		}
 
-		for(y = 50;y<180;y++)
+		for(y = 90;y<180;y++)
 			if (imgResult->imageData[y * width + 160] == 255)
 				centerofpixel++;
 
 
-		if(!(finl||finr)){ //ì„  íƒì§€ xì¸ ê²½ìš° 
+		if(!(finl||finr)){ //¼± Å½Áö xÀÎ °æ¿ì 
 			Alarm_Write(ON);
     		usleep(100000);
     		Alarm_Write(OFF);
@@ -729,7 +729,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		
 		SteeringServoControl_Write(angle);//motor control 
 
-		speed = 40;
+		speed = 60;
 		DesireSpeed_Write(speed);
 }
 
@@ -1123,4 +1123,3 @@ fail: // Run down sequence
     
     return err;
 }
-
