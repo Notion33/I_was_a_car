@@ -37,7 +37,7 @@
 
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL
-//#define IMGSAVE
+#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -506,7 +506,7 @@ static unsigned int CaptureThread(void *params)
             break;
         }
       
-        if(i%1 == 0)                        // once in three loop = 10 Hz
+        if(i%3 == 0)                        // once in three loop = 10 Hz
             pthread_cond_signal(&cond);        // ControlThread() is called
 
         pthread_mutex_unlock(&mutex);        // for ControlThread()
@@ -669,8 +669,8 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int right_line_end = 0;
     int bottom_line = 200;
     int speed = 0;
-    int curve_speed = 60;       //default : 60
-    int straight_speed = 60;    //default : 90
+    int curve_speed = 40;       //default : 60
+    int straight_speed = 40;    //default : 90
 
     int line_gap = 4;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
     int tolerance = 40; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
@@ -710,7 +710,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
         }
     }
 
-    if (continue_turn_left||continue_turn_right == false){          //turn max flag가 false인 경우 1. 직선 2. 과다곡선
+    if (continue_turn_left == false && continue_turn_right == false){          //turn max flag가 false인 경우 1. 직선 2. 과다곡선
         if(turn_left_max == true){                                  //2. 과다곡선인 경우, 차선이 정상검출범위내로 돌아올때까지 턴 유지
             if(left[0]<(imgResult->width/2)-tolerance)
                 continue_turn_left = false;
@@ -721,7 +721,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             if(right[0]>(imgResult->width/2)+tolerance)
                 continue_turn_right = false;
             else
-                continue_turn_right - true
+                continue_turn_right - true;
         }
         else{                                                         //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
             for(i=0;i<=valid_left_amount;i++){                        //좌측 차선 검출
@@ -741,10 +741,10 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
 
             printf("\nleft line = ");
             for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
-            printf("    valid left line = %d\n",valid_left_amount)
+            printf("    valid left line = %d\n",valid_left_amount);
             printf("right line = ");
             for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
-            printf("    valid left line = %d\n",valid_left_amount)
+            printf("    valid left line = %d\n",valid_left_amount);
 
             if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
                 left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
@@ -781,7 +781,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
         if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
            speed = curve_speed;
         else
-           speed = straight_speed
+           speed = straight_speed;
     DesireSpeed_Write(speed);
     #endif
 
@@ -854,7 +854,7 @@ void *ControlThread(void *unused)
             
         GetTime(&pt2);
         ptime2 = (NvU64)pt2.tv_sec * 1000000000LL + (NvU64)pt2.tv_nsec;
-        printf("--------------------------------operation time=%llu.%09llu[s]\n", (ptime2-ptime1)/1000000000LL, (ptime2-ptime1)%1000000000LL);  
+        printf("Frame : %d ------------------------operation time=%llu.%09llu[s]\n",i, (ptime2-ptime1)/1000000000LL, (ptime2-ptime1)%1000000000LL);  
         
          
         i++;
@@ -911,24 +911,14 @@ int main(int argc, char *argv[])
 
         printf("0. Car initializing \n");
         CarControlInit();
-
-        
         printf("\n\n 0.1 servo control\n");
-
-        //camera x servo set
         angle = 1500;                       // Range : 600(Right)~1200(default)~1800(Left)
         CameraXServoControl_Write(angle);
-        //camera y servo set
-        
         angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
         CameraYServoControl_Write(angle);    
-        
-        /*                              //Servo restoration(disable)
         angle = 1500;
         SteeringServoControl_Write(angle);
-        CameraXServoControl_Write(angle);
-        CameraYServoControl_Write(angle); 
-        */
+
     #endif  
 
 
