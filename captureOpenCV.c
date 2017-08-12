@@ -529,12 +529,12 @@ static int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
             num = 3*k+3*resWidth*(j);
             bin_num = j*imgResult->widthStep + k;
             if(v>45   &&   v<130  ) {
-                // 검은색
-                imgResult->imageData[bin_num] = (char)0;
-            }
-            else {
                 // 흰색
                 imgResult->imageData[bin_num] = (char)255;
+            }
+            else {
+                // 검은색
+                imgResult->imageData[bin_num] = (char)0;
             }
 
             img->imageData[num] = y;
@@ -892,7 +892,7 @@ void StartMission(){
     cvSaveImage(fileName_result, imgResult, 0);
     #endif
 
-    if(isStart(imgRe sult)==1){ // 손으로 가린 것을 확인
+    if(isStart(imgResult)==1){ // 손으로 가린 것을 확인
       ready += 1;
       printf("ready : %d / %d\n", ready, go);
     } else if (ready >= go && isStart(imgResult)==0){   // 손으로 일정 시간 가리다 떼는 것을 확인
