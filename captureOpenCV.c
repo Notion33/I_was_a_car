@@ -841,7 +841,7 @@ static int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
             // - 39 , 111 , 51, 241
             num = 3*k+3*resWidth*(j);
             bin_num = j*imgResult->widthStep + k;
-            if(v>45   &&   v<130  ) {
+            if(v>45   &&   v<=132  ) {
                 // 검은색
                 imgResult->imageData[bin_num] = (char)0;
             }
