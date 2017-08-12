@@ -40,6 +40,7 @@
 #define SERVO_CONTROL     // TY add 6.27
               // To servo control(steering & camera position)
 #define IMGSAVE
+#define SPEED_CONTROL
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -456,100 +457,6 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
     return 1;
 }
 
-static int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
-{
-    NvMediaVideoSurfaceMap surfMap;
-    unsigned int resWidth, resHeight;
-    unsigned char y,u,v;
-    int num;
-
-    if(NvMediaVideoSurfaceLock(capSurf, &surfMap) != NVMEDIA_STATUS_OK)
-    {
-        MESSAGE_PRINTF("NvMediaVideoSurfaceLock() failed in Frame2Ipl()\n");
-        return 0;
-    }
-
-    unsigned char *pY[2] = {surfMap.pY, surfMap.pY2};
-    unsigned char *pU[2] = {surfMap.pU, surfMap.pU2};
-    unsigned char *pV[2] = {surfMap.pV, surfMap.pV2};
-    unsigned int pitchY[2] = {surfMap.pitchY, surfMap.pitchY2};
-    unsigned int pitchU[2] = {surfMap.pitchU, surfMap.pitchU2};
-    unsigned int pitchV[2] = {surfMap.pitchV, surfMap.pitchV2};
-    unsigned int i, j, k, x;
-    unsigned int stepY, stepU, stepV;
-
-    unsigned int bin_num=0;
-
-    resWidth = RESIZE_WIDTH;
-    resHeight = RESIZE_HEIGHT;
-
-    // Frame2Ipl
-    img->nSize = 112;
-    img->ID = 0;
-    img->nChannels = 3;
-    img->alphaChannel = 0;
-    img->depth = IPL_DEPTH_8U;    // 8
-    img->colorModel[0] = 'R';
-    img->colorModel[1] = 'G';
-    img->colorModel[2] = 'B';
-    img->channelSeq[0] = 'B';
-    img->channelSeq[1] = 'G';
-    img->channelSeq[2] = 'R';
-    img->dataOrder = 0;
-    img->origin = 0;
-    img->align = 4;
-    img->width = resWidth;
-    img->height = resHeight;
-    img->imageSize = resHeight*resWidth*3;
-    img->widthStep = resWidth*3;
-    img->BorderMode[0] = 0;
-    img->BorderMode[1] = 0;
-    img->BorderMode[2] = 0;
-    img->BorderMode[3] = 0;
-    img->BorderConst[0] = 0;
-    img->BorderConst[1] = 0;
-    img->BorderConst[2] = 0;
-    img->BorderConst[3] = 0;
-
-    stepY = 0;
-    stepU = 0;
-    stepV = 0;
-    i = 0;
-
-     for(j = 0; j < resHeight; j++)
-    {
-        for(k = 0; k < resWidth; k++)
-        {
-            x = ResTableX_720To320[k];
-            y = pY[i][stepY+x];
-            u = pU[i][stepU+x/2];
-            v = pV[i][stepV+x/2];
-
-            // - 39 , 111 , 51, 241
-            num = 3*k+3*resWidth*(j);
-            bin_num = j*imgResult->widthStep + k;
-            if(v>45   &&   v<130  ) {
-                // 흰색
-                imgResult->imageData[bin_num] = (char)255;
-            }
-            else {
-                // 검은색
-                imgResult->imageData[bin_num] = (char)0;
-            }
-
-            img->imageData[num] = y;
-            img->imageData[num+1] = u;
-            img->imageData[num+2] = v;
-
-        }
-        stepY += pitchY[i];
-        stepU += pitchU[i];
-        stepV += pitchV[i];
-    }
-    NvMediaVideoSurfaceUnlock(capSurf);
-    return 1;
-}
-
 static unsigned int CaptureThread(void *params)
 {
     int i = 0;
@@ -751,12 +658,73 @@ void Find_Center(IplImage* imgResult, IplImage* imgCenter)
     SteeringServoControl_Write(angle);
 }
 
-////////////////////////////////////
-// NYC 추가
-// Starting Mission 함수
-// 작업중
-// TODO 방향따라 다른 속도 플래그 추가
-////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////// NYC 추가
+////////////////////////////////////// Starting Mission 함수
+////////////////////////////////////// 작업중
+////////////////////////////////////// TODO 방향따라 다른 속도 플래그 추가
+////////////////////////////////////////////////////////////////////////
+void StartMission(){
+
+  int i=0;
+  char fileName[40];
+  char fileName_result[40];
+  NvMediaTime pt1 ={0}, pt2 = {0};
+  NvU64 ptime1, ptime2;
+  struct timespec;
+
+  IplImage* imgOrigin;
+  IplImage* imgResult;
+
+  // cvCreateImage
+  imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
+  imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+
+  cvZero(imgResult);          // TY add 6.27
+
+  int flag = 0;       //stop flag
+  int ready = 0;      //ready는 손으로 가리고 있을때
+  int ready_th = 5;   //ready가 시작할 threshold
+  int go = 0;         //손을 땐 후 증가
+  int go_th = 3;      //go의 threshold
+  while(flag == 0){   //flag가 정지(0)인 동안 계속 검사
+    pthread_mutex_lock(&mutex);
+    pthread_cond_wait(&cond, &mutex);
+    GetTime(&pt1);
+    ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+    //Frame2Ipl(imgOrigin, imgResult);
+    Frame2Ipl_Start(imgOrigin, imgResult);
+    pthread_mutex_unlock(&mutex);
+
+    //이미지 디버깅
+    #ifdef IMGSAVE
+    sprintf(fileName, "captureImage/Start_imgOrigin%d.png", i);
+    sprintf(fileName_result, "captureImage/Start_imgResult%d.png", i);
+    cvSaveImage(fileName, imgOrigin, 0);
+    cvSaveImage(fileName_result, imgResult, 0);
+    #endif
+
+    if(isStart(imgResult)==1){ // 손으로 가린 것을 확인
+      ready += 1;
+      printf("ready : %d / %d\n", ready, ready_th);
+    } else if (go >= go_th){
+      printf("\n\nCar is now Ready! Start the Mission!!\n\n");
+      RunTheMission();
+    }else if (ready >= ready_th && isStart(imgResult)==0){   // 손으로 일정 시간 가리다 떼는 것을 확인
+      go += 1;
+      printf("go : %d / %d\n", go, go_th);
+      //flag = 1;
+    }
+    // else {
+    //   flag = 1;
+    //   printf("\n\nCar is Ready! Start the Mission!!\n\n");
+    //   RunTheMission();
+    // }
+
+    i++;
+  }
+}
+
 int isStart(IplImage* imgResult){
   int flag = 0; // Stop상태
   int index = 0;
@@ -783,13 +751,13 @@ int isStart(IplImage* imgResult){
 			   	imgResult->height*imgResult->width/12,
 			   	imgResult->height*imgResult->width/16);
 		printf("flag is true! Run the car\n");
-	} else if(startpx > imgResult->height*imgResult->width/32){  //NYC added 8.5
+	} else if(startpx > imgResult->height*imgResult->width/48){  //NYC added 8.5
     flag = 2; //히스테리시스 적용을 위한 ready 상태
 		printf("startpx : %d, area: %d, threshold : %d\n",
 			   	startpx,
 			   	imgResult->height*imgResult->width/12,
-			   	imgResult->height*imgResult->width/16);
-		printf("flag is not enough! But Ready the car\n");
+			   	imgResult->height*imgResult->width/48);
+		printf("Hysteresis!!!\n");
   } else {
 		printf("startpx : %d, area: %d, threshold : %d\n",
 			   	startpx,
@@ -799,6 +767,100 @@ int isStart(IplImage* imgResult){
 	}
 
   return flag;
+}
+
+static int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
+{
+    NvMediaVideoSurfaceMap surfMap;
+    unsigned int resWidth, resHeight;
+    unsigned char y,u,v;
+    int num;
+
+    if(NvMediaVideoSurfaceLock(capSurf, &surfMap) != NVMEDIA_STATUS_OK)
+    {
+        MESSAGE_PRINTF("NvMediaVideoSurfaceLock() failed in Frame2Ipl()\n");
+        return 0;
+    }
+
+    unsigned char *pY[2] = {surfMap.pY, surfMap.pY2};
+    unsigned char *pU[2] = {surfMap.pU, surfMap.pU2};
+    unsigned char *pV[2] = {surfMap.pV, surfMap.pV2};
+    unsigned int pitchY[2] = {surfMap.pitchY, surfMap.pitchY2};
+    unsigned int pitchU[2] = {surfMap.pitchU, surfMap.pitchU2};
+    unsigned int pitchV[2] = {surfMap.pitchV, surfMap.pitchV2};
+    unsigned int i, j, k, x;
+    unsigned int stepY, stepU, stepV;
+
+    unsigned int bin_num=0;
+
+    resWidth = RESIZE_WIDTH;
+    resHeight = RESIZE_HEIGHT;
+
+    // Frame2Ipl
+    img->nSize = 112;
+    img->ID = 0;
+    img->nChannels = 3;
+    img->alphaChannel = 0;
+    img->depth = IPL_DEPTH_8U;    // 8
+    img->colorModel[0] = 'R';
+    img->colorModel[1] = 'G';
+    img->colorModel[2] = 'B';
+    img->channelSeq[0] = 'B';
+    img->channelSeq[1] = 'G';
+    img->channelSeq[2] = 'R';
+    img->dataOrder = 0;
+    img->origin = 0;
+    img->align = 4;
+    img->width = resWidth;
+    img->height = resHeight;
+    img->imageSize = resHeight*resWidth*3;
+    img->widthStep = resWidth*3;
+    img->BorderMode[0] = 0;
+    img->BorderMode[1] = 0;
+    img->BorderMode[2] = 0;
+    img->BorderMode[3] = 0;
+    img->BorderConst[0] = 0;
+    img->BorderConst[1] = 0;
+    img->BorderConst[2] = 0;
+    img->BorderConst[3] = 0;
+
+    stepY = 0;
+    stepU = 0;
+    stepV = 0;
+    i = 0;
+
+     for(j = 0; j < resHeight; j++)
+    {
+        for(k = 0; k < resWidth; k++)
+        {
+            x = ResTableX_720To320[k];
+            y = pY[i][stepY+x];
+            u = pU[i][stepU+x/2];
+            v = pV[i][stepV+x/2];
+
+            // - 39 , 111 , 51, 241
+            num = 3*k+3*resWidth*(j);
+            bin_num = j*imgResult->widthStep + k;
+            if(v>45   &&   v<130  ) {
+                // 검은색
+                imgResult->imageData[bin_num] = (char)0;
+            }
+            else {
+                // 흰색 = 손바닥
+                imgResult->imageData[bin_num] = (char)255;
+            }
+
+            img->imageData[num] = y;
+            img->imageData[num+1] = u;
+            img->imageData[num+2] = v;
+
+        }
+        stepY += pitchY[i];
+        stepU += pitchU[i];
+        stepV += pitchV[i];
+    }
+    NvMediaVideoSurfaceUnlock(capSurf);
+    return 1;
 }
 
 //NYC added 8.5
@@ -855,60 +917,8 @@ void PrepareMission(){
   Alarm_Write(OFF);
 }
 
-void StartMission(){
-
-  int i=0;
-  char fileName[30];
-  char fileName_result[30];
-  NvMediaTime pt1 ={0}, pt2 = {0};
-  NvU64 ptime1, ptime2;
-  struct timespec;
-
-  IplImage* imgOrigin;
-  IplImage* imgResult;
-
-  // cvCreateImage
-  imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
-  imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
-
-  cvZero(imgResult);          // TY add 6.27
-
-  int flag = 0;       //stop flag
-  int ready = 0;      //ready는 손으로 가리고 있을때
-  int go = 7;         //ready가 시작할 threshold
-  while(flag == 0){   //flag가 정지(0)인 동안 계속 검사
-    pthread_mutex_lock(&mutex);
-    pthread_cond_wait(&cond, &mutex);
-    GetTime(&pt1);
-    ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
-    Frame2Ipl_Start(imgOrigin, imgResult);
-    pthread_mutex_unlock(&mutex);
-
-    //이미지 디버깅
-    #ifdef IMGSAVE
-    sprintf(fileName, "captureImage/Start_imgOrigin%d.png", i);
-    sprintf(fileName_result, "captureImage/Start_imgResult%d.png", i);
-    cvSaveImage(fileName, imgOrigin, 0);
-    cvSaveImage(fileName_result, imgResult, 0);
-    #endif
-
-    if(isStart(imgResult)==1){ // 손으로 가린 것을 확인
-      ready += 1;
-      printf("ready : %d / %d\n", ready, go);
-    } else if (ready >= go && isStart(imgResult)==0){   // 손으로 일정 시간 가리다 떼는 것을 확인
-      flag = 1;
-      printf("\n\nCar is now Ready! Start the Mission!!\n\n");
-      RunTheMission();
-    }
-    // else {
-    //   flag = 1;
-    //   printf("\n\nCar is Ready! Start the Mission!!\n\n");
-    //   RunTheMission();
-    // }
-
-    i++;
-  }
-}
+//END OF StartMission
+//=================================================================
 
 
 void *ControlThread(void *unused)
@@ -933,9 +943,13 @@ void *ControlThread(void *unused)
     cvZero(imgResult);          // TY add 6.27
     //cvZero(imgCenter);            // TY add 6.27
 
+    //================================
     // Check if start Mission
     // NYC add 8.9
     StartMission();
+
+
+    //=================================
 
     //Start of Mission
     while(1)
@@ -1249,6 +1263,11 @@ int main(int argc, char *argv[])
 
 
     err = 0;
+
+    #ifdef SPEED_CONTROL
+      speed = 0;
+      DesireSpeed_Write(speed);
+    #endif
 
 fail: // Run down sequence
     // Destroy vip threads and stream start/done semaphores
