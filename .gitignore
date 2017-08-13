@@ -1,0 +1,6 @@
+#no image file
+*.png
+
+#no output file
+*.o
+caputeOpenCV
