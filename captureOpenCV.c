@@ -40,6 +40,7 @@
 #define SERVO_CONTROL     // TY add 6.27
               // To servo control(steering & camera position)
 #define IMGSAVE
+//#define IMGSAVE_STARTMISSION
 #define SPEED_CONTROL
 
 ////////////////////////////////////////////////////////////////////////////
@@ -697,7 +698,7 @@ void StartMission(){
     pthread_mutex_unlock(&mutex);
 
     //이미지 디버깅
-    #ifdef IMGSAVE
+    #ifdef IMGSAVE_STARTMISSION
     sprintf(fileName, "captureImage/Start_imgOrigin%d.png", i);
     sprintf(fileName_result, "captureImage/Start_imgResult%d.png", i);
     cvSaveImage(fileName, imgOrigin, 0);
@@ -777,6 +778,9 @@ int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
     unsigned char y,u,v;
     int num;
 
+    int low_v = 45;
+    int high_v = 127;
+
     if(NvMediaVideoSurfaceLock(capSurf, &surfMap) != NVMEDIA_STATUS_OK)
     {
         MESSAGE_PRINTF("NvMediaVideoSurfaceLock() failed in Frame2Ipl()\n");
@@ -842,7 +846,7 @@ int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
             // - 39 , 111 , 51, 241
             num = 3*k+3*resWidth*(j);
             bin_num = j*imgResult->widthStep + k;
-            if(v>45   &&   v<=132  ) {
+            if(v>low_v   &&   v<=high_v) {
                 // 검은색
                 imgResult->imageData[bin_num] = (char)0;
             }
