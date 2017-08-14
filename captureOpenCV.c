@@ -36,7 +36,7 @@
 #define SERVO_CONTROL     // TY add 6.27
 // To servo control(steering & camera position)
 #define IMGSAVE
-//#define SPEED_CONTROL
+#define SPEED_CONTROL
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -502,7 +502,7 @@ static unsigned int CaptureThread(void *params)
 			break;
 		}
 
-		if (i % 10 == 0)                        // once in three loop = 10 Hz
+		if (i % 1 == 0)                        // once in three loop = 10 Hz
 			pthread_cond_signal(&cond);        // ControlThread() is called
 
 		pthread_mutex_unlock(&mutex);        // for ControlThread()
@@ -641,39 +641,43 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 }
 
 
-void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
+void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
-	int width = 60;
-	int height = 80;
+	int width = 320;//60 
+	int height = 240;//80
 	int Left_Down = 0; // 3 사분면
 	int Right_Down = 0; // 4 사분면
 	int Left_Up = 0; // 2 사분면
 	int Right_Up = 0; // 1 사분면
+
 	int x = 0;
 	int y = 0;
 	int angle = 0;
+
 	int Dif = 0, Dif1 = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
 	int Left_Sum = 0, Right_Sum = 0; //왼쪽, 오른쪽 픽셀 갯수
 	int Gap = 0; // 왼쪽 - 오른쪽 픽셀 갯수;
+	int Up = 0, Down = 0;// 1,2 dimension's sum & 3,4 dimension's sum
+
 	float weight = 1.5, weight2 = 0.8;// control angle weight
 	int straight_speed = 60;
 	int curve_speed = 40;
-									  //총 픽셀은 320 *240 = 76800
+	//총 픽셀은 320 *240 = 76800
 
 
-	for (y = 0; y < height / 2; y++)
+	for (y = height / 3; y < height / 2; y++)
 	{
-		for (x = 0; x < width / 2; x++)
+		for (x = 130; x < width / 2; x++)
 		{
-			if (Image_copy->imageData[y * width + x] == 255)//Find white pixels 
+			if (imgResult->imageData[y * width + x] == 255)//Find white pixels 
 			{
 				Left_Up++;
 
 			}// 2사분면
 		}
-		for (x = width - 1; x > width / 2; x--)
+		for (x = 190; x > width / 2; x--)
 		{
-			if (Image_copy->imageData[y * width + x] == 255)
+			if (imgResult->imageData[y * width + x] == 255)
 			{
 				Right_Up++;
 			}// 1사분면
@@ -686,19 +690,19 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	printf("Difference1 is %d\n", Dif1);
 
 
-	for (y = (height / 2) + 1; y < height; y++)
+	for (y = (height / 2) + 1; y < height * 2 / 3; y++)
 	{
-		for (x = 0; x < width / 2; x++)
+		for (x = 130; x < width / 2; x++)
 		{
-			if (Image_copy->imageData[y * width + x] == 255)//Find white pixels 
+			if (imgResult->imageData[y * width + x] == 255)//Find white pixels 
 			{
 				Left_Down++;
 
 			}// 3사분면
 		}
-		for (x = width - 1; x > width / 2; x--)
+		for (x = 190; x > width / 2; x--)
 		{
-			if (Image_copy->imageData[y * width + x] == 255)
+			if (imgResult->imageData[y * width + x] == 255)
 			{
 				Right_Down++;
 			}// 4사분면
@@ -715,51 +719,64 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 	Left_Sum = Left_Down + Left_Up;
 	Right_Sum = Right_Down + Right_Up;
 	Gap = Left_Sum - Right_Sum;
+	Up = Left_Up + Right_Up;
+	Down = Left_Down + Right_Down;
 
 	printf("left_sum=%d, Right_sum=%d, gap=%d\n", Left_Sum, Right_Sum, Gap);
 
 
-	if (Gap > 0) // turn right
+	if (Dif == 0 && Dif1 == 0)
 	{
-		if (Dif1 <= 50 && Dif <= 50)
+		angle = 1500;
+	}
+
+	else if (Gap > 0) // turn right
+	{
+		if (Dif <= 10 && Dif1 <= 10)
 		{
-				angle = 1500;
+			angle = 1500;
 		}
 
-		else if (Left_Down >= Right_Down && Left_Up <= Right_Up)
+		else if (Right_Up < Left_Up)
 		{
-			angle = 1500 - Gap * weight;
+			if (Down == 0)
+			{
+				if (Right_Sum == 0)
+				{
+					angle = 1500 - Gap * weight2;
+				}//only one side pixels 
+				else
+					angle = 1000;
+			}
+			else
+				angle = 1500 - Gap * weight;
 		}
-		else if (Left_Sum + Right_Up > Right_Down && Dif1 > Dif && Dif1 > 0 && Left_Sum > Right_Sum)
-		{
-			angle = 1150;//1,2,3 사분면에 대부분의 픽셀이 있는 경우 오른쪽으로 틀어라!
-		}
-		else if (Left_Down >= Right_Down && Left_Up >= Right_Up)
-		{
-			angle = 1500 - Gap * weight2;//대부분 왼쪽 화면에만 픽셀이 보이는 경우
-		}
+
 	}// angle < 1500 turn right
+
 	else if (Gap < 0) // turn left 
 	{
-		if (Dif1 >= -50 && Dif >= -50)
+		if (Dif >= -10 && Dif1 >= -10)
 		{
-				angle = 1500;
+			angle = 1500;
 		}
 
-		else if (Left_Down <= Right_Down && Left_Up >= Right_Up)
+		else if (Right_Up > Left_Up)
 		{
-			angle = 1500 - Gap * weight;
+			if (Down == 0)
+			{
+				if (Left_Sum == 0)
+				{
+					angle = 1500 - Gap * weight2;
+				}
+				else
+					angle = 2000;
+			}
+			else
+				angle = 1500 - Gap * weight;
 		}
-		else if (Right_Sum + Left_Up > Left_Down && Dif1 > Dif && Dif1 < 0 && Left_Sum < Right_Sum)
-		{
-			angle = 1850;//1,2,4 사분면에 대부분의 픽셀이 있는 경우 왼쪽으로 틀어라!
-		}
-		else if (Left_Down <= Right_Down && Left_Up <= Right_Up)
-		{
-			angle = 1500 - Gap * weight2;//대부분 오른쪽 화면에만 픽셀이 보이는 경우
-		}
-
 	}// angle > 1500 turn left
+
 
 	angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
 
@@ -768,41 +785,39 @@ void Find_Center(IplImage* Image_copy, IplImage* imgCenter)		//TY add 6.27
 
 	SteeringServoControl_Write(angle);
 
-#ifdef SPEED_CONTROL
-	if (angle<1200 || angle>1700)     
-		speed = curve_speed;
+	/*#ifdef SPEED_CONTROL
+	if (angle<1200 || angle>1800)
+	speed = curve_speed;
 	else
-		speed = straight_speed;
+	speed = straight_speed;
 	DesireSpeed_Write(speed);
-#endif
-
+	#endif
+	*/
 }
-
 
 void *ControlThread(void *unused)
 {
 	int i = 0;
-	char fileName[30];
-	char fileName1[30];			// TY add 6.27
-	char fileName2[30];			// TY add 6.27
+	char fileName[40];
+	char fileName1[40];         // TY add 6.27
+								//char fileName2[30];           // TY add 6.27
 	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
 	NvU64 ptime1, ptime2;
 	struct timespec;
 
 	IplImage* imgOrigin;
-	IplImage* imgResult;			// TY add 6.27
-	IplImage* imgCenter;			// TY add 6.27
+	IplImage* imgResult;            // TY add 6.27
 	IplImage* Image_copy;
 
+	//IplImage* imgCenter;          // TY add 6.27
 
 	// cvCreateImage
 	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
-	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);			// TY add 6.27
+	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+																				//imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
 
-																				//imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);			// TY add 6.27
-
-	cvZero(imgResult);			// TY add 6.27
-	cvZero(imgCenter);			// TY add 6.27
+	cvZero(imgResult);          // TY add 6.27
+								//cvZero(imgCenter);            // TY add 6.27
 
 	while (1)
 	{
@@ -813,35 +828,42 @@ void *ControlThread(void *unused)
 		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
 		Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
-										 // TY modified 6.27  Before : Frame2Ipl(imgOrigin)
+										 // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
 
 		pthread_mutex_unlock(&mutex);
 
 		// TODO : control steering angle based on captured image ---------------
 
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
+		//
+
 		IplImage * Image_copy = (IplImage*)cvClone(imgResult);
-		cvSetImageROI(Image_copy, cvRect(130, 100, 190, 180)); //x축 최소, y축 최소, x축 최대, y축 최대 순으로 
-
-		Find_Center(Image_copy, imgCenter); // TY add 6.27
-											// to find the center line
+		cvSetImageROI(Image_copy, cvRect(130, 80, 190, 160)); //x축 최소, y축 최소, x축 최대, y축 최대 순으로 
 
 
+		Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
+								/////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
+
+#ifdef IMGSAVE              
+		sprintf(fileName, "captureImage/imgOrigin%d.png", i);
+		sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
+																		//sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
 
-#ifdef IMGSAVE
-											//sprintf(fileName, "captureImage/imgOrigin%d.png", i);
-		sprintf(fileName1, "captureImage/imgResult%d.png", i);			// TY add 6.27
-		sprintf(fileName2, "captureImage/Image_copy%d.png", i);
-		//sprintf(fileName2, "captureImage/imgCenter%d.png", i);			// TY add 6.27
-
-
-		//cvSaveImage(fileName, imgOrigin, 0);
-		cvSaveImage(fileName1, imgResult, 0);			// TY add 6.27
-		cvSaveImage(fileName2, Image_copy, 0);
-		//cvSaveImage(fileName2, imgCenter, 0);			// TY add 6.27
+		cvSaveImage(fileName, Image_copy, 0);
+		cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
+														//cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
 #endif  
 
-		// ---------------------------------------------------------------------
+														//TY설명 내용
+														//imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
+														//imgCenter는 아직 구현 안되어있으며 필요시 아래의 코드 주석처리 해제시 사용가능
+														//char fileName2[30] , IplImage* imgCenter, imgCenter = cvCreateImage(cvGetSize(imgOrigin),
+														//IPL_DEPTH_8U, 1), cvZero(imgCenter), sprintf(fileName2, "captureImage/imgCenter%d.png", i), cvSaveImage(fileName2, imgCenter, 0)
+														/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+														// ---------------------------------------------------------------------
 
 		GetTime(&pt2);
 		ptime2 = (NvU64)pt2.tv_sec * 1000000000LL + (NvU64)pt2.tv_nsec;
@@ -918,7 +940,7 @@ int main(int argc, char *argv[])
 	CameraYServoControl_Write(angle);
 
 	sleep(1);
-							//Servo restoration(disable)
+	//Servo restoration(disable)
 	angle = 1500;
 	SteeringServoControl_Write(angle);
 	/*CameraXServoControl_Write(angle);
@@ -940,7 +962,7 @@ int main(int argc, char *argv[])
 	gain = 20;
 	SpeedPIDProportional_Write(gain);
 
-	speed = 0;
+	speed = 70;
 	DesireSpeed_Write(speed);
 
 #endif
