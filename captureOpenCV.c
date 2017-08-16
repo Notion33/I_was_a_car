@@ -30,6 +30,7 @@
 #include <ResTable_720To320.h>
 #include <pthread.h>
 #include <unistd.h>     // for sleep
+#include "stdbool.h"	//TY add
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -54,6 +55,9 @@
 
 
 static NvMediaVideoSurface *capSurf = NULL;
+
+bool Left_Max = false;
+bool Right_Max = false;
 
 pthread_cond_t      cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t     mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -643,8 +647,8 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 
 void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
-	int width = 320;//60 
-	int height = 240;//80
+	int width = 320;//40 
+	int height = 240;//60
 	int Left_Down = 0; // 3 사분면
 	int Right_Down = 0; // 4 사분면
 	int Left_Up = 0; // 2 사분면
@@ -659,9 +663,10 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	int Gap = 0; // 왼쪽 - 오른쪽 픽셀 갯수;
 	int Up = 0, Down = 0;// 1,2 dimension's sum & 3,4 dimension's sum
 
-	float weight = 1.5, weight2 = 0.8;// control angle weight
-	int straight_speed = 60;
-	int curve_speed = 40;
+	float weight = 1.8, weight2 = 1.2;// control angle weight
+	int speed = 0;
+	int straight_speed = 90;
+	int curve_speed = 70;
 	//총 픽셀은 320 *240 = 76800
 
 
@@ -682,7 +687,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 				Right_Up++;
 			}// 1사분면
 		}
-
 	}
 	printf("Left_Up = %d\n", Left_Up);
 	printf("Right_Up = %d\n", Right_Up);
@@ -725,6 +729,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	printf("left_sum=%d, Right_sum=%d, gap=%d\n", Left_Sum, Right_Sum, Gap);
 
 
+
 	if (Dif == 0 && Dif1 == 0)
 	{
 		angle = 1500;
@@ -746,8 +751,12 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 					angle = 1500 - Gap * weight2;
 				}//only one side pixels 
 				else
+				{
 					angle = 1000;
+					Right_Max = true;
+				}
 			}
+
 			else
 				angle = 1500 - Gap * weight;
 		}
@@ -770,13 +779,33 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 					angle = 1500 - Gap * weight2;
 				}
 				else
+				{
 					angle = 2000;
+					Left_Max = true;
+				}
 			}
+
 			else
 				angle = 1500 - Gap * weight;
 		}
 	}// angle > 1500 turn left
 
+	if (Left_Max || Right_Max == true)
+	{
+		if (Dif == 0 && Dif1 == 0)
+		{
+			Left_Max = false;
+			Right_Max = false;
+		}
+		else if (Right_Max == true)
+		{
+			angle = 1000;
+		}
+		else if (Left_Max == true)
+		{
+			angle = 2000;
+		}
+	}
 
 	angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
 
@@ -785,14 +814,14 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 	SteeringServoControl_Write(angle);
 
-	/*#ifdef SPEED_CONTROL
+#ifdef SPEED_CONTROL
 	if (angle<1200 || angle>1800)
-	speed = curve_speed;
+		speed = curve_speed;
 	else
-	speed = straight_speed;
+		speed = straight_speed;
 	DesireSpeed_Write(speed);
-	#endif
-	*/
+#endif
+
 }
 
 void *ControlThread(void *unused)
@@ -807,11 +836,10 @@ void *ControlThread(void *unused)
 
 	IplImage* imgOrigin;
 	IplImage* imgResult;            // TY add 6.27
-	IplImage* Image_copy;
 
-	//IplImage* imgCenter;          // TY add 6.27
+									//IplImage* imgCenter;          // TY add 6.27
 
-	// cvCreateImage
+									// cvCreateImage
 	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
 	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
 																				//imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
@@ -839,19 +867,19 @@ void *ControlThread(void *unused)
 		//
 
 		IplImage * Image_copy = (IplImage*)cvClone(imgResult);
-		cvSetImageROI(Image_copy, cvRect(130, 80, 190, 160)); //x축 최소, y축 최소, x축 최대, y축 최대 순으로 
+
 
 
 		Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
 								/////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
 #ifdef IMGSAVE              
-		sprintf(fileName, "captureImage/imgOrigin%d.png", i);
+								//sprintf(fileName, "captureImage/imgOrigin%d.png", i);
 		sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
 																		//sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
 
-		cvSaveImage(fileName, Image_copy, 0);
+																		//cvSaveImage(fileName, Image_copy, 0);
 		cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
 														//cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
 #endif  
@@ -962,7 +990,7 @@ int main(int argc, char *argv[])
 	gain = 20;
 	SpeedPIDProportional_Write(gain);
 
-	speed = 70;
+	speed = 0;
 	DesireSpeed_Write(speed);
 
 #endif
