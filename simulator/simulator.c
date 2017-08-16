@@ -13,6 +13,8 @@
 
 int sim_angle;
 int sim_speed;
+int img_height;
+int img_width;
 
 //==============================================================================
 //  Please put your own Find_Center code!
@@ -251,19 +253,46 @@ void writeonImage(IplImage* imgResult, char* str_info){
   //cvInitFont(&font, 폰트이름, 1.0, 1.0, 0, 1, CV_AA);
 
   //textPoint
-  CvPoint myPoint = cvPoint(10,200);
+  CvPoint myPoint = cvPoint(10,15);
 
   cvPutText(imgResult, str, myPoint, &font, cvScalar(255,255,255,0));
   //cvPutText(Mat&, string& ,textPoint, &font, cvScalar(255,255,255,0));
 
 }
 
+CvPoint getEndPoint(int angle){
+  CvPoint point;
+  //double x=-1, y=-1;
+  int len = 208;
+  double seta = 90 - (angle-1500)/10;
+
+  point.x = (int)(img_width/2 + len*cos(seta * CV_PI/180.0));
+  point.y = (int)(img_height - len*sin(seta * CV_PI/180.0));
+  //point.x = (int)(img_width/2 + len*cos(seta));
+  //point.y = (int)(img_height - len*sin(seta));
+
+  return point;
+}
+
+void drawonImage(IplImage* imgResult, int angle){
+  CvPoint point1, point2;
+  point1.x = img_width/2;
+  point1.y = img_height;
+  //point2.x = getX(angle);
+  //point2.y = getY(angle);
+  point2 = getEndPoint(angle);
+
+  cvLine(imgResult, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
+}
+
+
+
 int main(int argc, char const *argv[]) {
 
   int index = 0; // index of image
   char file_name[40];
   char str_info[50];
-  sprintf(file_name, "testset/imgResult%d.png", index);
+  sprintf(file_name, "../captureImage/imgResult%d.png", index);
 
   //initializing images
   IplImage* img = cvLoadImage(file_name, CV_WINDOW_AUTOSIZE);
@@ -271,6 +300,10 @@ int main(int argc, char const *argv[]) {
     printf("No Testset Image! Index : %d\n",index);
     return;
   }
+  img_width = cvGetSize(img).width;
+  img_height = cvGetSize(img).height;
+  //printf("width : %d",img_width);
+  //printf("height : %d",img_height);
   IplImage* imgResult = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U,1);
 
   //TODO mode selecting
@@ -282,7 +315,7 @@ int main(int argc, char const *argv[]) {
   cvShowImage("simulator",imgResult);
 
   while(1){
-    sprintf(file_name, "testset/imgResult%d.png", index);
+    sprintf(file_name, "../captureImage/imgResult%d.png", index);
     img = cvLoadImage(file_name, CV_WINDOW_AUTOSIZE);
     if(img==0){ //null check
       printf("No Testset Image! Index : %d\n",index);
@@ -292,11 +325,13 @@ int main(int argc, char const *argv[]) {
     imgResult = img;
     //TODO 이미지 처리
     Find_Center(imgResult);
-    sprintf(str_info, "[Image %d] Angle : %d, Speed : %d", index, sim_angle, sim_speed);
+    sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", index, sim_angle, sim_speed);
     writeonImage(imgResult, str_info);
+    drawonImage(imgResult, sim_angle);
+
     cvShowImage("simulator",imgResult);
 
-    int key = cvWaitKey(500);
+    int key = cvWaitKey(200);
     if(key=='q'){
       printf("Closing the Simulator...\n");
       return;
