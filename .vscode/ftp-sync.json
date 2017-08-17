@@ -1,0 +1,24 @@
+{
+    "remotePath": "/home/ty/carSDK/targetfs/root/UMS",
+    "host": "192.168.1.101",
+    "username": "ty",
+    "password": "1231231234",
+    "port": 21,
+    "secure": false,
+    "protocol": "ftp",
+    "uploadOnSave": true,
+    "passive": false,
+    "debug": false,
+    "privateKeyPath": null,
+    "passphrase": null,
+    "ignore": [
+        "\\.vscode",
+        "\\.git",
+        "\\.DS_Store"
+    ],
+    "generatedFiles": {
+        "uploadOnSave": false,
+        "extensionsToInclude": [],
+        "path": ""
+    }
+}

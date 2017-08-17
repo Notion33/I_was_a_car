@@ -14,12 +14,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include <sys/time.h>
+#include <sys/time.h> 
 
 #include <nvcommon.h>
 #include <nvmedia.h>
 
-#include <testutil_board.h>
+#include <testutil_board.h> 
 #include <testutil_capture_input.h>
 
 #include "nvthread.h"

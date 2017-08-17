@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "testutil_capture_input.h": "c",
+        "car_lib.h": "c"
+    }
+}
