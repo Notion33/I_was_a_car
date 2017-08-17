@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <cv.h>
 #include <highgui.h>
+#include <math.h>
 //Your Driving Algorithm!
 //#include <find_Center.h>
 
@@ -282,7 +283,7 @@ void drawonImage(IplImage* imgResult, int angle){
   //point2.y = getY(angle);
   point2 = getEndPoint(angle);
 
-  cvLine(imgResult, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
+  cvLine(imgResult, point1, point2, CV_RGB(255,0,0), 2, 8, 0);
 }
 
 
@@ -295,7 +296,7 @@ int main(int argc, char const *argv[]) {
   sprintf(file_name, "../captureImage/imgResult%d.png", index);
 
   //initializing images
-  IplImage* img = cvLoadImage(file_name, CV_WINDOW_AUTOSIZE);
+  IplImage* img = cvLoadImage(file_name, CV_LOAD_IMAGE_GRAYSCALE);
   if(img==0){ //null check
     printf("No Testset Image! Index : %d\n",index);
     return;
@@ -305,24 +306,26 @@ int main(int argc, char const *argv[]) {
   //printf("width : %d",img_width);
   //printf("height : %d",img_height);
   IplImage* imgResult = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U,1);
-
+  cvZero(imgResult);
   //TODO mode selecting
   //int mode = selectMode();
 
 
   //show the image
-  cvNamedWindow("simulator",1);
+  cvNamedWindow("simulator",CV_WINDOW_AUTOSIZE);
   cvShowImage("simulator",imgResult);
+
 
   while(1){
     sprintf(file_name, "../captureImage/imgResult%d.png", index);
-    img = cvLoadImage(file_name, CV_WINDOW_AUTOSIZE);
+    img = cvLoadImage(file_name, CV_LOAD_IMAGE_GRAYSCALE);
     if(img==0){ //null check
       printf("No Testset Image! Index : %d\n",index);
       return;
     }
 
-    imgResult = img;
+    //imgResult = img;
+    imgResult = (IplImage*)cvClone(img);
     //TODO 이미지 처리
     Find_Center(imgResult);
     sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", index, sim_angle, sim_speed);
