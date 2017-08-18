@@ -35,7 +35,7 @@
 #define SPEED_CONTROL
 #define SERVO_CONTROL     // TY add 6.27
 			  // To servo control(steering & camera position)
-//#define IMGSAVE
+#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -501,7 +501,7 @@ static unsigned int CaptureThread(void *params)
             break;
         }
       
-        if(i%1 == 0)                        // once in three loop = 10 Hz
+        if(i%3 == 0)                        // once in three loop = 10 Hz
             pthread_cond_signal(&cond);        // ControlThread() is called
 
         pthread_mutex_unlock(&mutex);        // for ControlThread()
@@ -728,7 +728,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		printf("Centerofpixle = %d\n",centerofpixel);
 		centerpixel = finl&&finr? (rightpixel+leftpixel)/2:(finl==0?rightpixel-distance:leftpixel+distance);
 		
-		if(centerofpixel>=3){
+		if(centerofpixel>=5){
 			if(centerpixel>160)angle = 1000;	//turn right maximize
 			else angle = 2000;//turn left maximize
 				}
@@ -740,9 +740,9 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 		#ifdef SPEED_CONTROL
         if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
-           speed = 70;//max==90
+           speed = 80;//max==90
         else
-           speed = 110;//max==130
+           speed = 100;//max==130
 
 
 	DesireSpeed_Write(speed);
@@ -794,12 +794,12 @@ void *ControlThread(void *unused)
 					  // to find the center line
         
 	#ifdef IMGSAVE
-        sprintf(fileName, "captureImage/imgOrigin%d.png", i);
+        //sprintf(fileName, "captureImage/imgOrigin%d.png", i);
 	sprintf(fileName1, "captureImage/imgResult%d.png", i);			// TY add 6.27
         //sprintf(fileName2, "captureImage/imgCenter%d.png", i);			// TY add 6.27
 
         
-        cvSaveImage(fileName, imgOrigin, 0);
+        //cvSaveImage(fileName, imgOrigin, 0);
         cvSaveImage(fileName1, imgResult, 0);			// TY add 6.27
         //cvSaveImage(fileName2, imgCenter, 0);			// TY add 6.27
         #endif  
@@ -838,12 +838,12 @@ int main(int argc, char *argv[])
 #ifdef SPEED_CONTROL	
 			PositionControlOnOff_Write(UNCONTROL); // position controller must be OFF !!!
 			SpeedControlOnOff_Write(CONTROL);
-			gain = 20;
-   		 	SpeedPIDProportional_Write(gain);
+		//	gain = 30;
+   	//	 	SpeedPIDProportional_Write(gain);
 			//SpeedPIDIntegral_Write(gain);
 			//SpeedPIDDifferential_Write(gain);
-			speed = 0;
-	    		DesireSpeed_Write(speed);			
+	//		speed = 0;
+	 //   		DesireSpeed_Write(speed);			
 			#endif
 
 
