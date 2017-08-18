@@ -668,6 +668,13 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		
 		int centerofpixel = 0;//centerlinepixel
 		
+
+		PositionControlOnOff_Write(UNCONTROL);
+		    SpeedControlOnOff_Write(CONTROL);    
+		int gain = 20;
+		    SpeedPIDProportional_Write(gain);
+
+
 		for (y = height-1-cutdown; y >=0; y-=5){//cut down bumper pixel 
 			if(finl||finr)break;
 			for (x = width / 2 -1; x>=0; x--){//left side
@@ -703,16 +710,17 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			}
 		}
 
-		for(y = 90;y<180;y++)
+		for(y = 100;y<240;y++)//90->120->110->100 2017.08.17
 			if (imgResult->imageData[y * width + 160] == 255)
 				centerofpixel++;
 
 
 		if(!(finl||finr)){ //?? Ž?? x???? 
-			Alarm_Write(ON);
+			//Alarm_Write(ON);
+			//Alarm_Write(OFF);
 			DesireSpeed_Write(0);
-    		usleep(100000);
-    		Alarm_Write(OFF);
+    		usleep(1000000);
+    		
 		}
 		
 		printf("Left_line = %d\n", leftpixel);
@@ -720,7 +728,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		printf("Centerofpixle = %d\n",centerofpixel);
 		centerpixel = finl&&finr? (rightpixel+leftpixel)/2:(finl==0?rightpixel-distance:leftpixel+distance);
 		
-		if(centerofpixel>=5){
+		if(centerofpixel>=3){
 			if(centerpixel>160)angle = 1000;	//turn right maximize
 			else angle = 2000;//turn left maximize
 				}
@@ -732,11 +740,15 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 		#ifdef SPEED_CONTROL
         if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
-           speed = 40;//max==90
+           speed = 70;//max==90
         else
-           speed = 80;//max==130
-    DesireSpeed_Write(speed);
+           speed = 110;//max==130
+
+
+	DesireSpeed_Write(speed);
     #endif
+
+	
 }
 
 
