@@ -39,7 +39,7 @@
 
 ////////////////////////////////////////////////////////////////////////////
 
-
+#define whitepx 255
 #define VIP_BUFFER_SIZE 6
 #define VIP_FRAME_TIMEOUT_MS 100
 #define VIP_NAME "vip"
@@ -678,7 +678,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		for (y = height-1-cutdown; y >=0; y-=5){//cut down bumper pixel 
 			if(finl||finr)break;
 			for (x = width / 2 -1; x>=0; x--){//left side
-				if (imgResult->imageData[y * width + x] == 255){//Search pixels
+				if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
 					if(befline){//if there was white pixels right before
 						if(counl==5){// if counl>4 -> regarded as line
 						finl = 1;
@@ -695,7 +695,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			befline = 0;
 			
 			for (x = width/2; x<width; x++){
-				if (imgResult->imageData[y * width + x] == 255){//Search pixels
+				if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
 					if(befline){			//if there was white pixels right before
 						if(counr==5){// if counl>4 -> regarded as line
 						finr = 1;
@@ -711,7 +711,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		}
 
 		for(y = 100;y<240;y++)//90->120->110->100 2017.08.17
-			if (imgResult->imageData[y * width + 160] == 255)
+			if (imgResult->imageData[y * width + 160] == whitepx)
 				centerofpixel++;
 
 
