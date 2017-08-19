@@ -770,7 +770,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             printf("    valid left line = %d\n",valid_left_amount);
             printf("right line = ");
             for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
-            printf("    valid left line = %d\n",valid_left_amount);
+            printf("    valid right line = %d\n",valid_right_amount);
 
             if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
                 left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
@@ -784,7 +784,6 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             
             control_angle = (left_slope[0] + right_slope[0])*weight;        //차량 조향 기울기 계산
 
-            printf("left[0] = %d left[last] = %d right[0] = %d right[last] = %d \n",left[0] , left[(valid_left_amount-1)*line_gap],right[0] , right[(valid_right_amount-1)*line_gap]);
             printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
             printf("Control_Angle : %f \n",control_angle);
         }
