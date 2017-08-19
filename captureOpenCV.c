@@ -36,9 +36,9 @@
 
 #define SERVO_CONTROL     // TY add 6.27
 // To servo control(steering & camera position)
-#define IMGSAVE
+//#define IMGSAVE
 #define SPEED_CONTROL
-
+#define whitepx 255
 ////////////////////////////////////////////////////////////////////////////
 
 
@@ -506,7 +506,7 @@ static unsigned int CaptureThread(void *params)
 			break;
 		}
 
-		if (i % 1 == 0)                        // once in three loop = 10 Hz
+		if (i % 3 == 0)                        // once in three loop = 10 Hz
 			pthread_cond_signal(&cond);        // ControlThread() is called
 
 		pthread_mutex_unlock(&mutex);        // for ControlThread()
@@ -665,24 +665,24 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 	float weight = 1.8, weight2 = 1.2;// control angle weight
 	int speed = 0;
-	int straight_speed = 90;
-	int curve_speed = 70;
+	int straight_speed = 115;
+	int curve_speed = 85;
 	//총 픽셀은 320 *240 = 76800
 
 
-	for (y = height / 3; y < height / 2; y++)
+	for (y = 100; y < height / 2; y++)
 	{
-		for (x = 130; x < width / 2; x++)
+		for (x = 80; x < width / 2; x++)
 		{
-			if (imgResult->imageData[y * width + x] == 255)//Find white pixels 
+			if (imgResult->imageData[y * width + x] == whitepx)//Find white pixels 
 			{
 				Left_Up++;
 
 			}// 2사분면
 		}
-		for (x = 190; x > width / 2; x--)
+		for (x = 240; x > width / 2; x--)
 		{
-			if (imgResult->imageData[y * width + x] == 255)
+			if (imgResult->imageData[y * width + x] == whitepx)
 			{
 				Right_Up++;
 			}// 1사분면
@@ -694,19 +694,19 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	printf("Difference1 is %d\n", Dif1);
 
 
-	for (y = (height / 2) + 1; y < height * 2 / 3; y++)
+	for (y = (height / 2) + 1; y < 160; y++)
 	{
-		for (x = 130; x < width / 2; x++)
+		for (x = 80; x < width / 2; x++)
 		{
-			if (imgResult->imageData[y * width + x] == 255)//Find white pixels 
+			if (imgResult->imageData[y * width + x] == whitepx)//Find white pixels 
 			{
 				Left_Down++;
 
 			}// 3사분면
 		}
-		for (x = 190; x > width / 2; x--)
+		for (x = 240; x > width / 2; x--)
 		{
-			if (imgResult->imageData[y * width + x] == 255)
+			if (imgResult->imageData[y * width + x] == whitepx)
 			{
 				Right_Down++;
 			}// 4사분면
@@ -748,7 +748,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			{
 				if (Right_Sum == 0)
 				{
-					angle = 1500 - Gap * weight2;
+					angle = 1250;
 				}//only one side pixels 
 				else
 				{
@@ -776,7 +776,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			{
 				if (Left_Sum == 0)
 				{
-					angle = 1500 - Gap * weight2;
+					angle = 1750;
 				}
 				else
 				{
@@ -784,18 +784,22 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 					Left_Max = true;
 				}
 			}
-
+			
 			else
 				angle = 1500 - Gap * weight;
 		}
+		
 	}// angle > 1500 turn left
 
 	if (Left_Max || Right_Max == true)
 	{
-		if (Dif == 0 && Dif1 == 0)
+		if (Dif <= 10 && Dif1 <= 10)
 		{
-			Left_Max = false;
 			Right_Max = false;
+		}
+		else if (Dif >= -10 && Dif1 >= -10)
+		{
+			Left_Max = false; 
 		}
 		else if (Right_Max == true)
 		{
@@ -987,7 +991,7 @@ int main(int argc, char *argv[])
 
 	//speed controller gain set
 	//P-gain
-	gain = 20;
+	gain = 15;
 	SpeedPIDProportional_Write(gain);
 
 	speed = 0;
