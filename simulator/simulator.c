@@ -55,118 +55,167 @@ void DesireSpeed_Write(int speed){
 //==============================================================================
 //  Find_Center Algorithm area
 
-void Find_Center(IplImage* imgResult)		//TY add 6.27
+void Find_Center(IplImage* imgResult)      //TY add 6.27
 {
-		float angle = 0;
-		int speed = 0;
-		int width = 320;//data of the input image
-		int height = 240;
+    int i=0;
+    int j=0;
 
-		int x = 0;//for cycle
-		int y = 0;
+    int y_start_line = 160;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
+    int y_end_line = 140;
 
-		int cutdown = 30;//length of y pixel which display bumper
-		int distance = 280; // approximately 10cm = 140px from leftside of the camera
-		int weight = 500/distance;
+    int valid_left_amount = 0;
+    int valid_right_amount = 0;
 
-		int counl = 0;//count left pixel of white
-		int counr = 0;
+    int left_line_start = 0;
+    int left_line_end = 0;
+    int right_line_start = 0;
+    int right_line_end = 0;
+    int bottom_line = 200;
+    int line_width = 70;
+    int speed = 0;
+    int curve_speed = 70;       //default : 60
+    int straight_speed = 100;    //default : 90
 
-		int centerpixel = 0;
+    int line_gap = 4;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
+    int tolerance = 40; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
+    int angle=1500;
+    float weight = 300; // control angle weight
+    float control_angle = 0;
 
-		int leftpixel = 0;//linepixel
-		int rightpixel = 0;
+    int left[240] = {0};
+    int right[240] = {imgResult->width-1};
+    float left_slope[2] = {0.0};
+    float right_slope[2] = {0.0};
 
-		int befline = 0;//true or false
+    bool continue_turn_left = false;
+    bool continue_turn_right = false;
 
-		int  finl = 0;//whether line of leftside detected
-		int finr = 0;
+    for(i = y_start_line ; i>y_end_line ; i=i-line_gap){
+        for(j=(imgResult->width)/2 ; j>0 ; j--){                            //Searching the left line point
+                left[y_start_line-i] = j;
+                if(imgResult->imageData[i*imgResult->widthStep + j] == whitepx){
+                    valid_left_amount++;
+                    break;
+                }
+        }
+        for(j=(imgResult->width)/2 ; j<imgResult->width ; j++){             //Searching the right line point
+                right[y_start_line-i] = j;
+                if(imgResult->imageData[i*imgResult->widthStep + j] == whitepx){
+                    valid_right_amount++;;
+                    break;
+                }
+        }
+        if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
+            if(valid_left_amount > valid_right_amount && turn_left_max == false){
+            	printf("continue_turn_right set!\n");
+                continue_turn_right = true;
+            }
+            else if(valid_right_amount > valid_left_amount && turn_right_max == false){
+            	printf("continue_turn_left set!\n");
+                continue_turn_left = true;
+            }
+            printf("valid_left_amount = %d , valid_right_amount = %d \n",valid_left_amount,valid_right_amount);
+            break;
+        }
+    }
 
-		int centerofpixel = 0;//centerlinepixel
+    if (continue_turn_left == false && continue_turn_right == false){          //turn max flag가 false인 경우 1. 직선 2. 과다곡선
+        printf("continue_turn_flag_off__1__\n");
+        if(turn_left_max == true){                                  //2. 과다곡선인 경우, 차선이 정상검출범위내로 돌아올때까지 턴 유지
+            for(i = imgResult->widthStep -1 ; i > (imgResult->width/2) + line_width ; i--){
+            	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == whitepx){
+                	continue_turn_left = false;
+                	printf("continue_turn_flag_off__2_left__\n");
+                    break;
+                }
+                else{
+                	printf("continue_turn_flag_on__2_left__\n");
+                	continue_turn_left = true;
+                	break;
+                }
+            }
+        }
+        else if (turn_right_max ==true){
+            for(i = 0 ; i < (imgResult->width/2) - line_width ; i++){
+            	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == whitepx){
+                	continue_turn_right = false;
+                	printf("continue_turn_flag_off__2_right__\n");
+                    break;
+                }
+                else{
+                	printf("continue_turn_flag_on__2_right__\n");
+                	continue_turn_right = true;
+                	break;
+                }
+            }
+        }
+    }
 
+    if (continue_turn_left == false && continue_turn_right == false){   //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
+            printf("continue_turn_flag_off__3__\n");
+            for(i=0;i<=valid_left_amount;i++){                        //좌측 차선 검출
+                if(left[i*line_gap]!=0){
+                    left_line_start = y_start_line - i * line_gap;
+                    left_line_end = y_start_line - (i + valid_left_amount) * line_gap;
+                    break;
+                }
+            }
+            for(i=0;i<=valid_right_amount;i++){                        //우측 차선 검출
+                if(right[i*line_gap]!=imgResult->width-1){
+                    right_line_start = y_start_line - i * line_gap;
+                    right_line_end = y_start_line - (i + valid_right_amount) * line_gap;
+                    break;
+                }
+            }
 
-		int gotomax = 0;
+            printf("\nleft line = ");
+            for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
+            printf("    valid left line = %d\n",valid_left_amount);
+            printf("right line = ");
+            for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
+            printf("    valid left line = %d\n",valid_left_amount);
 
+            if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
+                left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
+            }
+            else left_slope[0] = 0;
 
-		for (y = height-1-cutdown; y >=0; y-=5){//cut down bumper pixel
-			if(finl||finr)break;
-			for (x = width / 2 -1; x>=0; x--){//left side
-				if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
-					if(befline){//if there was white pixels right before
-						if(counl==5){// if counl>4 -> regarded as line
-						finl = 1;
-						leftpixel = x+4;
-						}
-						else counl++;	//regarded as start point of the line?
-					}
-					else counl = 1;
-					befline = 1;
-				}
-				else befline = 0;
-			}
+            if(valid_right_amount > 1){                                          //우측 차선 기울기 계산
+                right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
+            }
+            else right_slope[0] = 0;
 
-			befline = 0;
+            control_angle = (left_slope[0] + right_slope[0])*weight;        //차량 조향 기울기 계산
 
-			for (x = width/2; x<width; x++){
-				if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
-					if(befline){			//if there was white pixels right before
-						if(counr==5){// if counl>4 -> regarded as line
-						finr = 1;
-						rightpixel = x-4;
-						}
-						else counr++;
-					}
-					else counr = 1;
-					befline = 1;
-				}
-				else befline = 0;
-			}
-		}
+            printf("left[0] = %d left[last] = %d right[0] = %d right[last] = %d \n",left[0] , left[(valid_left_amount-1)*line_gap],right[0] , right[(valid_right_amount-1)*line_gap]);
+            printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
+            printf("Control_Angle : %f \n",control_angle);
+        }
 
-		befline = 0;
+    turn_left_max = continue_turn_left;             //현재 프레임에서 최대조향이라고 판단할 경우, 최대조향 전역변수 set.
+    turn_right_max = continue_turn_right;
 
-		for(y = 100;y<220;y++)//90->120->110->100 2017.08.17
-			if (imgResult->imageData[y * width + 160] == whitepx){
-				if(befline ==0)centerofpixel = 1;
-				if(centerofpixel>=4){gotomax = 1;break;}
-				centerofpixel++;
-				befline = 1;
-				}
+    if (turn_left_max == true)                      //차량 조향각도 판별
+        angle = 2000;
+    else if (turn_right_max == true)
+        angle = 1000;
+    else{
+        angle = 1500 + control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
+        angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
+    }
+    SteeringServoControl_Write(angle);
 
-
-		if(!(finl||finr)){ //?? Ž?? x????
-			//Alarm_Write(ON);
-			//Alarm_Write(OFF);
-			DesireSpeed_Write(0);
-    		usleep(1000000);
-
-		}
-
-		printf("Left_line = %d\n", leftpixel);
-		printf("Right_line = %d\n", rightpixel);
-		printf("Centerofpixle = %d\n",centerofpixel);
-		centerpixel = finl&&finr? (rightpixel+leftpixel)/2:(finl==0?rightpixel-distance:leftpixel+distance);
-
-		if(gotomax){
-			if(centerpixel>160)angle = 1000;	//turn right maximize
-			else angle = 2000;//turn left maximize
-				}
-		else if(centerpixel-160<10&&centerpixel-160>-10)angle = 1500;
-		else
-		angle = 1500 - weight*(centerpixel-160);
-
-		SteeringServoControl_Write(angle);//motor control
-
-		#ifdef SPEED_CONTROL
+    #ifdef SPEED_CONTROL
         if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
-           speed = 80;//max==90
+           speed = curve_speed;
         else
-           speed = 100;//max==130
-
-
-	DesireSpeed_Write(speed);
+           speed = straight_speed;
+    DesireSpeed_Write(speed);
     #endif
 
+    for(i=0;i<imgResult->widthStep;i++){
+    	imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
+    }
 
 }
 
@@ -182,6 +231,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 int selectMode(){
   int mode = 0;
+  printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
   printf("\n\nWelcome to Car Simulator! Please choose the mode\n");
   printf("1. AutoDrive   2. ManualDrive\n");
   printf("Mode : ");
@@ -217,7 +267,7 @@ void writeonImage(IplImage* imgResult, char* str_info){
   //cvInitFont(&font, 폰트이름, 1.0, 1.0, 0, 1, CV_AA);
 
   //textPoint
-  CvPoint myPoint = cvPoint(10,15);
+  CvPoint myPoint = cvPoint(10,235);
 
   cvPutText(imgResult, str, myPoint, &font, cvScalar(255,255,255,0));
   //cvPutText(Mat&, string& ,textPoint, &font, cvScalar(255,255,255,0));
@@ -241,7 +291,7 @@ return point;
 void drawonImage(IplImage* imgResult, int angle){
   CvPoint point1, point2;
   point1.x = img_width/2;
-  point1.y = img_height;
+  point1.y = img_height-20;
   //point2.x = getX(angle);
   //point2.y = getY(angle);
   point2 = getEndPoint(angle);
@@ -351,7 +401,7 @@ int main(int argc, char const *argv[]) {
       if(key=='q'){
         printf("Closing the Simulator...\n");
         break;
-      } else if(key==32){
+      } else if(key==32){ //space bar
         cvWaitKey(0);
       }
       index++;
@@ -362,9 +412,9 @@ int main(int argc, char const *argv[]) {
       if(key=='q'){
         printf("Closing the Simulator...\n");
         break;
-      } else if(key==65361){
+      } else if(key==65361){  //left key
         index--;
-      } else if(key==65363){
+      } else if(key==65363){  //right key
         index++;
       } else {
         printf("\n\n key = %d\n", key);
