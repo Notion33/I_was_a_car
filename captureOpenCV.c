@@ -730,10 +730,11 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 
 
+
 	if (Dif == 0 && Dif1 == 0)
 	{
 		angle = 1500;
-	}
+	}//straight
 
 	else if (Gap > 0) // turn right
 	{
@@ -793,6 +794,10 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 	if (Left_Max || Right_Max == true)
 	{
+		Left_Up = Left_Sum;
+		Right_Up = Right_Sum;
+
+		
 		if (Dif <= 10 && Dif1 <= 10)
 		{
 			Right_Max = false;
