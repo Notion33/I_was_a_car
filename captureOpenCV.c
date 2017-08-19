@@ -673,7 +673,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int curve_speed = 70;       //default : 60
     int straight_speed = 100;    //default : 90
 
-    int line_gap = 4;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
+    int line_gap = 10;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
     int tolerance = 40; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
     int angle=1500;
     float weight = 300; // control angle weight
@@ -703,11 +703,11 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
                 }
         }
         if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
-            if(valid_left_amount > valid_right_amount && turn_left_max == false){
+            if(valid_left_amount >= valid_right_amount && turn_left_max == false){
             	printf("continue_turn_right set!\n");
                 continue_turn_right = true;
             }
-            else if(valid_right_amount > valid_left_amount && turn_right_max == false){
+            else if(valid_right_amount >= valid_left_amount && turn_right_max == false){
             	printf("continue_turn_left set!\n");
                 continue_turn_left = true;
             }
@@ -798,8 +798,10 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
         angle = 1000;
     else{
         angle = 1500 + control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
-        angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
+		angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
     }
+
+
     SteeringServoControl_Write(angle);
 
     #ifdef SPEED_CONTROL
@@ -812,8 +814,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
 
     for(i=0;i<imgResult->widthStep;i++){
     	imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
-    }
-
+    	}
 }
 
 
