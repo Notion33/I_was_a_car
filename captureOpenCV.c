@@ -669,6 +669,9 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		int centerofpixel = 0;//centerlinepixel
 		
 
+		int gotomax = 0;
+		
+
 		PositionControlOnOff_Write(UNCONTROL);
 		    SpeedControlOnOff_Write(CONTROL);    
 		int gain = 20;
@@ -709,10 +712,16 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 				else befline = 0;
 			}
 		}
-
-		for(y = 100;y<240;y++)//90->120->110->100 2017.08.17
-			if (imgResult->imageData[y * width + 160] == whitepx)
+		
+		befline = 0;
+	
+		for(y = 100;y<220;y++)//90->120->110->100 2017.08.17
+			if (imgResult->imageData[y * width + 160] == whitepx){
+				if(befline ==0)centerofpixel = 1;
+				if(centerofpixel>=4){gotomax = 1;break;}
 				centerofpixel++;
+				befline = 1;
+				}
 
 
 		if(!(finl||finr)){ //?? Ž?? x???? 
@@ -728,7 +737,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		printf("Centerofpixle = %d\n",centerofpixel);
 		centerpixel = finl&&finr? (rightpixel+leftpixel)/2:(finl==0?rightpixel-distance:leftpixel+distance);
 		
-		if(centerofpixel>=5){
+		if(gotomax){
 			if(centerpixel>160)angle = 1000;	//turn right maximize
 			else angle = 2000;//turn left maximize
 				}
