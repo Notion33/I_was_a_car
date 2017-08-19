@@ -642,6 +642,7 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
 		float angle = 0;
+		int i, j, k; //for loop
 		int speed = 0;
 		int width = 320;//data of the input image
 		int height = 240;
@@ -661,15 +662,13 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		int leftpixel = 0;//linepixel
 		int rightpixel = 0;
 		
-		int befline = 0;//true or false
-		
 		int  finl = 0;//whether line of leftside detected
 		int finr = 0;
 		
 		int centerofpixel = 0;//centerlinepixel
 		
 
-		int gotomax = 0;
+		int setAngleMax = 0;
 		
 
 		PositionControlOnOff_Write(UNCONTROL);
@@ -678,66 +677,58 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		    SpeedPIDProportional_Write(gain);
 
 
-		for (y = height-1-cutdown; y >=0; y-=5){//cut down bumper pixel 
+		for (y = height-1-cutdown; y >=0; y-=2){//cut down bumper pixel 
 			if(finl||finr)break;
-			for (x = width / 2 -1; x>=0; x--){//left side
+			for (x = width / 2 -1; x>=4; x--){//left side
 				if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
-					if(befline){//if there was white pixels right before
-						if(counl==5){// if counl>4 -> regarded as line
-						finl = 1;
-						leftpixel = x+4;
-						}
-						else counl++;	//regarded as start point of the line?
+					for(i=0; i<5; i++){ //check successive 5 white pixels
+						if(imgResult->imageData[y * width + x - i] != whitepx)break;
+						if(i==4){
+							leftpixel = x;
+							finl = 1;
+						}		
 					}
-					else counl = 1;
-					befline = 1;
+					x = x - i;
+					if(finl==1)break;
 				}
-				else befline = 0;
 			}
 			
-			befline = 0;
-			
-			for (x = width/2; x<width; x++){
+			for (x = width/2; x<width - 4; x++){
 				if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
-					if(befline){			//if there was white pixels right before
-						if(counr==5){// if counl>4 -> regarded as line
-						finr = 1;
-						rightpixel = x-4;
-						}
-						else counr++;
+					for(i=0; i<5; i++){ //check successive 5 white pixels
+						if(imgResult->imageData[y * width + x + i] != whitepx)break;
+						if(i==4){
+							rightpixel = x;
+							finr = 1;
+						}			
 					}
-					else counr = 1;
-					befline = 1;
+					x = x + i;
+					if(finl==1)break;
 				}
-				else befline = 0;
 			}
 		}
-		
-		befline = 0;
 	
-		for(y = 100;y<220;y++)//90->120->110->100 2017.08.17
-			if (imgResult->imageData[y * width + 160] == whitepx){
-				if(befline ==0)centerofpixel = 1;
-				if(centerofpixel>=4){gotomax = 1;break;}
-				centerofpixel++;
-				befline = 1;
+		for(y = 70;y<240;y++)//90->120->110->100 2017.08.17
+			if (imgResult->imageData[y * width + width / 2] == whitepx){ //if center is w
+				for(i=0; i<5; i++){ //check successive 5 white pixels
+						if(imgResult->imageData[(y+i) * width + width/2] != whitepx){
+							break;
+						}
+						setAngleMax = 1; 			
+					}
+					y = y+i;
 				}
 
 
-		if(!(finl||finr)){ //?? Ž?? x???? 
-			//Alarm_Write(ON);
-			//Alarm_Write(OFF);
-			DesireSpeed_Write(0);
-    		usleep(1000000);
-    		
-		}
+		if(!(finl||finr)) //?? Ž?? x???? 
+			angle = 1500;
 		
 		printf("Left_line = %d\n", leftpixel);
 		printf("Right_line = %d\n", rightpixel);
 		printf("Centerofpixle = %d\n",centerofpixel);
 		centerpixel = finl&&finr? (rightpixel+leftpixel)/2:(finl==0?rightpixel-distance:leftpixel+distance);
 		
-		if(gotomax){
+		if(setAngleMax){
 			if(centerpixel>160)angle = 1000;	//turn right maximize
 			else angle = 2000;//turn left maximize
 				}
@@ -756,8 +747,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 	DesireSpeed_Write(speed);
     #endif
-
-	
 }
 
 
