@@ -309,11 +309,11 @@ sprintf(file_name, "../captureImage/imgResult%d.png", index);
   IplImage* imgResult = cvLoadImage(file_name, 1);
   if(img==0){ //null check
     printf("No Testset Image! Index : %d\n",index);
-    return;
+    return 1;
   }
   if(imgResult==0){ //null check
     printf("No Testset ImageResult! Index : %d\n",index);
-    return;
+    return 1;
   }
   img_width = cvGetSize(img).width;
   img_height = cvGetSize(img).height;
@@ -334,7 +334,7 @@ sprintf(file_name, "../captureImage/imgResult%d.png", index);
     imgResult = cvLoadImage(file_name, 1);
     if(img==0){ //null check
       printf("No Testset Image! Index : %d\n",index);
-      return;
+      return 1;
     }
 
     // for (i = 0; i < img_width * img_height; i++){
