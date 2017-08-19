@@ -279,13 +279,26 @@ void refineImage(IplImage* img){
 
 
 
+int startFrame(){
+  int i = 0;
+  printf("Please insert a starting frame.(Ex : 0 or 123)\n");
+  printf("Staring frame : ");
+  scanf("%d", &i);
+  return i;
+}
+
 int main(int argc, char const *argv[]) {
 
-  int i = 0, index = 0; // index of image
-  char file_name[40];
-  char str_info[50];
-  unsigned char asd;
-  sprintf(file_name, "../captureImage/imgResult%d.png", index);
+int i = 0, index = 0; // index of image
+char file_name[40];
+char str_info[50];
+unsigned char asd;
+
+int mode = selectMode();
+if(mode!=1 && mode!=2) return 1;
+
+index = startFrame();
+sprintf(file_name, "../captureImage/imgResult%d.png", index);
 
   //initializing images
   //IplImage* img = cvLoadImage(file_name, CV_LOAD_IMAGE_GRAYSCALE);
@@ -312,9 +325,6 @@ int main(int argc, char const *argv[]) {
   //show the image
   cvNamedWindow("simulator",CV_WINDOW_AUTOSIZE);
   cvShowImage("simulator",imgResult);
-
-  int mode = selectMode();
-  if(mode!=1 && mode!=2) return;
 
   while(1){
     printf("//============================================================frame : %d\n",index);
