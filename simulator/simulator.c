@@ -317,6 +317,7 @@ int main(int argc, char const *argv[]) {
   if(mode!=1 && mode!=2) return;
 
   while(1){
+    printf("//============================================================frame : %d\n",index);
     sprintf(file_name, "../captureImage/imgResult%d.png", index);
     //img = cvLoadImage(file_name, CV_LOAD_IMAGE_GRAYSCALE);
     img = cvLoadImage(file_name, -1);
