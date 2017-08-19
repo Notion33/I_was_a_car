@@ -23,7 +23,7 @@
 #include <testutil_capture_input.h>
 
 #include "nvthread.h"
-
+#include "car_lib.h"	//TY add 6.27
 
 #include <highgui.h>
 #include <cv.h>
@@ -32,18 +32,14 @@
 #include <unistd.h>     // for sleep
 
 ////////////////////////////////////////////////////////////////////////////
-#include "car_lib.h"    //TY add 6.27
-
-
-////////////////////////////////////////////////////////////////////////////
-
+#define SPEED_CONTROL
 #define SERVO_CONTROL     // TY add 6.27
-              // To servo control(steering & camera position)
-//#define IMGSAVE
+			  // To servo control(steering & camera position)
+#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
 
-
+#define whitepx 255
 #define VIP_BUFFER_SIZE 6
 #define VIP_FRAME_TIMEOUT_MS 100
 #define VIP_NAME "vip"
@@ -432,11 +428,11 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
             num = 3*k+3*resWidth*(j);
             bin_num = j*imgResult->widthStep + k;
             if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
-                // 흰색으로
+                // ???????
                 imgResult->imageData[bin_num] = (char)255;
             }
             else {
-                // 검정색으로
+                // ?????????
                 imgResult->imageData[bin_num] = (char)0;
             }            
 
@@ -643,42 +639,140 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
     free(outputParams);
 }
 
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////  Find_Center : TY 영상처리하여 조향값 찾아내는 알고리즘.
-/////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
-/////////////////////////////////////  빈공간에 원형만 선언해둠.
-////////////////////////////////////////////////////////////////////////////////////////////
-void Find_Center(IplImage* imgResult, IplImage* imgCenter)      
+void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
-    int angle=1500;
-    SteeringServoControl_Write(angle);
+		float angle = 0;
+		int speed = 0;
+		int width = 320;//data of the input image
+		int height = 240;
+		
+		int x = 0;//for cycle
+		int y = 0;
+		
+		int cutdown = 30;//length of y pixel which display bumper
+		int distance = 280; // approximately 10cm = 140px from leftside of the camera
+		int weight = 500/distance;
+		
+		int counl = 0;//count left pixel of white
+		int counr = 0;
+		
+		int centerpixel = 0;
+		
+		int leftpixel = 0;//linepixel
+		int rightpixel = 0;
+		
+		int befline = 0;//true or false
+		
+		int  finl = 0;//whether line of leftside detected
+		int finr = 0;
+		
+		int centerofpixel = 0;//centerlinepixel
+		
+
+		PositionControlOnOff_Write(UNCONTROL);
+		    SpeedControlOnOff_Write(CONTROL);    
+		int gain = 20;
+		    SpeedPIDProportional_Write(gain);
+
+
+		for (y = height-1-cutdown; y >=0; y-=5){//cut down bumper pixel 
+			if(finl||finr)break;
+			for (x = width / 2 -1; x>=0; x--){//left side
+				if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
+					if(befline){//if there was white pixels right before
+						if(counl==5){// if counl>4 -> regarded as line
+						finl = 1;
+						leftpixel = x+4;
+						}
+						else counl++;	//regarded as start point of the line?
+					}
+					else counl = 1;
+					befline = 1;
+				}
+				else befline = 0;
+			}
+			
+			befline = 0;
+			
+			for (x = width/2; x<width; x++){
+				if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
+					if(befline){			//if there was white pixels right before
+						if(counr==5){// if counl>4 -> regarded as line
+						finr = 1;
+						rightpixel = x-4;
+						}
+						else counr++;
+					}
+					else counr = 1;
+					befline = 1;
+				}
+				else befline = 0;
+			}
+		}
+
+		for(y = 100;y<240;y++)//90->120->110->100 2017.08.17
+			if (imgResult->imageData[y * width + 160] == whitepx)
+				centerofpixel++;
+
+
+		if(!(finl||finr)){ //?? Ž?? x???? 
+			//Alarm_Write(ON);
+			//Alarm_Write(OFF);
+			DesireSpeed_Write(0);
+    		usleep(1000000);
+    		
+		}
+		
+		printf("Left_line = %d\n", leftpixel);
+		printf("Right_line = %d\n", rightpixel);
+		printf("Centerofpixle = %d\n",centerofpixel);
+		centerpixel = finl&&finr? (rightpixel+leftpixel)/2:(finl==0?rightpixel-distance:leftpixel+distance);
+		
+		if(centerofpixel>=5){
+			if(centerpixel>160)angle = 1000;	//turn right maximize
+			else angle = 2000;//turn left maximize
+				}
+		else if(centerpixel-160<10&&centerpixel-160>-10)angle = 1500;
+		else
+		angle = 1500 - weight*(centerpixel-160);
+		
+		SteeringServoControl_Write(angle);//motor control 
+
+		#ifdef SPEED_CONTROL
+        if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
+           speed = 80;//max==90
+        else
+           speed = 100;//max==130
+
+
+	DesireSpeed_Write(speed);
+    #endif
+
+	
 }
 
 
 void *ControlThread(void *unused)
 {
     int i=0;
-    char fileName[40];
-    char fileName1[40];         // TY add 6.27
-    //char fileName2[30];           // TY add 6.27
+    char fileName[30];
+    char fileName1[30];			// TY add 6.27
+    char fileName2[30];			// TY add 6.27
     NvMediaTime pt1 ={0}, pt2 = {0};
     NvU64 ptime1, ptime2;
     struct timespec;
  
     IplImage* imgOrigin;
-    IplImage* imgResult;            // TY add 6.27
-    //IplImage* imgCenter;          // TY add 6.27
+    IplImage* imgResult;			// TY add 6.27
+    IplImage* imgCenter;			// TY add 6.27
     
     // cvCreateImage
     imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
-    imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
-    //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
+    imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);			// TY add 6.27
+    imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);			// TY add 6.27
 
-    cvZero(imgResult);          // TY add 6.27
-    //cvZero(imgCenter);            // TY add 6.27
+    cvZero(imgResult);			// TY add 6.27
+    cvZero(imgCenter);			// TY add 6.27
  
     while(1)
     {
@@ -689,36 +783,26 @@ void *ControlThread(void *unused)
         ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
         Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
-                                         // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
+					            // TY modified 6.27  Before : Frame2Ipl(imgOrigin)
 
         pthread_mutex_unlock(&mutex);     
         
         // TODO : control steering angle based on captured image ---------------
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
-//
 
-        Find_Center(imgResult, imgCenter); // TY Centerline 검출해서 조향해주는 알고리즘
-        /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
-
-        #ifdef IMGSAVE              
-        sprintf(fileName, "captureImage/imgOrigin%d.png", i);
-        sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
-        //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
+	Find_Center(imgResult); // TY add 6.27
+					  // to find the center line
+        
+	#ifdef IMGSAVE
+        //sprintf(fileName, "captureImage/imgOrigin%d.png", i);
+	sprintf(fileName1, "captureImage/imgResult%d.png", i);			// TY add 6.27
+        //sprintf(fileName2, "captureImage/imgCenter%d.png", i);			// TY add 6.27
 
         
-        cvSaveImage(fileName, imgOrigin, 0);
-        cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
-        //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
+        //cvSaveImage(fileName, imgOrigin, 0);
+        cvSaveImage(fileName1, imgResult, 0);			// TY add 6.27
+        //cvSaveImage(fileName2, imgCenter, 0);			// TY add 6.27
         #endif  
-
-        //TY설명 내용
-        //imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
-        //imgCenter는 아직 구현 안되어있으며 필요시 아래의 코드 주석처리 해제시 사용가능
-        //char fileName2[30] , IplImage* imgCenter, imgCenter = cvCreateImage(cvGetSize(imgOrigin),
-        //IPL_DEPTH_8U, 1), cvZero(imgCenter), sprintf(fileName2, "captureImage/imgCenter%d.png", i), cvSaveImage(fileName2, imgCenter, 0)
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // ---------------------------------------------------------------------
             
@@ -736,6 +820,7 @@ int main(int argc, char *argv[])
     int err = -1;
     TestArgs testArgs;
 
+
     //////////////////////////////// TY add 6.27
     unsigned char status;         // To using CAR Control
     short speed;
@@ -749,6 +834,18 @@ int main(int argc, char *argv[])
     int tol;
     char byte = 0x80;
     ////////////////////////////////
+
+#ifdef SPEED_CONTROL	
+			PositionControlOnOff_Write(UNCONTROL); // position controller must be OFF !!!
+			SpeedControlOnOff_Write(CONTROL);
+		//	gain = 30;
+   	//	 	SpeedPIDProportional_Write(gain);
+			//SpeedPIDIntegral_Write(gain);
+			//SpeedPIDDifferential_Write(gain);
+	//		speed = 0;
+	 //   		DesireSpeed_Write(speed);			
+			#endif
+
 
     CaptureInputHandle handle;
 
@@ -777,7 +874,7 @@ int main(int argc, char *argv[])
 
 
 // 3. servo control ----------------------------------------------------------
-#ifdef SERVO_CONTROL                                    //TY add 6.27
+#ifdef SERVO_CONTROL                         			//TY add 6.27
 
     printf("0. Car initializing \n");
     CarControlInit();
@@ -786,20 +883,23 @@ int main(int argc, char *argv[])
     printf("\n\n 0.1 servo control\n");
 
     //camera x servo set
-    angle = 1500;                       // Range : 600(Right)~1200(default)~1800(Left)
+    angle = 1500;						// Range : 600(Right)~1200(default)~1800(Left)
     CameraXServoControl_Write(angle);
+
     //camera y servo set
-    
-    angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
+    angle = 1800;						// Range : 1200(Up)~1500(default)~1800(Down)
     CameraYServoControl_Write(angle);    
     
-    /*                              //Servo restoration(disable)
+    sleep(1);
+    /*								//Servo restoration(disable)
     angle = 1500;
     SteeringServoControl_Write(angle);
     CameraXServoControl_Write(angle);
     CameraYServoControl_Write(angle); 
     */
 #endif  
+
+
 
     printf("1. Create NvMedia capture \n");
     // Create NvMedia capture(s)
@@ -1001,7 +1101,7 @@ fail: // Run down sequence
     // Close output file(s)
     if(vipFile)
         fclose(vipFile);
-        
+        DesireSpeed_Write(0);
     // Unbind NvMedia mixer(s) and output(s) and destroy them
     if(vipOutput[0])
     {
@@ -1041,4 +1141,3 @@ fail: // Run down sequence
     
     return err;
 }
-
