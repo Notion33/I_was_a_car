@@ -219,7 +219,7 @@ void writeonImage(IplImage* imgResult, char* str_info){
   //textPoint
   CvPoint myPoint = cvPoint(10,15);
 
-  cvPutText(imgResult, str, myPoint, &font, cvScalar(255,255,255,0));
+  cvPutText(imgResult, str, myPoint, &font, cvScalar(0,0,255,0));
   //cvPutText(Mat&, string& ,textPoint, &font, cvScalar(255,255,255,0));
 
 }
