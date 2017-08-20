@@ -693,7 +693,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
         for(j=(imgResult->width)/2 ; j>0 ; j--){                            //Searching the left line point
                 left[y_start_line-i] = j;
                 if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                    for( k = 0 ; k < line_width ; k++){
+                    for( k = 0 ; k < line_width ; k++){                     //차선이 line_width만큼 연속으로 나오는지 확인
                         if( j-k <= 0)
                           k = line_width - 1;
                         else if(imgResult->imageData[i*imgResult->widthStep + j - k] == 255)
@@ -709,7 +709,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
         for(j=(imgResult->width)/2 ; j<imgResult->width ; j++){             //Searching the right line point
                 right[y_start_line-i] = j;
                 if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                      for( k = 0 ; k < line_width ; k++){
+                      for( k = 0 ; k < line_width ; k++){                   //차선이 line_width만큼 연속으로 나오는지 확인
                         if( j + k >= imgResult->widthStep)
                           k = line_width - 1;
                         else if(imgResult->imageData[i*imgResult->widthStep + j + k] == 255)
@@ -742,11 +742,11 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             for(i = imgResult->widthStep -1 ; i > (imgResult->width/2) + line_tolerance ; i--){
             	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255){
                 	continue_turn_left = false;
-                	printf("continue_turn_flag_off__2_left__\n");
+                	printf("continue_turn_flag_OFF__overCurve_left__\n");
                     break;
                 }
                 else{
-                	printf("continue_turn_flag_on__2_left__\n");
+                	printf("continue_turn_flag_ON__overCurve_left__\n");
                 	continue_turn_left = true;
                 	break;
                 }
@@ -756,11 +756,11 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             for(i = 0 ; i < (imgResult->width/2) - line_tolerance ; i++){
             	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255){
                 	continue_turn_right = false;
-                	printf("continue_turn_flag_off__2_right__\n");
+                	printf("continue_turn_flag_OFF__2_right__\n");
                     break;
                 }
                 else{
-                	printf("continue_turn_flag_on__2_right__\n");
+                	printf("continue_turn_flag_ON__2_right__\n");
                 	continue_turn_right = true;
                 	break;
                 }
@@ -769,7 +769,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     }
 
     if (continue_turn_left == false && continue_turn_right == false){   //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
-            printf("continue_turn_flag_off__3__\n");
+            printf("continue_turn_flag_all_off__3__\n");
             for(i=0;i<=valid_left_amount;i++){                        //좌측 차선 검출
                 if(left[i*line_gap]!=0){
                     left_line_start = y_start_line - i * line_gap;
@@ -811,6 +811,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     turn_left_max = continue_turn_left;             //현재 프레임에서 최대조향이라고 판단할 경우, 최대조향 전역변수 set.
     turn_right_max = continue_turn_right;
 
+
     if (turn_left_max == true)                      //차량 조향각도 판별
         angle = 2000;
     else if (turn_right_max == true)
@@ -828,12 +829,17 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
            speed = curve_speed;
         else
            speed = straight_speed;
-    DesireSpeed_Write(speed);
+        DesireSpeed_Write(speed);
     #endif
 
-    for(i=0;i<imgResult->widthStep;i++){
-    	imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
-    	}
+    #ifdef IMGSAVE
+        for(i=0;i<imgResult->widthStep;i++){
+            imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
+            }
+        for(i=0;i<imgResult->widthStep;i++){
+            imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
+            }
+    #endif
 }
 
 
