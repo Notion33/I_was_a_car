@@ -715,13 +715,7 @@ void StartMission(){
     }else if (ready >= ready_th && isStart(imgResult)==0){   // 손으로 일정 시간 가리다 떼는 것을 확인
       go += 1;
       printf("go : %d / %d\n", go, go_th);
-      //flag = 1;
     }
-    // else {
-    //   flag = 1;
-    //   printf("\n\nCar is Ready! Start the Mission!!\n\n");
-    //   RunTheMission();
-    // }
 
     i++;
   }
@@ -868,6 +862,7 @@ int Frame2Ipl_Start(IplImage* img, IplImage* imgResult)
     return 1;
 }
 
+// 2차 세미나 미션을 위한 미션코드
 //NYC added 8.5
 void RunTheMission(){
   int status, gain, speed;
