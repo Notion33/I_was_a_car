@@ -295,7 +295,7 @@ void writeonImage(IplImage* imgResult, char* str_info){
   //textPoint
   CvPoint myPoint = cvPoint(10,235);
 
-  cvPutText(imgResult, str, myPoint, &font, cvScalar(255,255,255,0));
+  cvPutText(imgResult, str, myPoint, &font, cvScalar(0,0,255,0));
   //cvPutText(Mat&, string& ,textPoint, &font, cvScalar(255,255,255,0));
 
 }
@@ -355,13 +355,26 @@ void refineImage(IplImage* img){
 
 
 
+int startFrame(){
+  int i = 0;
+  printf("Please insert a starting frame.(Ex : 0 or 123)\n");
+  printf("Staring frame : ");
+  scanf("%d", &i);
+  return i;
+}
+
 int main(int argc, char const *argv[]) {
 
-  int i = 0, index = 0; // index of image
-  char file_name[40];
-  char str_info[50];
-  unsigned char asd;
-  sprintf(file_name, "../captureImage/imgResult%d.png", index);
+int i = 0, index = 0; // index of image
+char file_name[40];
+char str_info[50];
+unsigned char asd;
+
+int mode = selectMode();
+if(mode!=1 && mode!=2) return 1;
+
+index = startFrame();
+sprintf(file_name, "../captureImage/imgResult%d.png", index);
 
   //initializing images
   //IplImage* img = cvLoadImage(file_name, CV_LOAD_IMAGE_GRAYSCALE);
@@ -372,11 +385,11 @@ int main(int argc, char const *argv[]) {
   IplImage* imgResult = cvLoadImage(file_name, 1);
   if(img==0){ //null check
     printf("No Testset Image! Index : %d\n",index);
-    return;
+    return 1;
   }
   if(imgResult==0){ //null check
     printf("No Testset ImageResult! Index : %d\n",index);
-    return;
+    return 1;
   }
   img_width = cvGetSize(img).width;
   img_height = cvGetSize(img).height;
@@ -389,17 +402,15 @@ int main(int argc, char const *argv[]) {
   cvNamedWindow("simulator",CV_WINDOW_AUTOSIZE);
   cvShowImage("simulator",imgResult);
 
-  int mode = selectMode();
-  if(mode!=1 && mode!=2) return;
-
   while(1){
+    printf("//============================================================frame : %d\n",index);
     sprintf(file_name, "../captureImage/imgResult%d.png", index);
     //img = cvLoadImage(file_name, CV_LOAD_IMAGE_GRAYSCALE);
     img = cvLoadImage(file_name, -1);
     imgResult = cvLoadImage(file_name, 1);
     if(img==0){ //null check
       printf("No Testset Image! Index : %d\n",index);
-      return;
+      return 1;
     }
 
     // for (i = 0; i < img_width * img_height; i++){
