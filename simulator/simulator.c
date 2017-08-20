@@ -208,7 +208,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	{
     Left_Up = Left_Sum;
 		Right_Up = Right_Sum;
-    
+
 		if (Dif <= 10 && Dif1 <= 10)
 		{
 			Right_Max = false;
@@ -413,18 +413,6 @@ sprintf(file_name, "../captureImage/imgResult%d.png", index);
       return 1;
     }
 
-    // for (i = 0; i < img_width * img_height; i++){
-    //   imgResult -> imageData[i] = (char) img -> imageData[i];
-    //   if(img -> imageData[i] == 255) printf("0xff");
-    // }
-
-    //imgResult = img;
-
-    //imgResult = cvCloneImage(img);
-    //imgResult->depth = IPL_DEPTH_8U;
-    //printf("typeof : %d\n", );
-    //refineImage(imgResult);
-    //checkImage(imgResult);
     //TODO 이미지 처리
     Find_Center(img);
     sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", index, sim_angle, sim_speed);
