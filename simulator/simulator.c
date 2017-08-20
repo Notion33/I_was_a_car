@@ -6,15 +6,6 @@
 #include <cv.h>
 #include <highgui.h>
 #include <math.h>
-//Your Driving Algorithm!
-//#include <find_Center.h>
-
-// 1. 이미지에 글씨 넣기 clear
-
-// 2. 이미지 -> findcenter -> 글씨 넣기
-// 3. 각도 선으로 이미지화
-// 4. 연속이미지
-// 5. 모드선택
 
 int sim_angle;
 int sim_speed;
@@ -55,6 +46,7 @@ void DesireSpeed_Write(int speed){
   sim_speed = speed;
   //printf("Speed call! Speed : %d",sim_speed);
 }
+
 //==============================================================================
 //  Find_Center Algorithm area
 
@@ -261,9 +253,7 @@ int selectMode(){
   printf("\n\nWelcome to Car Simulator! Please choose the mode\n");
   printf("1. AutoDrive   2. ManualDrive\n");
   printf("Mode : ");
-  //scanf("%1d\n", &mode);
   scanf("%d", &mode);
-  //mode = getchar();
 
   switch (mode) {
     case 1 :
@@ -308,8 +298,6 @@ CvPoint getEndPoint(int angle){
 
   point.x = (int)(img_width/2 + len*cos(seta * CV_PI/180.0));
   point.y = (int)(img_height - len*sin(seta * CV_PI/180.0));
-  //point.x = (int)(img_width/2 + len*cos(seta));
-  //point.y = (int)(img_height - len*sin(seta));
 
 return point;
 }
@@ -318,8 +306,6 @@ void drawonImage(IplImage* imgResult, int angle){
   CvPoint point1, point2;
   point1.x = img_width/2;
   point1.y = img_height-20;
-  //point2.x = getX(angle);
-  //point2.y = getY(angle);
   point2 = getEndPoint(angle);
 
   cvLine(imgResult, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
@@ -353,34 +339,52 @@ void refineImage(IplImage* img){
   }
 }
 
-
-
-int startFrame(){
+int startFrame(int lastframe){
   int i = 0;
-  printf("Please insert a starting frame.(Ex : 0 or 123)\n");
+  printf("Please insert a starting frame.(Ex : 0 or 123)  /  %dframe\n",lastframe);
   printf("Staring frame : ");
   scanf("%d", &i);
   return i;
 }
 
+int findLastFrame(){
+  int index = 0;
+  char file_name[40];
+
+  while(1){
+    sprintf(file_name, "../captureImage/imgResult%d.png", index);
+    IplImage* img = cvLoadImage(file_name, -1);
+    if(img==0){ //null check
+      return index-1;
+    }
+    index++;
+  }
+}
+
+void onTrack(int pos){
+  //cvWaitKey(100);
+}
+
 int main(int argc, char const *argv[]) {
 
-int i = 0, index = 0; // index of image
-char file_name[40];
-char str_info[50];
-unsigned char asd;
+  int i = 0, index = 0; // index of image
+  int previous_idx = -1;
+  int automode = 1;
+  int lastframe = findLastFrame();
+  char file_name[40];
+  char str_info[50];
+  unsigned char asd;
 
-int mode = selectMode();
-if(mode!=1 && mode!=2) return 1;
-
-index = startFrame();
-sprintf(file_name, "../captureImage/imgResult%d.png", index);
+  printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+  printf("\n\nWelcome to Car Simulator! Please choose the mode\n");
+  index = startFrame(lastframe);
+  while(index>lastframe){
+    printf("Selected frame is out of range. Choose again starting frame\n");
+    index = selectMode(lastframe);
+  }
+  sprintf(file_name, "../captureImage/imgResult%d.png", index);
 
   //initializing images
-  //IplImage* img = cvLoadImage(file_name, CV_LOAD_IMAGE_GRAYSCALE);
-  //CvSize size(320,240);
-  //IplImage* imgsize = cvLoadImage(file_name, -1);
-  //IplImage* img = cvCreateImage(cvGetSize(imgsize), IPL_DEPTH_8U, 1);
   IplImage* img = cvLoadImage(file_name, -1);
   IplImage* imgResult = cvLoadImage(file_name, 1);
   if(img==0){ //null check
@@ -400,10 +404,10 @@ sprintf(file_name, "../captureImage/imgResult%d.png", index);
 
   //show the image
   cvNamedWindow("simulator",CV_WINDOW_AUTOSIZE);
+  cvCreateTrackbar("frame","simulator",&index,lastframe,onTrack);
   cvShowImage("simulator",imgResult);
 
   while(1){
-    printf("//============================================================frame : %d\n",index);
     sprintf(file_name, "../captureImage/imgResult%d.png", index);
     //img = cvLoadImage(file_name, CV_LOAD_IMAGE_GRAYSCALE);
     img = cvLoadImage(file_name, -1);
@@ -414,35 +418,38 @@ sprintf(file_name, "../captureImage/imgResult%d.png", index);
     }
 
     //TODO 이미지 처리
-    Find_Center(img);
+    if(previous_idx != index){  //중복 출력을 방지
+        printf("//============================================================frame : %d\n",index);
+        Find_Center(img);
+    }
     sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", index, sim_angle, sim_speed);
     writeonImage(imgResult, str_info);
     drawonImage(imgResult, sim_angle);
 
+    cvSetTrackbarPos("frame","simulator",index);
+
     cvShowImage("simulator",imgResult);
 
-    if(mode == 1){
-      int key = cvWaitKey(200);
-      if(key=='q'){
-        printf("Closing the Simulator...\n");
-        break;
-      } else if(key==32){ //space bar
-        cvWaitKey(0);
-      }
-      index++;
+    int key = cvWaitKey(200);
+    if(key=='q'){
+      printf("\nClosing the Simulator...\n");
+      break;
+    } else if(key==32){ //space bar
+      if(automode==1) automode = 0;
+      else if(automode==0) automode = 1;
     }
+    previous_idx = index;
+    index++;
 
-    else if(mode == 2){
-      int key = cvWaitKey(0);
-      if(key=='q'){
-        printf("Closing the Simulator...\n");
-        break;
-      } else if(key==65361){  //left key
+    if(automode==0){  //if manual mode
+      index--;        //같은 프레임 유지
+
+      if(key==65361){  //left key
         index--;
       } else if(key==65363){  //right key
         index++;
       } else {
-        printf("\n\n key = %d\n", key);
+        //printf("\n\n Wrong key = %d\n", key);
       }
     }
   }
