@@ -431,7 +431,7 @@ int main(int argc, char const *argv[]) {
     cvShowImage("simulator",imgResult);
 
     int key = cvWaitKey(200);
-    if(key=='q'){
+    if(key=='q' || key==27){
       printf("\nClosing the Simulator...\n");
       break;
     } else if(key==32){ //space bar
@@ -444,9 +444,9 @@ int main(int argc, char const *argv[]) {
     if(automode==0){  //if manual mode
       index--;        //같은 프레임 유지
 
-      if(key==65361){  //left key
+      if(key==65361 || key==65364){  //left key
         index--;
-      } else if(key==65363){  //right key
+      } else if(key==65363 || key==65362){  //right key
         index++;
       } else {
         //printf("\n\n Wrong key = %d\n", key);

@@ -1,9 +1,0 @@
-<Terminal>
-
-/simulator $ sh gcccv.sh simulator.c -o simulator
-
-./simulator
-
-before simulating
-
-please make [testset] folder and put the testset images.

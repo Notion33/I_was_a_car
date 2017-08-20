@@ -7,7 +7,11 @@ argv2=$2
 argv3=$3
 argv4=$4
 
-if [ $argv1 = -o ]
+if [ $argc -eq 0 ]
+then
+	gcc `pkg-config opencv --cflags` simulator.c -o simulator `pkg-config opencv --libs`
+
+elif [ $argv1 = -o ]
 then
 	gcc `pkg-config opencv --cflags` $argv3 -o $argv2 `pkg-config opencv --libs`
 	exit
