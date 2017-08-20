@@ -6,7 +6,7 @@
 
 ## 준비
 
-1. `simulator.c`를 열어 `Find_Center`에 자신의 알고리즘을 넣어주세요.
+1. `find_center.h`를 열어 `Find_Center`에 자신의 알고리즘을 넣어주세요.
 2. `/simulator`디렉토리에서 `$ sh gcccv.sh`를 입력합니다.
 3. 컴파일된 `simulator`를 확인하고 `./simulator`로 실행합니다.
 
