@@ -38,6 +38,7 @@
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL
 #define IMGSAVE
+//#define ROI
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -460,6 +461,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
 static unsigned int CaptureThread(void *params)
 {
     int i = 0;
+    int fps = 0;
     NvU64 stime, ctime;
     NvMediaTime t1 = {0}, t2 = {0}, st = {0}, ct = {0};
     CaptureContext *ctx = (CaptureContext *)params;
@@ -505,8 +507,13 @@ static unsigned int CaptureThread(void *params)
             stop = NVMEDIA_TRUE;
             break;
         }
+        
+        fps = 3;
+        #ifdef IMGSAVE
+            fps = 1;
+        #endif
       
-        if(i%3 == 0)                        // once in three loop = 10 Hz
+        if(i%fps == 0)                        // once in three loop = 10 Hz
             pthread_cond_signal(&cond);        // ControlThread() is called
 
         pthread_mutex_unlock(&mutex);        // for ControlThread()
@@ -658,10 +665,10 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int j=0;
     int k=0;
 
-    int y_start_line = 159;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
-    int y_end_line = 140;
-    int y_high_start_line = 70;
-    int y_high_end_line = 50;
+    int y_start_line = 150;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
+    int y_end_line = 130;
+    int y_high_start_line = 110;
+    int y_high_end_line = 90;
 
     int valid_left_amount = 0;
     int valid_right_amount = 0;
@@ -677,15 +684,15 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     int low_line_width = 20;
     int high_line_width = 10;
     int speed = 0;
-    int curve_speed = 70;       //default : 60
-    int straight_speed = 100;    //default : 90
+    int curve_speed = 100;       //default : 60
+    int straight_speed = 130;    //default : 90
 
-    int line_gap = 10;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
-    int tolerance = 40; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
+    int line_gap = 5;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
+    int tolerance = 25; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
     int high_tolerance = 60;
     int angle=1500;
     float low_line_weight = 320; // control angle weight
-    float high_line_weight = 100;
+    float high_line_weight = 80;
     float control_angle = 0;
 
     int left[240] = {0};
@@ -819,6 +826,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     turn_right_max = continue_turn_right;
 
     if(turn_left_max == false && turn_left_max == false && control_angle == 0.0 ){   //아랫쪽차선 검출시도후, 직진주행 하는 경우,
+        printf("Does not detected low_lain\n");
         for(i = y_high_start_line ; i>y_high_end_line ; i=i-line_gap){
           for(j=(imgResult->width)/2 ; j>0 ; j--){                            //Searching the left line point
                   left[y_high_start_line-i] = j;
@@ -852,24 +860,24 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
                       }
                   }
           }
-          if(left[y_high_start_line-i]>((imgResult->width/2)-high_tolerance)||right[y_high_start_line-i]<((imgResult->width/2)+high_tolerance))     //검출된 차선이 화면중앙부근에 있는경우, 아랫쪽차선까지 올수있도록 무시
-              break;
+        //   if(left[y_high_start_line-i]>((imgResult->width/2)-high_tolerance)||right[y_high_start_line-i]<((imgResult->width/2)+high_tolerance))     //검출된 차선이 화면중앙부근에 있는경우, 아랫쪽차선까지 올수있도록 무시
+        //       break;
         }
 
         for(i=0;i<=valid_high_left_amount;i++){                        //좌측 차선 검출
-          if(left[i*line_gap]!=0){
-              left_line_start = y_high_start_line - i * line_gap;
-              left_line_end = y_high_start_line - (i + valid_high_left_amount) * line_gap;
-              break;
-          }
-      }
-      for(i=0;i<=valid_high_right_amount;i++){                        //우측 차선 검출
-          if(right[i*line_gap]!=imgResult->width-1){
-              right_line_start = y_high_start_line - i * line_gap;
-              right_line_end = y_high_start_line - (i + valid_right_amount) * line_gap;
-              break;
-          }
-      }
+            if(left[i*line_gap]!=0){
+                left_line_start = y_high_start_line - i * line_gap;
+                left_line_end = y_high_start_line - (i + valid_high_left_amount) * line_gap;
+                break;
+            }
+        }
+        for(i=0;i<=valid_high_right_amount;i++){                        //우측 차선 검출
+            if(right[i*line_gap]!=imgResult->width-1){
+                right_line_start = y_high_start_line - i * line_gap;
+                right_line_end = y_high_start_line - (i + valid_right_amount) * line_gap;
+                break;
+            }
+        }
 
       printf("\nleft high line = ");
       for(i=0;i<valid_high_left_amount;i++)printf("%d  ",left[i*line_gap]);
@@ -917,7 +925,7 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
         DesireSpeed_Write(speed);
     #endif
 
-    #ifdef IMGSAVE
+    #ifdef ROI
         for(i=0;i<imgResult->widthStep;i++){
             imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
             }
@@ -973,12 +981,12 @@ void *ControlThread(void *unused)
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
         #ifdef IMGSAVE              
-        sprintf(fileName, "captureImage/imgOrigin%d.png", i);
+        //sprintf(fileName, "captureImage/imgOrigin%d.png", i);
         sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
         //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
         
-        cvSaveImage(fileName, imgOrigin, 0);
+        //cvSaveImage(fileName, imgOrigin, 0);
         cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
         //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
         #endif  
