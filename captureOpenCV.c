@@ -70,7 +70,7 @@ int table_516[256];
 typedef struct
 {
     I2cId i2cDevice;
-  
+
     CaptureInputDeviceId vipDeviceInUse;
     NvMediaVideoCaptureInterfaceFormat vipInputtVideoStd;
     unsigned int vipInputWidth;
@@ -197,7 +197,7 @@ static int ParseOptions(int argc, char *argv[], TestArgs *args)
     args->vipCaptureTime = 0;
     args->vipCaptureCount = 0;
 
-  
+
 
     if(i < argc && argv[i][0] == '-')
     {
@@ -382,10 +382,10 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
     unsigned int stepY, stepU, stepV;
 
     unsigned int bin_num=0;
-    
+
     resWidth = RESIZE_WIDTH;
     resHeight = RESIZE_HEIGHT;
-    
+
     // Frame2Ipl
     img->nSize = 112;
     img->ID = 0;
@@ -413,12 +413,12 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
     img->BorderConst[1] = 0;
     img->BorderConst[2] = 0;
     img->BorderConst[3] = 0;
-    
+
     stepY = 0;
     stepU = 0;
     stepV = 0;
     i = 0;
-    
+
      for(j = 0; j < resHeight; j++)
     {
         for(k = 0; k < resWidth; k++)
@@ -428,7 +428,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
             u = pU[i][stepU+x/2];
             v = pV[i][stepV+x/2];
 
-            // - 39 , 111 , 51, 241 
+            // - 39 , 111 , 51, 241
             num = 3*k+3*resWidth*(j);
             bin_num = j*imgResult->widthStep + k;
             if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
@@ -438,7 +438,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
             else {
                 // 검정색으로
                 imgResult->imageData[bin_num] = (char)0;
-            }            
+            }
 
             img->imageData[num] = y;
             img->imageData[num+1] = u;
@@ -450,7 +450,263 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
         stepV += pitchV[i];
     }
 
-    
+
+    NvMediaVideoSurfaceUnlock(capSurf);
+
+    return 1;
+}
+
+static int Frame2Ipl(IplImage* img, IplImage* imgResult)
+{
+    NvMediaVideoSurfaceMap surfMap;
+    unsigned int resWidth, resHeight;
+    unsigned char y,u,v;
+    int num;
+
+    if(NvMediaVideoSurfaceLock(capSurf, &surfMap) != NVMEDIA_STATUS_OK)
+    {
+        MESSAGE_PRINTF("NvMediaVideoSurfaceLock() failed in Frame2Ipl()\n");
+        return 0;
+    }
+
+    unsigned char *pY[2] = {surfMap.pY, surfMap.pY2};
+    unsigned char *pU[2] = {surfMap.pU, surfMap.pU2};
+    unsigned char *pV[2] = {surfMap.pV, surfMap.pV2};
+    unsigned int pitchY[2] = {surfMap.pitchY, surfMap.pitchY2};
+    unsigned int pitchU[2] = {surfMap.pitchU, surfMap.pitchU2};
+    unsigned int pitchV[2] = {surfMap.pitchV, surfMap.pitchV2};
+    unsigned int i, j, k, x;
+    unsigned int stepY, stepU, stepV;
+
+    unsigned int bin_num=0;
+
+    resWidth = RESIZE_WIDTH;
+    resHeight = RESIZE_HEIGHT;
+
+    // Frame2Ipl
+    img->nSize = 112;
+    img->ID = 0;
+    img->nChannels = 3;
+    img->alphaChannel = 0;
+    img->depth = IPL_DEPTH_8U;    // 8
+    img->colorModel[0] = 'R';
+    img->colorModel[1] = 'G';
+    img->colorModel[2] = 'B';
+    img->channelSeq[0] = 'B';
+    img->channelSeq[1] = 'G';
+    img->channelSeq[2] = 'R';
+    img->dataOrder = 0;
+    img->origin = 0;
+    img->align = 4;
+    img->width = resWidth;
+    img->height = resHeight;
+    img->imageSize = resHeight*resWidth*3;
+    img->widthStep = resWidth*3;
+    img->BorderMode[0] = 0;
+    img->BorderMode[1] = 0;
+    img->BorderMode[2] = 0;
+    img->BorderMode[3] = 0;
+    img->BorderConst[0] = 0;
+    img->BorderConst[1] = 0;
+    img->BorderConst[2] = 0;
+    img->BorderConst[3] = 0;
+
+    stepY = 0;
+    stepU = 0;
+    stepV = 0;
+    i = 0;
+
+     for(j = 0; j < resHeight; j++)
+    {
+        for(k = 0; k < resWidth; k++)
+        {
+            x = ResTableX_720To320[k];
+            y = pY[i][stepY+x];
+            u = pU[i][stepU+x/2];
+            v = pV[i][stepV+x/2];
+
+            // - 39 , 111 , 51, 241
+            num = 3*k+3*resWidth*(j);
+            bin_num = j*imgResult->widthStep + k;
+            if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+                // 흰색으로
+                imgResult->imageData[bin_num] = (char)255;
+            }
+            else {
+                // 검정색으로
+                imgResult->imageData[bin_num] = (char)0;
+            }
+
+            img->imageData[num] = y;
+            img->imageData[num+1] = u;
+            img->imageData[num+2] = v;
+
+        }
+        stepY += pitchY[i];
+        stepU += pitchU[i];
+        stepV += pitchV[i];
+    }
+
+
+    NvMediaVideoSurfaceUnlock(capSurf);
+
+    return 1;
+}
+
+static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
+{
+    NvMediaVideoSurfaceMap surfMap;
+    unsigned int resWidth, resHeight;
+    unsigned char y,u,v;
+    int num;
+
+    if(NvMediaVideoSurfaceLock(capSurf, &surfMap) != NVMEDIA_STATUS_OK)
+    {
+        MESSAGE_PRINTF("NvMediaVideoSurfaceLock() failed in Frame2Ipl()\n");
+        return 0;
+    }
+
+    unsigned char *pY[2] = {surfMap.pY, surfMap.pY2};
+    unsigned char *pU[2] = {surfMap.pU, surfMap.pU2};
+    unsigned char *pV[2] = {surfMap.pV, surfMap.pV2};
+    unsigned int pitchY[2] = {surfMap.pitchY, surfMap.pitchY2};
+    unsigned int pitchU[2] = {surfMap.pitchU, surfMap.pitchU2};
+    unsigned int pitchV[2] = {surfMap.pitchV, surfMap.pitchV2};
+    unsigned int i, j, k, x;
+    unsigned int stepY, stepU, stepV;
+
+    unsigned int bin_num=0;
+
+    resWidth = RESIZE_WIDTH;
+    resHeight = RESIZE_HEIGHT;
+
+    // Frame2Ipl
+    img->nSize = 112;
+    img->ID = 0;
+    img->nChannels = 3;
+    img->alphaChannel = 0;
+    img->depth = IPL_DEPTH_8U;    // 8
+    img->colorModel[0] = 'R';
+    img->colorModel[1] = 'G';
+    img->colorModel[2] = 'B';
+    img->channelSeq[0] = 'B';
+    img->channelSeq[1] = 'G';
+    img->channelSeq[2] = 'R';
+    img->dataOrder = 0;
+    img->origin = 0;
+    img->align = 4;
+    img->width = resWidth;
+    img->height = resHeight;
+    img->imageSize = resHeight*resWidth*3;
+    img->widthStep = resWidth*3;
+    img->BorderMode[0] = 0;
+    img->BorderMode[1] = 0;
+    img->BorderMode[2] = 0;
+    img->BorderMode[3] = 0;
+    img->BorderConst[0] = 0;
+    img->BorderConst[1] = 0;
+    img->BorderConst[2] = 0;
+    img->BorderConst[3] = 0;
+
+    stepY = 0;
+    stepU = 0;
+    stepV = 0;
+    i = 0;
+
+     for(j = 0; j < resHeight; j++)
+    {
+        for(k = 0; k < resWidth; k++)
+        {
+            x = ResTableX_720To320[k];
+            y = pY[i][stepY+x];
+            u = pU[i][stepU+x/2];
+            v = pV[i][stepV+x/2];
+
+            // - 39 , 111 , 51, 241
+            num = 3*k+3*resWidth*(j);
+            bin_num = j*imgResult->widthStep + k;
+
+            switch (color) {
+              case 1:   //  살색, startmission
+                if(  v>45   &&   v<127  ) {
+                    // 검정색으로
+                    imgResult->imageData[bin_num] = (char)0;
+                }
+                else {
+                    // 흰색으로 -> 살색
+                    imgResult->imageData[bin_num] = (char)255;
+                }
+                break;
+
+              case 2:   //  흰색
+                if(  y>200  &&  u>130  ) {
+                    // 흰색으로
+                    imgResult->imageData[bin_num] = (char)255;
+                }
+                else {
+                    // 검정색으로
+                    imgResult->imageData[bin_num] = (char)0;
+                }
+                break;
+
+              case 3:   //  검은색 TODO
+                if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+                    // 흰색으로
+                    imgResult->imageData[bin_num] = (char)255;
+                }
+                else {
+                    // 검정색으로
+                    imgResult->imageData[bin_num] = (char)0;
+                }
+                break;
+
+              case 4:   //  노란색 TODO
+                if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+                    // 흰색으로
+                    imgResult->imageData[bin_num] = (char)255;
+                }
+                else {
+                    // 검정색으로
+                    imgResult->imageData[bin_num] = (char)0;
+                }
+                break;
+
+              case 5:   //  초록색 TODO
+                if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+                    // 흰색으로
+                    imgResult->imageData[bin_num] = (char)255;
+                }
+                else {
+                    // 검정색으로
+                    imgResult->imageData[bin_num] = (char)0;
+                }
+                break;
+
+
+              default:  //  기본 : 노란 차선검출
+                if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+                    // 흰색으로
+                    imgResult->imageData[bin_num] = (char)255;
+                }
+                else {
+                    // 검정색으로
+                    imgResult->imageData[bin_num] = (char)0;
+                }
+                break;
+            }
+
+
+            img->imageData[num] = y;
+            img->imageData[num+1] = u;
+            img->imageData[num+2] = v;
+
+        }
+        stepY += pitchY[i];
+        stepU += pitchU[i];
+        stepV += pitchV[i];
+    }
+
+
     NvMediaVideoSurfaceUnlock(capSurf);
 
     return 1;
@@ -476,7 +732,7 @@ static unsigned int CaptureThread(void *params)
     primaryVideo.previous2 = NULL;
     primaryVideo.srcRect = &primarySrcRect;
     primaryVideo.dstRect = NULL;
-    
+
 
     NvSemaphoreDecrement(ctx->semStart, NV_TIMEOUT_INFINITE);
 
@@ -497,19 +753,19 @@ static unsigned int CaptureThread(void *params)
         //printf("frame=%3d, time=%llu.%09llu[s] \n", i, (ctime-stime)/1000000000LL, (ctime-stime)%1000000000LL);
 
         pthread_mutex_lock(&mutex);            // for ControlThread()
-        
+
         if(!(capSurf = NvMediaVideoCaptureGetFrame(ctx->capture, ctx->timeout)))
         { // TBD
             MESSAGE_PRINTF("NvMediaVideoCaptureGetFrame() failed in %sThread\n", ctx->name);
             stop = NVMEDIA_TRUE;
             break;
         }
-      
+
         if(i%3 == 0)                        // once in three loop = 10 Hz
             pthread_cond_signal(&cond);        // ControlThread() is called
 
         pthread_mutex_unlock(&mutex);        // for ControlThread()
-        
+
         primaryVideo.current = capSurf;
         primaryVideo.pictureStructure = NVMEDIA_PICTURE_STRUCTURE_TOP_FIELD;
 
@@ -553,7 +809,7 @@ static unsigned int CaptureThread(void *params)
             if(!ctx->displayEnabled)
                 releaseList[0] = capSurf;
         }
-        
+
         relList = &releaseList[0];
 
         while(*relList)
@@ -651,7 +907,7 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 /////////////////////////////////////  빈공간에 원형만 선언해둠.
 ////////////////////////////////////////////////////////////////////////////////////////////
-void Find_Center(IplImage* imgResult, IplImage* imgCenter)      
+void Find_Center(IplImage* imgResult, IplImage* imgCenter)
 {
     int angle=1500;
     SteeringServoControl_Write(angle);
@@ -667,11 +923,11 @@ void *ControlThread(void *unused)
     NvMediaTime pt1 ={0}, pt2 = {0};
     NvU64 ptime1, ptime2;
     struct timespec;
- 
+
     IplImage* imgOrigin;
     IplImage* imgResult;            // TY add 6.27
     //IplImage* imgCenter;          // TY add 6.27
-    
+
     // cvCreateImage
     imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
     imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
@@ -679,20 +935,20 @@ void *ControlThread(void *unused)
 
     cvZero(imgResult);          // TY add 6.27
     //cvZero(imgCenter);            // TY add 6.27
- 
+
     while(1)
     {
         pthread_mutex_lock(&mutex);
         pthread_cond_wait(&cond, &mutex);
-        
+
         GetTime(&pt1);
         ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
         Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
                                          // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
 
-        pthread_mutex_unlock(&mutex);     
-        
+        pthread_mutex_unlock(&mutex);
+
         // TODO : control steering angle based on captured image ---------------
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -702,16 +958,16 @@ void *ControlThread(void *unused)
         Find_Center(imgResult, imgCenter); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
-        #ifdef IMGSAVE              
+        #ifdef IMGSAVE
         sprintf(fileName, "captureImage/imgOrigin%d.png", i);
         sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
         //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
-        
+
         cvSaveImage(fileName, imgOrigin, 0);
         cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
         //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
-        #endif  
+        #endif
 
         //TY설명 내용
         //imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
@@ -721,12 +977,12 @@ void *ControlThread(void *unused)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // ---------------------------------------------------------------------
-            
+
         GetTime(&pt2);
         ptime2 = (NvU64)pt2.tv_sec * 1000000000LL + (NvU64)pt2.tv_nsec;
-        printf("--------------------------------operation time=%llu.%09llu[s]\n", (ptime2-ptime1)/1000000000LL, (ptime2-ptime1)%1000000000LL);  
-        
-         
+        printf("--------------------------------operation time=%llu.%09llu[s]\n", (ptime2-ptime1)/1000000000LL, (ptime2-ptime1)%1000000000LL);
+
+
         i++;
     }
 }
@@ -765,9 +1021,9 @@ int main(int argc, char *argv[])
     CaptureContext vipCtx;
     NvMediaBool deviceEnabled = NVMEDIA_FALSE;
     unsigned int displayId;
-    
+
     pthread_t cntThread;
-    
+
     signal(SIGINT, SignalHandler);
 
     memset(&testArgs, 0, sizeof(TestArgs));
@@ -782,24 +1038,24 @@ int main(int argc, char *argv[])
     printf("0. Car initializing \n");
     CarControlInit();
 
-    
+
     printf("\n\n 0.1 servo control\n");
 
     //camera x servo set
     angle = 1500;                       // Range : 600(Right)~1200(default)~1800(Left)
     CameraXServoControl_Write(angle);
     //camera y servo set
-    
+
     angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
-    CameraYServoControl_Write(angle);    
-    
+    CameraYServoControl_Write(angle);
+
     /*                              //Servo restoration(disable)
     angle = 1500;
     SteeringServoControl_Write(angle);
     CameraXServoControl_Write(angle);
-    CameraYServoControl_Write(angle); 
+    CameraYServoControl_Write(angle);
     */
-#endif  
+#endif
 
     printf("1. Create NvMedia capture \n");
     // Create NvMedia capture(s)
@@ -833,7 +1089,7 @@ int main(int argc, char *argv[])
             MESSAGE_PRINTF("Bad VIP device\n");
             goto fail;
     }
-    
+
 
     if(!(vipCapture = NvMediaVideoCaptureCreate(testArgs.vipInputtVideoStd, // interfaceFormat
                                                 NULL, // settings
@@ -842,7 +1098,7 @@ int main(int argc, char *argv[])
         MESSAGE_PRINTF("NvMediaVideoCaptureCreate() failed for vipCapture\n");
         goto fail;
     }
-  
+
 
     printf("2. Create NvMedia device \n");
     // Create NvMedia device
@@ -907,7 +1163,7 @@ int main(int argc, char *argv[])
         goto fail;
     }
 
- 
+
 
     printf("5. Open output file(s) \n");
     // Open output file(s)
@@ -972,14 +1228,14 @@ int main(int argc, char *argv[])
 
     printf("wait for ADV7182 ... one second\n");
     sleep(1);
-    
+
     printf("7. Kickoff \n");
     // Kickoff
     NvMediaVideoCaptureStart(vipCapture);
     NvSemaphoreIncrement(vipStartSem);
-    
+
     printf("8. Control Thread\n");
-    pthread_create(&cntThread, NULL, &ControlThread, NULL); 
+    pthread_create(&cntThread, NULL, &ControlThread, NULL);
 
     printf("9. Wait for completion \n");
     // Wait for completion
@@ -1001,7 +1257,7 @@ fail: // Run down sequence
     // Close output file(s)
     if(vipFile)
         fclose(vipFile);
-        
+
     // Unbind NvMedia mixer(s) and output(s) and destroy them
     if(vipOutput[0])
     {
@@ -1038,7 +1294,6 @@ fail: // Run down sequence
                 break;
         }
     }
-    
+
     return err;
 }
-
