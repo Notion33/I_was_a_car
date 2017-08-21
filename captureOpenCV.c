@@ -744,7 +744,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	{
 		if (Gap > 0) // turn right
 		{
-			if (Right_Up < Left_Up && Down == 0)
+			if (Right_Up < Left_Up && Down == 0) //상단오른쪽 < 상단왼쪽 & 3,4분면의 픽셀 수 = 0
 			{
 				if (Right_Sum == 0)
 				{
@@ -754,15 +754,15 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 				{
 					angle = 1000;
 					Right_Max = true;
-				}
+				}// 세가지 조건이 만족하지 않은 경우 최대조향
 			}
 			else
-			angle = 1500 - Gap * weight;
+			angle = 1500 - Gap * weight;// 그 외의 것 (예를 들어, 1,2,3분면에 픽셀 존재)
 		}// angle < 1500 turn right
 
 		else if (Gap < 0)// turn left 
 		{
-			if (Right_Up > Left_Up && Down == 0)
+			if (Right_Up > Left_Up && Down == 0) //상단오른쪽 > 상단왼쪽 & 3,4분면의 픽셀 수 = 0
 			{
 				if (Left_Sum == 0)
 				{
@@ -772,17 +772,17 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 				{
 					angle = 2000;
 					Left_Max = true;
-				}
+				}// 세가지 조건이 만족하지 않은 경우 최대조향
 			}
 			else
-			angle = 1500 - Gap * weight;	
+			angle = 1500 - Gap * weight;// 그 외의 것 (예를 들어, 1,2,4분면에 픽셀 존재)	
 		}// angle > 1500 turn left
 
-		if (Left_Max == true || Right_Max == true)
+		if (Left_Max == true || Right_Max == true) //최대 조향을 할 경우 
 		{
-			Left_Up = Left_Sum;
+			Left_Up = Left_Sum; 
 			Right_Up = Right_Sum;
-			
+
 			if (abs(Dif_Down) < 11 && abs(Dif_Up) < 11 && abs(Up) > 10)
 			{
 				Right_Max = false;
@@ -791,10 +791,14 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			else if (Right_Max == true)
 			{
 				angle = 1000;
+				angle = angle > 1800 ? 1000: angle;
+				// 갑작스럽게 왼쪽으로 조향하는 것을 방지
 			}
 			else if (Left_Max == true)
 			{
 				angle = 2000;
+				angle = angle < 1200 ? 2000: angle;
+				// 갑작스럽게 오른쪽으로 조향하는 것을 방지
 			}
 		}
 
@@ -802,6 +806,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		/*angle = angle > 2000 ? 2000: angle;
 		angle = angle < 1000 ? 1000 : angle;*/
 	}
+	
 	
 	SteeringServoControl_Write(angle);
 
