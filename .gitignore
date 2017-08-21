@@ -1,5 +1,6 @@
 #no image file
 *.png
+*.jpeg
 
 #no output file
 *.o
