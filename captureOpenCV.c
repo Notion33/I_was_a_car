@@ -733,14 +733,15 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	printf("left_sum=%d, Right_sum=%d, gap=%d\n", Left_Sum, Right_Sum, Gap);
 
 
-	if (Dif_Up == 0 && Dif_Down == 0)
-	{
-		angle = 1500;
-	}//straight
+		if (Dif_Up == 0 && Dif_Down == 0)
+		{
+			angle = 1500;
+			/*SteeringServoControl_Write(angle);
+			return;*/
+		}//straight
 
-	else
-	{ 
-		if (Gap > 0) // turn right
+	
+		else if (Gap > 0) // turn right
 		{
 			if (Dif_Up <= 10 && Dif_Down <= 10)
 			{
@@ -807,11 +808,12 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		}
 
 		angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
-	}
+		/*angle = angle > 2000 ? 2000: angle;
+		angle = angle < 1000 ? 1000 : angle;*/
 
-	/*angle = angle > 2000 ? 2000: angle;
-	angle = angle < 1000 ? 1000 : angle;*/
+	
 
+	
 	SteeringServoControl_Write(angle);
 
 #ifdef SPEED_CONTROL
