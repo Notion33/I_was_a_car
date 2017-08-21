@@ -53,6 +53,10 @@
 #define RESIZE_WIDTH  320
 #define RESIZE_HEIGHT 240
 
+#define DIMENSION_X_AXIS 80
+#define DIMENSION_Y_AXIS 20
+
+#define abs(a) ((a) < 0 ? (-(a)) : (a)) 
 
 static NvMediaVideoSurface *capSurf = NULL;
 
@@ -647,8 +651,8 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 
 void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
-	int width = 320;//40 
-	int height = 240;//60
+	int width = 320;//160 크기 ROI
+	int height = 240;//40 크기 ROI
 	int Left_Down = 0; // 3 사분면
 	int Right_Down = 0; // 4 사분면
 	int Left_Up = 0; // 2 사분면
@@ -658,21 +662,21 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	int y = 0;
 	int angle = 0;
 
-	int Dif = 0, Dif1 = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
+	int Dif_Down = 0, Dif_Up = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
 	int Left_Sum = 0, Right_Sum = 0; //왼쪽, 오른쪽 픽셀 갯수
 	int Gap = 0; // 왼쪽 - 오른쪽 픽셀 갯수;
 	int Up = 0, Down = 0;// 1,2 dimension's sum & 3,4 dimension's sum
 
-	float weight = 1.8, weight2 = 1.2;// control angle weight
+	float weight = 1.8;// control angle weight
 	int speed = 0;
 	int straight_speed = 115;
 	int curve_speed = 85;
 	//총 픽셀은 320 *240 = 76800
 
 
-	for (y = 100; y < height / 2; y++)
+	for (y = (height / 2) - DIMENSION_Y_AXIS; y < height / 2; y++)
 	{
-		for (x = 80; x < width / 2; x++)
+		for (x = (width / 2) - DIMENSION_X_AXIS; x < width / 2; x++)
 		{
 			if (imgResult->imageData[y * width + x] == whitepx)//Find white pixels 
 			{
@@ -680,7 +684,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 			}// 2사분면
 		}
-		for (x = 240; x > width / 2; x--)
+		for (x = (width / 2) + DIMENSION_X_AXIS; x > width / 2; x--)
 		{
 			if (imgResult->imageData[y * width + x] == whitepx)
 			{
@@ -688,15 +692,11 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			}// 1사분면
 		}
 	}
-	printf("Left_Up = %d\n", Left_Up);
-	printf("Right_Up = %d\n", Right_Up);
-	Dif1 = Left_Up - Right_Up;
-	printf("Difference1 is %d\n", Dif1);
+	
 
-
-	for (y = (height / 2) + 1; y < 160; y++)
+	for (y = (height / 2) + 1; y < (height / 2) + DIMENSION_Y_AXIS; y++)
 	{
-		for (x = 80; x < width / 2; x++)
+		for (x = (width / 2) - DIMENSION_X_AXIS; x < width / 2; x++)
 		{
 			if (imgResult->imageData[y * width + x] == whitepx)//Find white pixels 
 			{
@@ -704,7 +704,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 			}// 3사분면
 		}
-		for (x = 240; x > width / 2; x--)
+		for (x = (width / 2) + DIMENSION_X_AXIS; x > width / 2; x--)
 		{
 			if (imgResult->imageData[y * width + x] == whitepx)
 			{
@@ -713,12 +713,8 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		}
 
 	}
-	printf("Left_Down = %d\n", Left_Down);
-	printf("Right_Down = %d\n", Right_Down);
-
-	Dif = Left_Down - Right_Down;
-	printf("Difference is %d\n", Dif);
-
+	Dif_Up = Left_Up - Right_Up;
+	Dif_Down = Left_Down - Right_Down;
 
 	Left_Sum = Left_Down + Left_Up;
 	Right_Sum = Right_Down + Right_Up;
@@ -726,58 +722,59 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	Up = Left_Up + Right_Up;
 	Down = Left_Down + Right_Down;
 
+	printf("Left_Up = %d\n", Left_Up);
+	printf("Right_Up = %d\n", Right_Up);
+	printf("Difference_Up is %d\n", Dif_Up);
+
+	printf("Left_Down = %d\n", Left_Down);
+	printf("Right_Down = %d\n", Right_Down);
+	printf("Difference_Down is %d\n", Dif_Down);
+
 	printf("left_sum=%d, Right_sum=%d, gap=%d\n", Left_Sum, Right_Sum, Gap);
 
 
-
-
-	if (Dif == 0 && Dif1 == 0)
+	if (Dif_Up == 0 && Dif_Down == 0)
 	{
 		angle = 1500;
 	}//straight
 
-	else if (Gap > 0) // turn right
-	{
-		if (Dif <= 10 && Dif1 <= 10)
+	else
+	{ 
+		if (Gap > 0) // turn right
 		{
-			angle = 1500;
-		}
-
-		else if (Right_Up < Left_Up)
-		{
-			if (Down == 0)
+			if (Dif_Up <= 10 && Dif_Down <= 10)
 			{
-				if (Right_Sum == 0)
+				angle = 1500;
+			}
+
+			else if (Right_Up < Left_Up)
+			{
+				if (Down == 0 && Right_Sum == 0)
 				{
-					angle = 1250;
-				}//only one side pixels 
+					angle = 1250;//only one side pixels 
+				}
 				else
 				{
 					angle = 1000;
 					Right_Max = true;
 				}
 			}
-
 			else
-				angle = 1500 - Gap * weight;
-		}
+			angle = 1500 - Gap * weight;
+		}// angle < 1500 turn right
 
-	}// angle < 1500 turn right
-
-	else if (Gap < 0) // turn left 
-	{
-		if (Dif >= -10 && Dif1 >= -10)
+		else // turn left 
 		{
-			angle = 1500;
-		}
-
-		else if (Right_Up > Left_Up)
-		{
-			if (Down == 0)
+			if (Dif_Up >= -10 && Dif_Down >= -10)
 			{
-				if (Left_Sum == 0)
+				angle = 1500;
+			}
+
+			if (Right_Up > Left_Up)
+			{
+				if (Down == 0 && Left_Sum == 0)
 				{
-					angle = 1750;
+						angle = 1750;
 				}
 				else
 				{
@@ -785,46 +782,32 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 					Left_Max = true;
 				}
 			}
-			
 			else
-				angle = 1500 - Gap * weight;
-		}
-		
-	}// angle > 1500 turn left
+			angle = 1500 - Gap * weight;	
+		}// angle > 1500 turn left
 
-	if (Left_Max || Right_Max == true)
-	{
-		Left_Up = Left_Sum;
-		Right_Up = Right_Sum;
-
-		
-		if (Dif <= 10 && Dif1 <= 10)
+		if (Left_Max == true || Right_Max == true)
 		{
-			Right_Max = false;
-		}
-		else if (Dif >= -10 && Dif1 >= -10)
-		{
-			Left_Max = false; 
-		}
-		else if (Right_Max == true)
-		{
-			if (angle > 1800)
-			{
-				Left_Max = false;
-			}
-			angle = 1000;
-		}
-		else if (Left_Max == true)
-		{
-			if (angle < 1200)
+			Left_Up = Left_Sum;
+			Right_Up = Right_Sum;
+			
+			if (abs(Dif_Down) < 11 && abs(Dif_Up) < 11 && abs(Up) > 10)
 			{
 				Right_Max = false;
+				Left_Max = false; 
 			}
-			angle = 2000;
+			else if (Right_Max == true)
+			{
+				angle = 1000;
+			}
+			else if (Left_Max == true)
+			{
+				angle = 2000;
+			}
 		}
-	}
 
-	angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
+		angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
+	}
 
 	/*angle = angle > 2000 ? 2000: angle;
 	angle = angle < 1000 ? 1000 : angle;*/
