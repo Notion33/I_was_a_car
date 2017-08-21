@@ -763,18 +763,18 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			angle = 1500 - Gap * weight;
 		}// angle < 1500 turn right
 
-		else // turn left 
+		else if (Gap < 0)// turn left 
 		{
 			if (Dif_Up >= -10 && Dif_Down >= -10)
 			{
 				angle = 1500;
 			}
 
-			if (Right_Up > Left_Up)
+			else if (Right_Up > Left_Up)
 			{
 				if (Down == 0 && Left_Sum == 0)
 				{
-						angle = 1750;
+					angle = 1750;//only one side pixels
 				}
 				else
 				{
