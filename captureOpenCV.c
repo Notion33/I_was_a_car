@@ -555,6 +555,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
 
 static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
 {
+    //color : 1. 살색 2. 흰색 3. 검은색 4. 노란색 5. 초록색 6. 빨간색 7. 노란차선검출
     NvMediaVideoSurfaceMap surfMap;
     unsigned int resWidth, resHeight;
     unsigned char y,u,v;
@@ -649,8 +650,19 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
                 }
                 break;
 
-              case 3:   //  검은색 TODO
-                if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+              case 3:   //  검은색
+                if( y>35 && y<50 && u>125 ) {
+                    // 흰색으로 -> 실제 검은색
+                    imgResult->imageData[bin_num] = (char)255;
+                }
+                else {
+                    // 검정색으로
+                    imgResult->imageData[bin_num] = (char)0;
+                }
+                break;
+
+              case 4:   //  노란색
+                if( y>90 && y<105 && v>146 ) {
                     // 흰색으로
                     imgResult->imageData[bin_num] = (char)255;
                 }
@@ -660,8 +672,8 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
                 }
                 break;
 
-              case 4:   //  노란색 TODO
-                if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+              case 5:   //  초록색
+                if( y<100  &&  u<127 &&   v<123  ) {
                     // 흰색으로
                     imgResult->imageData[bin_num] = (char)255;
                 }
@@ -671,8 +683,8 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
                 }
                 break;
 
-              case 5:   //  초록색 TODO
-                if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
+              case 6:   //  빨간색
+                if( v>140 ) {
                     // 흰색으로
                     imgResult->imageData[bin_num] = (char)255;
                 }
@@ -974,7 +986,7 @@ void *ControlThread(void *unused)
         //imgCenter는 아직 구현 안되어있으며 필요시 아래의 코드 주석처리 해제시 사용가능
         //char fileName2[30] , IplImage* imgCenter, imgCenter = cvCreateImage(cvGetSize(imgOrigin),
         //IPL_DEPTH_8U, 1), cvZero(imgCenter), sprintf(fileName2, "captureImage/imgCenter%d.png", i), cvSaveImage(fileName2, imgCenter, 0)
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // ---------------------------------------------------------------------
 
