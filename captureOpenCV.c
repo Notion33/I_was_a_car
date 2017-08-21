@@ -653,23 +653,24 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
 	int width = 320;//160 크기 ROI
 	int height = 240;//40 크기 ROI
-	int Left_Down = 0; // 3 사분면
-	int Right_Down = 0; // 4 사분면
 	int Left_Up = 0; // 2 사분면
 	int Right_Up = 0; // 1 사분면
+	int Left_Down = 0; // 3 사분면
+	int Right_Down = 0; // 4 사분면
+	
 
-	int x = 0;
-	int y = 0;
-	int angle = 0;
+	int x = 0;// x축
+	int y = 0;// y축
+	int angle = 0; //조향각도
 
 	int Dif_Down = 0, Dif_Up = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
 	int Left_Sum = 0, Right_Sum = 0; //왼쪽, 오른쪽 픽셀 갯수
 	int Gap = 0; // 왼쪽 - 오른쪽 픽셀 갯수;
 	int Up = 0, Down = 0;// 1,2 dimension's sum & 3,4 dimension's sum
 
-	float weight = 1.8;// control angle weight
-	int speed = 0;
-	int straight_speed = 115;
+	float weight = 0.65;// control angle weight
+	int speed = 0; 
+	int straight_speed = 115; 
 	int curve_speed = 85;
 	//총 픽셀은 320 *240 = 76800
 
@@ -692,7 +693,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 			}// 1사분면
 		}
 	}
-	
 
 	for (y = (height / 2) + 1; y < (height / 2) + DIMENSION_Y_AXIS; y++)
 	{
@@ -711,8 +711,8 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 				Right_Down++;
 			}// 4사분면
 		}
-
 	}
+
 	Dif_Up = Left_Up - Right_Up;
 	Dif_Down = Left_Down - Right_Down;
 
@@ -733,24 +733,20 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	printf("left_sum=%d, Right_sum=%d, gap=%d\n", Left_Sum, Right_Sum, Gap);
 
 
-		if (Dif_Up == 0 && Dif_Down == 0)
+	if (abs(Dif_Up) < 11 && abs(Dif_Down) < 11)
+	{
+		angle = 1500;
+		/*SteeringServoControl_Write(angle);
+		return;*/
+	}//straight
+	 
+	else
+	{
+		if (Gap > 0) // turn right
 		{
-			angle = 1500;
-			/*SteeringServoControl_Write(angle);
-			return;*/
-		}//straight
-
-	
-		else if (Gap > 0) // turn right
-		{
-			if (Dif_Up <= 10 && Dif_Down <= 10)
+			if (Right_Up < Left_Up && Down == 0)
 			{
-				angle = 1500;
-			}
-
-			else if (Right_Up < Left_Up)
-			{
-				if (Down == 0 && Right_Sum == 0)
+				if (Right_Sum == 0)
 				{
 					angle = 1250;//only one side pixels 
 				}
@@ -766,14 +762,9 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 		else if (Gap < 0)// turn left 
 		{
-			if (Dif_Up >= -10 && Dif_Down >= -10)
+			if (Right_Up > Left_Up && Down == 0)
 			{
-				angle = 1500;
-			}
-
-			else if (Right_Up > Left_Up)
-			{
-				if (Down == 0 && Left_Sum == 0)
+				if (Left_Sum == 0)
 				{
 					angle = 1750;//only one side pixels
 				}
@@ -810,9 +801,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
 		/*angle = angle > 2000 ? 2000: angle;
 		angle = angle < 1000 ? 1000 : angle;*/
-
-	
-
+	}
 	
 	SteeringServoControl_Write(angle);
 
