@@ -808,10 +808,18 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		}
 		else if (Right_Max == true)
 		{
+			if (angle > 1800)
+			{
+				Left_Max = false;
+			}
 			angle = 1000;
 		}
 		else if (Left_Max == true)
 		{
+			if (angle < 1200)
+			{
+				Right_Max = false;
+			}
 			angle = 2000;
 		}
 	}
