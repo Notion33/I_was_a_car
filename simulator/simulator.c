@@ -179,7 +179,7 @@ int main(int argc, char const *argv[]) {
   index = startFrame(lastframe);
   while(index>lastframe){
     printf("Selected frame is out of range. Choose again starting frame\n");
-    index = selectMode(lastframe);
+    index = startFrame(lastframe);
   }
   sprintf(file_name, "../captureImage/imgResult%d.png", index);
 
