@@ -885,9 +885,6 @@ void Find_Center(IplImage* imgResult)
     int angle=1500;
     SteeringServoControl_Write(angle);
 
-    //TODO 테스트용 속도
-    DesireSpeed_Write(100);
-
 }
 
 
