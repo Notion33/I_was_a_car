@@ -39,7 +39,7 @@
 
 #define SERVO_CONTROL     // TY add 6.27
               // To servo control(steering & camera position)
-//#define IMGSAVE
+#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -54,6 +54,8 @@
 
 #define RESIZE_WIDTH  320
 #define RESIZE_HEIGHT 240
+
+#define whitepx 255
 
 
 static NvMediaVideoSurface *capSurf = NULL;
@@ -629,6 +631,60 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
     return 1;
 }
 
+void emergencyStopRed(IplImage* imgOrigin){ // Find_Center보다 뒤에서 사용해야 급정거 효과 있음
+    int x = 20, y= 30;
+    int width = 280, height = 80;
+    int mThreshold = width*height*0.4;
+    //int isStop = 0;
+    IplImage* imgEmergency;
+    imgEmergency = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+    cvZero(imgEmergency);
+    //cvZero(imgEmergency);
+
+    //=========================
+    //frame2ipl
+    NvMediaTime pt1 ={0}, pt2 = {0};
+    NvU64 ptime1, ptime2;
+    struct timespec;
+
+    pthread_mutex_lock(&mutex);
+    pthread_cond_wait(&cond, &mutex);
+    GetTime(&pt1);
+    ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+    Frame2Ipl_color(imgOrigin, imgEmergency, 6);    //binary red->white
+    pthread_mutex_unlock(&mutex);
+    //TODO 변환하는 픽셀 자체를 더 줄일 수 없을까?
+    //==========================
+
+    //적색 px판단
+    int i, j;
+    int count = 0;
+    for(j=y; j<y+height; j++){
+        for(i=x; i<x+width; i++){
+            int px = imgEmergency->imageData[i + j*imgEmergency->widthStep];
+            if(px == whitepx){
+                //TODO
+                count++;
+            }
+        }
+    }
+    printf("threshold : %d\n", mThreshold);
+    if(count > mThreshold){
+        //급정지! 대기
+        //speed = 0;
+        printf("\nStop!!! countpx : %d / %d \n\n",count, mThreshold);
+        DesireSpeed_Write(0);   //정지
+
+        //isStop = 1;
+    }
+    // else if(count < width*height*0.05 && isStop == 1){
+    //     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
+    //     //출발
+    //     //아예 이 함수 플래그 죽이기
+    // }
+
+}
+
 static unsigned int CaptureThread(void *params)
 {
     int i = 0;
@@ -824,10 +880,14 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 /////////////////////////////////////  빈공간에 원형만 선언해둠.
 ////////////////////////////////////////////////////////////////////////////////////////////
-void Find_Center(IplImage* imgResult, IplImage* imgCenter)
+void Find_Center(IplImage* imgResult)
 {
     int angle=1500;
     SteeringServoControl_Write(angle);
+
+    //TODO 테스트용 속도
+    DesireSpeed_Write(100);
+
 }
 
 
@@ -872,8 +932,9 @@ void *ControlThread(void *unused)
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
 
-        Find_Center(imgResult, imgCenter); // TY Centerline 검출해서 조향해주는 알고리즘
+        Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
+        emergencyStopRed(imgOrigin);
 
         #ifdef IMGSAVE
         sprintf(fileName, "captureImage/imgOrigin%d.png", i);
