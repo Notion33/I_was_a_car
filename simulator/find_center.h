@@ -9,6 +9,7 @@
 #define UNCONTROL 0
 #define CONTROL 1
 #define whitepx -1
+#define SHOWLOG
 
 bool turn_left_max = false;         //TY add
 bool turn_right_max = false;
@@ -18,188 +19,129 @@ bool Left_Max = false;
 
 //==============================================================================
 
-void Find_Center(IplImage* imgResult)		//TY add 6.27
+void Find_Center(IplImage* imgResult)
 {
-	int width = 320;//40
-	int height = 240;//60
-	int Left_Down = 0; // 3 사분면
-	int Right_Down = 0; // 4 사분면
-	int Left_Up = 0; // 2 사분면
-	int Right_Up = 0; // 1 사분면
-
-	int x = 0;
-	int y = 0;
-	int angle = 0;
-
-	int Dif = 0, Dif1 = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
-	int Left_Sum = 0, Right_Sum = 0; //왼쪽, 오른쪽 픽셀 갯수
-	int Gap = 0; // 왼쪽 - 오른쪽 픽셀 갯수;
-	int Up = 0, Down = 0;// 1,2 dimension's sum & 3,4 dimension's sum
-
-	float weight = 1.8, weight2 = 1.2;// control angle weight
-	int speed = 0;
-	int straight_speed = 115;
-	int curve_speed = 85;
-	//총 픽셀은 320 *240 = 76800
+    int i=0, j=0;
+    int count = 0;
+    int angle = 1500;
+    int speed = 80;
+    int width = imgResult->width;
+    int height = imgResult->height;
+    int spacing = 40;                       // 중앙선 기준으로 spacing만큼은 무시
+    int rightTop = 0, leftTop = 0;          // 0~2
+    int rightBottom = 0, leftBottom = 0;    // 0~2
 
 
-	for (y = 100; y < height / 2; y++)
-	{
-		for (x = 80; x < width / 2; x++)
-		{
-			if (imgResult->imageData[y * width + x] == whitepx)//Find white pixels
-			{
-				Left_Up++;
+    //  직진 코스 읽기
+    int checkStraightLineY[4] = {50, 70, 130, 150}; // 상단과 하단의 1/6씩 버림
 
-			}// 2사분면
-		}
-		for (x = 240; x > width / 2; x--)
-		{
-			if (imgResult->imageData[y * width + x] == whitepx)
-			{
-				Right_Up++;
-			}// 1사분면
-		}
-	}
-	printf("Left_Up = %d\n", Left_Up);
-	printf("Right_Up = %d\n", Right_Up);
-	Dif1 = Left_Up - Right_Up;
-	printf("Difference1 is %d\n", Dif1);
+    //  상단부 2줄 읽어서 직진코스 확인
+    for (i = 0; i < 2; i++) {
+      count = 0;
+      for(j=width/2 + spacing; j<width; j++){ // 우측 상단
+        int idx = checkStraightLineY[i]*imgResult->widthStep + j;
+        if(imgResult->imageData[idx] == whitepx){
+          count++;
+          if(count>5){    // 차선이라 판단
+            rightTop++;
+            break;
+          }
+        }
+      }
+      count = 0;
+      for(j=width/2 - spacing; j>=0; j--){    // 좌측 상단
+        int idx = checkStraightLineY[i]*imgResult->widthStep + j;
+        if(imgResult->imageData[idx] == whitepx){
+          count++;
+          if(count>5){    // 차선이라 판단
+            leftTop++;
+            break;
+          }
+        }
+      }
+    }
 
+    //  하단부는 비어야있어야 함
+    for (i = 2; i < 4; i++) {
+      count = 0;
+      for(j=width/2 + spacing; j<width; j++){ // 우측 하단
+        int idx = checkStraightLineY[i]*imgResult->widthStep + j;
+        if(imgResult->imageData[idx] == whitepx){
+          count++;
+          if(count>5){    // 차선이라 판단
+            rightBottom++;
+            break;
+          }
+        }
+      }
+      count = 0;
+      for(j=width/2 - spacing; j>=0; j--){    // 좌측 하단
+        int idx = checkStraightLineY[i]*imgResult->widthStep + j;
+        if(imgResult->imageData[idx] == whitepx){
+          count++;
+          if(count>5){    // 차선이라 판단
+            leftBottom++;
+            break;
+          }
+        }
+      }
+    }
 
-	for (y = (height / 2) + 1; y < 160; y++)
-	{
-		for (x = 80; x < width / 2; x++)
-		{
-			if (imgResult->imageData[y * width + x] == whitepx)//Find white pixels
-			{
-				Left_Down++;
+    //  교점 분포에 따른 주행 판단
+    // TODO TODO 상황별 시뮬레이션 보며 상황문 조정!!
+    if(leftTop==2 && rightTop==2 && leftBottom==0 && rightBottom==0){           //직선, 상반부만 검출됨
+        angle = 1500;
+    } else if(leftTop+rightTop>=3 && leftBottom==0 && rightBottom==0){          //약한 직선
+        angle = 1500;
+    } else if(leftTop==0 && rightTop==2 && leftBottom==0 && rightBottom>=1) {   //중앙선이탈(우측치우침), 우측차선 크게 검출
+        angle = 1600;   //TODO 더 세밀하게 조향
+    } else if(leftTop==2 && rightTop==0 && leftBottom>=1 && rightBottom==0) {   //중앙선이탈(좌측치우침), 좌측차선 크게 검출
+        angle = 1400;   //TODO 더 세밀하게 조향
+    } else if(leftTop>=1 && rightTop==2 && leftBottom==0 && rightBottom>=1) {   //약한 좌회전, 우측차선 크게 검출
+        angle = 1800;   //TODO 더 세밀하게 조향
+    } else if(leftTop==2 && rightTop>=1 && leftBottom>=1 && rightBottom==0) {   //약한 우회전, 좌측차선 크게 검출
+        angle = 1200;   //TODO 더 세밀하게 조향
+    } else if(leftTop<=1 && rightTop==0 && leftBottom==0 && rightBottom==2) {   //강한 좌회전, 우측차선만 검출
+        angle = 2000;   //TODO 범위 더 정확하게
+    } else if(leftTop==0 && rightTop<=1 && leftBottom==2 && rightBottom==0) {   //강한 우회전, 좌측차선만 검출
+        angle = 1000;   //TODO 범위 더 정확하게
+    }
 
-			}// 3사분면
-		}
-		for (x = 240; x > width / 2; x--)
-		{
-			if (imgResult->imageData[y * width + x] == whitepx)
-			{
-				Right_Down++;
-			}// 4사분면
-		}
+    else {
+        //angle 유지
+    }
 
-	}
-	printf("Left_Down = %d\n", Left_Down);
-	printf("Right_Down = %d\n", Right_Down);
+    #ifdef SHOWLOG
+    //TODO 현재상태 문자열로 반환
+    char status[30];
+    if(leftTop==2 && rightTop==2 && leftBottom==0 && rightBottom==0){           //직선, 상반부만 검출됨
+        sprintf(status, "Straight!");
+    } else if(leftTop+rightTop>=3 && leftBottom==0 && rightBottom==0){          //약한 직선
+        sprintf(status, "weak Straight!");
+    } else if(leftTop==0 && rightTop==2 && leftBottom==0 && rightBottom>=1) {   //중앙선이탈(우측치우침), 우측차선 크게 검출
+        sprintf(status, "<- centerline --");
+    } else if(leftTop==2 && rightTop==0 && leftBottom>=1 && rightBottom==0) {   //중앙선이탈(좌측치우침), 좌측차선 크게 검출
+        sprintf(status, "-- centerline ->!");
+    } else if(leftTop>=1 && rightTop==2 && leftBottom==0 && rightBottom>=1) {   //약한 좌회전, 우측차선 크게 검출
+        sprintf(status, "left turn <-");
+    } else if(leftTop==2 && rightTop>=1 && leftBottom>=1 && rightBottom==0) {   //약한 우회전, 좌측차선 크게 검출
+        sprintf(status, "right turn ->");
+    } else if(leftTop<=1 && rightTop==0 && leftBottom==0 && rightBottom==2) {   //강한 좌회전, 우측차선만 검출
+        sprintf(status, "Max Left Turn! <<<-");
+    } else if(leftTop==0 && rightTop<=1 && leftBottom==2 && rightBottom==0) {   //강한 우회전, 좌측차선만 검출
+        sprintf(status, "Max Right Turn! ->>>");
+    }
 
-	Dif = Left_Down - Right_Down;
-	printf("Difference is %d\n", Dif);
+    //printf("\nstraight : %d,  notStraight : %d\n", straight, notStraight);
+    printf("\n");
+    printf("============\n");
+    printf("|| %d || %d ||\n",leftTop, rightTop);
+    printf("|| %d || %d ||\n",leftBottom, rightBottom);
+    printf("============\n");
+    printf("Angle : %d  Speed : %d\n", angle, speed);
+    printf("Current Status : %s\n", status);  //TODO 현재 상태 문자열로 출력
+    #endif
 
-
-	Left_Sum = Left_Down + Left_Up;
-	Right_Sum = Right_Down + Right_Up;
-	Gap = Left_Sum - Right_Sum;
-	Up = Left_Up + Right_Up;
-	Down = Left_Down + Right_Down;
-
-	printf("left_sum=%d, Right_sum=%d, gap=%d\n", Left_Sum, Right_Sum, Gap);
-
-
-
-	if (Dif == 0 && Dif1 == 0)
-	{
-		angle = 1500;
-	}
-
-	else if (Gap > 0) // turn right
-	{
-		if (Dif <= 10 && Dif1 <= 10)
-		{
-			angle = 1500;
-		}
-
-		else if (Right_Up < Left_Up)
-		{
-			if (Down == 0)
-			{
-				if (Right_Sum == 0)
-				{
-					angle = 1250;
-				}//only one side pixels
-				else
-				{
-					angle = 1000;
-					Right_Max = true;
-				}
-			}
-
-			else
-				angle = 1500 - Gap * weight;
-		}
-
-	}// angle < 1500 turn right
-
-	else if (Gap < 0) // turn left
-	{
-		if (Dif >= -10 && Dif1 >= -10)
-		{
-			angle = 1500;
-		}
-
-		else if (Right_Up > Left_Up)
-		{
-			if (Down == 0)
-			{
-				if (Left_Sum == 0)
-				{
-					angle = 1750;
-				}
-				else
-				{
-					angle = 2000;
-					Left_Max = true;
-				}
-			}
-
-			else
-				angle = 1500 - Gap * weight;
-		}
-
-	}// angle > 1500 turn left
-
-	if (Left_Max || Right_Max == true)
-	{
-    Left_Up = Left_Sum;
-		Right_Up = Right_Sum;
-
-		if (Dif <= 10 && Dif1 <= 10)
-		{
-			Right_Max = false;
-		}
-		else if (Dif >= -10 && Dif1 >= -10)
-		{
-			Left_Max = false;
-		}
-		else if (Right_Max == true)
-		{
-			angle = 1000;
-		}
-		else if (Left_Max == true)
-		{
-			angle = 2000;
-		}
-	}
-
-	angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;
-
-	/*angle = angle > 2000 ? 2000: angle;
-	angle = angle < 1000 ? 1000 : angle;*/
-
-	SteeringServoControl_Write(angle);
-
-#ifdef SPEED_CONTROL
-	if (angle<1200 || angle>1800)
-		speed = curve_speed;
-	else
-		speed = straight_speed;
-	DesireSpeed_Write(speed);
-#endif
-
+    DesireSpeed_Write(speed);
+    SteeringServoControl_Write(angle);
 }
