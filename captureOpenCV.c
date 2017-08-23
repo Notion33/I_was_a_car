@@ -931,7 +931,7 @@ void *ControlThread(void *unused)
 
         Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
-        emergencyStopRed(imgOrigin);
+        emergencyStopRed(imgOrigin);    //NYC //TODO flag to kill
 
         #ifdef IMGSAVE
         sprintf(fileName, "captureImage/imgOrigin%d.png", i);
