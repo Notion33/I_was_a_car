@@ -708,14 +708,26 @@ void StartMission(){
     if(isStart(imgResult)==1){ // 손으로 가린 것을 확인
       ready += 1;
       printf("ready : %d / %d\n", ready, ready_th);
+      if(ready == ready_th){
+          Alarm_Write(ON);
+          usleep(100000);
+          Alarm_Write(OFF);
+          usleep(100000);
+          Alarm_Write(ON);
+          usleep(600000);
+          Alarm_Write(OFF);
+      }
     } else if (go >= go_th){
       printf("\n\nCar is now Ready! Start the Mission!!\n\n");
       RunTheMission();
+      FinishMission();
       flag = 1;
     }else if (ready >= ready_th && isStart(imgResult)==0){   // 손으로 일정 시간 가리다 떼는 것을 확인
       go += 1;
       printf("go : %d / %d\n", go, go_th);
     }
+
+
 
     i++;
   }
@@ -916,6 +928,64 @@ void PrepareMission(){
   usleep(1000000);
   Alarm_Write(OFF);
   Winker_Write(ALL_OFF);
+}
+
+void FinishMission(){
+    Winker_Write(ALL_ON);   //NYC added 8.23
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(120000);
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(120000);
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(400000);
+
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(120000);
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(120000);
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(400000);
+
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(120000);
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(120000);
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(120000);
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(500000);
+
+    CarLight_Write(ALL_ON);
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    usleep(120000);
+    Alarm_Write(ON);
+    usleep(150000);
+    Alarm_Write(OFF);
+    CarLight_Write(ALL_OFF);
+
+    Winker_Write(ALL_OFF);
 }
 
 //END OF StartMission
