@@ -39,7 +39,7 @@
 
 #define SERVO_CONTROL     // TY add 6.27
               // To servo control(steering & camera position)
-//#define IMGSAVE
+#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -824,7 +824,7 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 /////////////////////////////////////  빈공간에 원형만 선언해둠.
 ////////////////////////////////////////////////////////////////////////////////////////////
-void Find_Center(IplImage* imgResult, IplImage* imgCenter)
+void Find_Center(IplImage* imgResult)
 {
     int angle=1500;
     SteeringServoControl_Write(angle);
@@ -872,7 +872,7 @@ void *ControlThread(void *unused)
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
 
-        Find_Center(imgResult, imgCenter); // TY Centerline 검출해서 조향해주는 알고리즘
+        Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
         #ifdef IMGSAVE
