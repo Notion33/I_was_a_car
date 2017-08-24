@@ -764,7 +764,7 @@ static unsigned int CaptureThread(void *params)
         ctime = (NvU64)ct.tv_sec * 1000000000LL + (NvU64)ct.tv_nsec;
         //printf("frame=%3d, time=%llu.%09llu[s] \n", i, (ctime-stime)/1000000000LL, (ctime-stime)%1000000000LL);
 
-        pthread_mutex_lock(&mutex);            // for ControlThread()
+        pthread_mutex_lock(&mutex);            // for ControlThread() 
 
         if(!(capSurf = NvMediaVideoCaptureGetFrame(ctx->capture, ctx->timeout)))
         { // TBD
@@ -773,7 +773,7 @@ static unsigned int CaptureThread(void *params)
             break;
         }
 
-        if(i%3 == 0)                        // once in three loop = 10 Hz
+        if(i%3 == 0)                        // once in three loop = 10 Hz --> frequency
             pthread_cond_signal(&cond);        // ControlThread() is called
 
         pthread_mutex_unlock(&mutex);        // for ControlThread()
@@ -976,7 +976,7 @@ void *ControlThread(void *unused)
         //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
 
-        cvSaveImage(fileName, imgOrigin, 0);
+        cvSaveImage(fileName, imgOrigin, 0);            // should be removed when racing
         cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
         //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
         #endif
@@ -1232,7 +1232,7 @@ int main(int argc, char *argv[])
     }
 
 
-    if(NvThreadCreate(&vipThread, CaptureThread, &vipCtx, NV_THREAD_PRIORITY_NORMAL) != RESULT_OK)
+    if(NvThreadCreate(&vipThread, CaptureThread, &vipCtx, NV_THREAD_PRIORITY_NORMAL) != RESULT_OK)// make capture thread / call capture thread
     {
         MESSAGE_PRINTF("NvThreadCreate() failed for vipThread\n");
         goto fail;
@@ -1247,7 +1247,8 @@ int main(int argc, char *argv[])
     NvSemaphoreIncrement(vipStartSem);
 
     printf("8. Control Thread\n");
-    pthread_create(&cntThread, NULL, &ControlThread, NULL);
+    pthread_create(&cntThread, NULL, &ControlThread, NULL); // method to make create thread at linux -- googling **
+    //n
 
     printf("9. Wait for completion \n");
     // Wait for completion
