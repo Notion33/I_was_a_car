@@ -251,8 +251,13 @@ int main(int argc, char const *argv[]) {
         //printf("\n\n Wrong key = %d\n", key);
       }
     }
+
+    //TODO save images
+    #ifdef IMGSAVE
+    sprintf(fileName, "DebugImage/imgDebug%d.png", i);
+    cvSaveImage(fileName, imgResult, 0);
+    #endif
   }
-  //TODO save images
 
   //close the image
   cvDestroyWindow("simulator");
