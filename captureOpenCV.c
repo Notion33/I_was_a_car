@@ -456,7 +456,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
     return 1;
 }
 
-static int Frame2Ipl(IplImage* img, IplImage* imgResult)
+/*static int Frame2Ipl(IplImage* img, IplImage* imgResult)
 {
     NvMediaVideoSurfaceMap surfMap;
     unsigned int resWidth, resHeight;
@@ -551,7 +551,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
     NvMediaVideoSurfaceUnlock(capSurf);
 
     return 1;
-}
+}*/
 
 static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
 {
