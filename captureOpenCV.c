@@ -810,16 +810,24 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 ////////////////////////////////////////////////////////////////////////////////////////////
 void Find_Center(IplImage* imgResult)
 {
-    int angle=1500;
-    SteeringServoControl_Write(angle);
+    // speed와 angle은 내부 변수에서 제거하고
+    // 조향과 속도조절 부분은 전역변수 angle과 speed의 값만 바꾸도록 한다.
+    
+    //int angle=1500;
+    //SteeringServoControl_Write(angle);
 }
 
 
 void *ControlThread(void *unused)
 {
+    int angle = 1500;
+    int speed = 30;
+    int colorFlag = 0;
+
     int i=0;
     char fileName[40];
     char fileName1[40];         // TY add 6.27
+    char fileName_color[40];         // NYC add 8.25
     //char fileName2[30];           // TY add 6.27
     NvMediaTime pt1 ={0}, pt2 = {0};
     NvU64 ptime1, ptime2;
@@ -827,14 +835,17 @@ void *ControlThread(void *unused)
 
     IplImage* imgOrigin;
     IplImage* imgResult;            // TY add 6.27
+    IplImage* imgColor;             // NYC add 8.25
     //IplImage* imgCenter;          // TY add 6.27
 
     // cvCreateImage
     imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
     imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+    imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
     //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
 
     cvZero(imgResult);          // TY add 6.27
+    cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
     //cvZero(imgCenter);            // TY add 6.27
 
     while(1)
@@ -845,8 +856,9 @@ void *ControlThread(void *unused)
         GetTime(&pt1);
         ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
-        Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
+        //Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
                                          // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
+        Frame2Ipl_color(imgOrigin, imgResult, imgColor, colorFlag);
 
         pthread_mutex_unlock(&mutex);
 
@@ -859,14 +871,25 @@ void *ControlThread(void *unused)
         Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
+        //===================================
+        //  장애물 처리 모듈 input : imgColor
+        //===================================
+
+        // 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
+        SteeringServoControl_Write(angle);
+        DesireSpeed_Write(speed);
+
+
         #ifdef IMGSAVE
         sprintf(fileName, "captureImage/imgOrigin%d.png", i);
         sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
+        sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
         //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
 
         cvSaveImage(fileName, imgOrigin, 0);
         cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
+        cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
         //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
         #endif
 
