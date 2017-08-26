@@ -39,7 +39,7 @@
 
 #define SERVO_CONTROL     // TY add 6.27
               // To servo control(steering & camera position)
-//#define IMGSAVE
+#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -456,9 +456,12 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
     return 1;
 }
 
-static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
+
+
+//img를 받아 -> imgResult(노란차선) , imgColor(flag따라 target color) 추출
+static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColor, int color)
 {
-    //color : 1. 살색 2. 흰색 3. 검은색 4. 노란색 5. 초록색 6. 빨간색 7. 노란차선검출
+    //color : 1. 살색 2. 흰색차선 3. 검은색신호등 4. 노란색신호등 5. 초록색신호등 6. 빨간색긴급정지  7.노랑&흰색 mix차선
     NvMediaVideoSurfaceMap surfMap;
     unsigned int resWidth, resHeight;
     unsigned char y,u,v;
@@ -517,7 +520,53 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
     stepV = 0;
     i = 0;
 
-     for(j = 0; j < resHeight; j++)
+
+    //노란차선 검출
+    int y_max = 255, u_max = 115, v_max = 255;
+    int y_min = 180, u_min = 0, v_min = 0;
+    //검출할 색상 경계값
+    int cy_max = 255, cu_max = 255, cv_max = 255;
+    int cy_min = 0, cu_min = 0, cv_min = 0;
+
+    //color : 1. 살색 2. 흰색차선 3. 검은색신호등 4. 노란색신호등 5. 초록색신호등 6. 빨간색긴급정지  7.노랑&흰색 mix차선
+    switch (color) {
+        case 1:     //살색
+            cv_min = 45; cv_max = 127;
+            break;
+        case 2:     //흰색 차선
+            cy_min = 200;
+            cu_min = 130;
+            break;
+        case 3:     //검은색 신호등
+            cy_min = 35; cy_max = 50;
+            cu_min = 125;
+            break;
+        case 4:     //노란색 신호등
+            cy_min = 90; cy_max = 105;
+            cv_min = 146;
+            break;
+        case 5:     //초록색 신호등
+            cy_max = 100;
+            cu_max = 127;
+            cv_max = 123;
+            break;
+        case 6:     //빨간색 긴급정지
+            cv_min = 140;
+            break;
+        case 7:     //노랑&흰색 mix 차선
+            cy_min = 171;
+            break;
+        case 8:
+            break;
+
+        default:    //노란차선
+            y_max = 255; u_max = 115; v_max = 255;
+            y_min = 180; u_min = 0; v_min = 0;
+            break;
+    }
+
+    for(j = 0; j < resHeight; j++)
+
     {
         for(k = 0; k < resWidth; k++)
         {
@@ -530,84 +579,25 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, int color)
             num = 3*k+3*resWidth*(j);
             bin_num = j*imgResult->widthStep + k;
 
-            switch (color) {
-              case 1:   //  살색, startmission
-                if(  v>45   &&   v<127  ) {
-                    // 검정색으로
-                    imgResult->imageData[bin_num] = (char)0;
-                }
-                else {
-                    // 흰색으로 -> 살색
-                    imgResult->imageData[bin_num] = (char)255;
-                }
-                break;
 
-              case 2:   //  흰색
-                if(  y>200  &&  u>130  ) {
-                    // 흰색으로
-                    imgResult->imageData[bin_num] = (char)255;
-                }
-                else {
-                    // 검정색으로
-                    imgResult->imageData[bin_num] = (char)0;
-                }
-                break;
+            // 노란차선 : Threshold에 따른 Binary
+            if( y_min<y && y<y_max && u_min<u && u<u_max && v_min<v && v<v_max ) {
+                // 흰색으로
+                imgResult->imageData[bin_num] = (char)255;
+            }
+            else {
+                // 검정색으로
+                imgResult->imageData[bin_num] = (char)0;
+            }
 
-              case 3:   //  검은색
-                if( y>35 && y<50 && u>125 ) {
-                    // 흰색으로 -> 실제 검은색
-                    imgResult->imageData[bin_num] = (char)255;
-                }
-                else {
-                    // 검정색으로
-                    imgResult->imageData[bin_num] = (char)0;
-                }
-                break;
-
-              case 4:   //  노란색
-                if( y>90 && y<105 && v>146 ) {
-                    // 흰색으로
-                    imgResult->imageData[bin_num] = (char)255;
-                }
-                else {
-                    // 검정색으로
-                    imgResult->imageData[bin_num] = (char)0;
-                }
-                break;
-
-              case 5:   //  초록색
-                if( y<100  &&  u<127 &&   v<123  ) {
-                    // 흰색으로
-                    imgResult->imageData[bin_num] = (char)255;
-                }
-                else {
-                    // 검정색으로
-                    imgResult->imageData[bin_num] = (char)0;
-                }
-                break;
-
-              case 6:   //  빨간색
-                if( v>140 ) {
-                    // 흰색으로
-                    imgResult->imageData[bin_num] = (char)255;
-                }
-                else {
-                    // 검정색으로
-                    imgResult->imageData[bin_num] = (char)0;
-                }
-                break;
-
-
-              default:  //  기본 : 노란 차선검출
-                if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
-                    // 흰색으로
-                    imgResult->imageData[bin_num] = (char)255;
-                }
-                else {
-                    // 검정색으로
-                    imgResult->imageData[bin_num] = (char)0;
-                }
-                break;
+            // Target Color : Threshold에 따른 Binary
+            if( cy_min<y && y<cy_max && cu_min<u && u<cu_max && cv_min<v && v<cv_max ) {
+                // 흰색으로
+                imgColor->imageData[bin_num] = (char)255;
+            }
+            else {
+                // 검정색으로
+                imgColor->imageData[bin_num] = (char)0;
             }
 
 
@@ -814,7 +804,45 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
     free(outputParams);
 }
 
+//  디버깅 이미지 생성
+#ifdef  IMGSAVE
+void writeonImage(IplImage* imgResult, char* str_info){
+  char* str = str_info;
 
+  //font
+  CvFont font;
+  cvInitFont(&font, CV_FONT_HERSHEY_PLAIN, 0.9, 0.9, 0, 1, CV_AA);
+  //cvInitFont(&font, 폰트이름, 1.0, 1.0, 0, 1, CV_AA);
+
+  //textPoint
+  CvPoint myPoint = cvPoint(10,235);
+
+  cvPutText(imgResult, str, myPoint, &font, cvScalar(0,0,255,0));
+  //cvPutText(Mat&, string& ,textPoint, &font, cvScalar(255,255,255,0));
+
+}
+
+CvPoint getEndPoint(int angle){
+  CvPoint point;
+  //double x=-1, y=-1;
+  int len = 208;
+  double seta = 90 + (angle-1500)/10;
+
+  point.x = (int)(RESIZE_WIDTH/2 + len*cos(seta * CV_PI/180.0));
+  point.y = (int)(RESIZE_HEIGHT - len*sin(seta * CV_PI/180.0));
+
+return point;
+}
+
+void drawonImage(IplImage* imgResult, int angle){
+  CvPoint point1, point2;
+  point1.x = RESIZE_WIDTH/2;
+  point1.y = RESIZE_HEIGHT-20;
+  point2 = getEndPoint(angle);
+
+  cvLine(imgResult, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
+}
+#endif
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -822,18 +850,28 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 /////////////////////////////////////  빈공간에 원형만 선언해둠.
 ////////////////////////////////////////////////////////////////////////////////////////////
-void Find_Center(IplImage* imgResult, IplImage* imgCenter)
+void Find_Center(IplImage* imgResult)
 {
-    int angle=1500;
-    SteeringServoControl_Write(angle);
+    // speed와 angle은 내부 변수에서 제거하고
+    // 조향과 속도조절 부분은 전역변수 angle과 speed의 값만 바꾸도록 한다.
+
+    //int angle=1500;
+    //SteeringServoControl_Write(angle);
 }
 
 
 void *ControlThread(void *unused)
 {
+    int angle = 1500;
+    int speed = 30;
+    int colorFlag = 0;
+
     int i=0;
-    char fileName[50];
-    char fileName1[50];         // TY add 6.27
+
+    char fileName[40];
+    char fileName1[40];         // TY add 6.27
+    char fileName_color[40];         // NYC add 8.25
+
     //char fileName2[30];           // TY add 6.27
     NvMediaTime pt1 ={0}, pt2 = {0};
     NvU64 ptime1, ptime2;
@@ -841,14 +879,17 @@ void *ControlThread(void *unused)
 
     IplImage* imgOrigin;
     IplImage* imgResult;            // TY add 6.27
+    IplImage* imgColor;             // NYC add 8.25
     //IplImage* imgCenter;          // TY add 6.27
 
     // cvCreateImage
     imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
     imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+    imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
     //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
 
     cvZero(imgResult);          // TY add 6.27
+    cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
     //cvZero(imgCenter);            // TY add 6.27
 
     while(1)
@@ -859,8 +900,9 @@ void *ControlThread(void *unused)
         GetTime(&pt1);
         ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
-        Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
+        //Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
                                          // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
+        Frame2Ipl_color(imgOrigin, imgResult, imgColor, colorFlag);
 
         pthread_mutex_unlock(&mutex);
 
@@ -870,18 +912,38 @@ void *ControlThread(void *unused)
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
 
-        Find_Center(imgResult, imgCenter); // TY Centerline 검출해서 조향해주는 알고리즘
+        Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
+
+        //===================================
+        //  장애물 처리 모듈 input : imgColor
+        //===================================
+
+        // 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
+        SteeringServoControl_Write(angle);
+        DesireSpeed_Write(speed);
+
 
         #ifdef IMGSAVE
         sprintf(fileName, "captureImage/imgOrigin%d.png", i);
         sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
+        sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
         //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
 
         cvSaveImage(fileName, imgOrigin, 0);            // should be removed when racing
         cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
+        cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
         //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
+
+        //  디버그 이미지 생성
+        char str_info[50];
+        sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", i, angle, speed);
+        writeonImage(imgResult, str_info);
+        drawonImage(imgResult, angle);
+        sprintf(fileName1, "DebugImage/imgDebug%d.png", i);
+        cvSaveImage(fileName1, imgResult, 0);
+
         #endif
 
         //TY설명 내용
