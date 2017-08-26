@@ -28,6 +28,9 @@ void DesireSpeed_Write(int speed){
   //printf("Speed call! Speed : %d",sim_speed);
 }
 
+int speed = 130;
+int angle = 1500;
+
 #include "find_center.h"
 
 //==============================================================================
@@ -220,6 +223,9 @@ int main(int argc, char const *argv[]) {
     if(previous_idx != index){  //중복 출력을 방지
         printf("//============================================================frame : %d\n",index);
         Find_Center(img);
+
+        SteeringServoControl_Write(angle);
+        DesireSpeed_Write(speed);
     }
     sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", index, sim_angle, sim_speed);
     writeonImage(imgResult, str_info);
