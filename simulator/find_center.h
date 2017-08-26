@@ -29,7 +29,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 	int x = 0;
 	int y = 0;
-	int angle = 0;
+	//int angle = 0;
 
 	int Dif = 0, Dif1 = 0; // 2사분면 - 1사분면 픽셀수 ; 3사분면 - 4사분면 픽셀수;
 	int Left_Sum = 0, Right_Sum = 0; //왼쪽, 오른쪽 픽셀 갯수
@@ -37,7 +37,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	int Up = 0, Down = 0;// 1,2 dimension's sum & 3,4 dimension's sum
 
 	float weight = 1.8, weight2 = 1.2;// control angle weight
-	int speed = 0;
+	//int speed = 0;
 	int straight_speed = 115;
 	int curve_speed = 85;
 	//총 픽셀은 320 *240 = 76800
@@ -192,14 +192,14 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 	/*angle = angle > 2000 ? 2000: angle;
 	angle = angle < 1000 ? 1000 : angle;*/
 
-	SteeringServoControl_Write(angle);
+	//SteeringServoControl_Write(angle);
 
 #ifdef SPEED_CONTROL
 	if (angle<1200 || angle>1800)
 		speed = curve_speed;
 	else
 		speed = straight_speed;
-	DesireSpeed_Write(speed);
+	//DesireSpeed_Write(speed);
 #endif
 
 }

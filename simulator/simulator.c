@@ -7,8 +7,6 @@
 #include <highgui.h>
 #include <math.h>
 
-#define IMGSAVE
-
 int sim_angle;
 int sim_speed;
 int img_height;
@@ -29,6 +27,9 @@ void DesireSpeed_Write(int speed){
   sim_speed = speed;
   //printf("Speed call! Speed : %d",sim_speed);
 }
+
+int speed = 130;
+int angle = 1500;
 
 #include "find_center.h"
 
@@ -127,6 +128,19 @@ void checkImage(IplImage* img){
   cvWaitKey(0);
 }
 
+void refineImage(IplImage* img){
+  int idx = 0;
+  int i=0; int j=0;
+  for (i = 0; i < img_width; i++) {
+    for (j = 0; j < img_height; j++) {
+      idx = i * img_width + j;
+      if(img->imageData[idx]==-1){
+        img->imageData[idx]=255;
+      }
+    }
+  }
+}
+
 int startFrame(int lastframe){
   int i = 0;
   printf("Please insert a starting frame.(Ex : 0 or 123)  /  %dframe\n",lastframe);
@@ -157,7 +171,6 @@ int main(int argc, char const *argv[]) {
 
   int i = 0, index = 0; // index of image
   int previous_idx = -1;
-  int latest_idx = 0;
   int automode = 1;
   int lastframe = findLastFrame();
   char file_name[40];
@@ -210,6 +223,9 @@ int main(int argc, char const *argv[]) {
     if(previous_idx != index){  //중복 출력을 방지
         printf("//============================================================frame : %d\n",index);
         Find_Center(img);
+
+        SteeringServoControl_Write(angle);
+        DesireSpeed_Write(speed);
     }
     sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", index, sim_angle, sim_speed);
     writeonImage(imgResult, str_info);
@@ -218,12 +234,6 @@ int main(int argc, char const *argv[]) {
     cvSetTrackbarPos("frame","simulator",index);
 
     cvShowImage("simulator",imgResult);
-
-    //TODO save images
-    #ifdef IMGSAVE
-    sprintf(file_name, "DebugImage/imgDebug%d.png", index);
-    cvSaveImage(file_name, imgResult, 0);
-    #endif
 
     int key = cvWaitKey(200);
     if(key=='q' || key==27){
@@ -243,13 +253,12 @@ int main(int argc, char const *argv[]) {
         index--;
       } else if(key==65363 || key==65362){  //right key
         index++;
-        latest_idx = index;
       } else {
         //printf("\n\n Wrong key = %d\n", key);
       }
     }
-
   }
+  //TODO save images
 
   //close the image
   cvDestroyWindow("simulator");
