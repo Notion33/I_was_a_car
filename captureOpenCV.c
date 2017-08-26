@@ -55,6 +55,12 @@
 #define RESIZE_WIDTH  320
 #define RESIZE_HEIGHT 240
 
+#define whitepx 255
+
+int angle = 1500;
+int speed = 100;
+int colorFlag = 0;
+
 
 static NvMediaVideoSurface *capSurf = NULL;
 
@@ -617,6 +623,46 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColo
     return 1;
 }
 
+void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용해야 급정거 효과 있음
+    int x = 20, y= 30;
+    int width = 280, height = 80;
+    int mThreshold = width*height*0.4;
+    //int isStop = 0;
+    //IplImage* imgEmergency;
+    //imgEmergency = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+    //cvZero(imgEmergency);
+    //cvZero(imgEmergency);
+
+    //적색 px판단
+    int i, j;
+    int count = 0;
+    for(j=y; j<y+height; j++){
+        for(i=x; i<x+width; i++){
+            int px = imgColor->imageData[i + j*imgColor->widthStep];
+            if(px == whitepx){
+                //TODO
+                count++;
+            }
+        }
+    }
+    printf("threshold : %d\n", mThreshold);
+    if(count > mThreshold){
+        //급정지! 대기
+        //speed = 0;
+        printf("\nStop!!! countpx : %d / %d \n\n",count, mThreshold);
+        //DesireSpeed_Write(0);   //정지
+        speed = 0;
+
+        //isStop = 1;
+    }
+    // else if(count < width*height*0.05 && isStop == 1){
+    //     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
+    //     //출발
+    //     //아예 이 함수 플래그 죽이기
+    // }
+
+}
+
 static unsigned int CaptureThread(void *params)
 {
     int i = 0;
@@ -862,10 +908,6 @@ void Find_Center(IplImage* imgResult)
 
 void *ControlThread(void *unused)
 {
-    int angle = 1500;
-    int speed = 30;
-    int colorFlag = 0;
-
     int i=0;
 
     char fileName[40];
@@ -917,6 +959,7 @@ void *ControlThread(void *unused)
 
         //===================================
         //  장애물 처리 모듈 input : imgColor
+        emergencyStopRed(imgColor);    //NYC //TODO flag to kill
         //===================================
 
         // 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
