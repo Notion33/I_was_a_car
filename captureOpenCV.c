@@ -824,16 +824,16 @@ CvPoint getEndPoint(int angle){
   int len = 208;
   double seta = 90 + (angle-1500)/10;
 
-  point.x = (int)(img_width/2 + len*cos(seta * CV_PI/180.0));
-  point.y = (int)(img_height - len*sin(seta * CV_PI/180.0));
+  point.x = (int)(RESIZE_WIDTH/2 + len*cos(seta * CV_PI/180.0));
+  point.y = (int)(RESIZE_HEIGHT - len*sin(seta * CV_PI/180.0));
 
 return point;
 }
 
 void drawonImage(IplImage* imgResult, int angle){
   CvPoint point1, point2;
-  point1.x = img_width/2;
-  point1.y = img_height-20;
+  point1.x = RESIZE_WIDTH/2;
+  point1.y = RESIZE_HEIGHT-20;
   point2 = getEndPoint(angle);
 
   cvLine(imgResult, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
