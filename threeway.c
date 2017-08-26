@@ -5,8 +5,8 @@
 #include "car_lib.h" //
  
 //#define LIGHT_BEEP       // to test light and beep
-//#define SPEED_CONTROL     // to test speed control
-//#define POSITION_CONTROL  // to test postion control
+#define SPEED_CONTROL     // to test speed control
+#define POSITION_CONTROL  // to test postion control
 #define SERVO_CONTROL     // to test servo control(steering & camera position)
 //#define LINE_TRACE              // to test line trace sensor
 //#define DISTANCE_SENSOR     // to test distance sensor
@@ -31,14 +31,14 @@ void main(void)
     // 3. servo control ----------------------------------------------------------
     printf("\n\n 3. servo control\n");
     //steer servo set
- //  angle = SteeringServoControl_Read();
-  // printf("SteeringServoControl_Read() = %d\n", angle);    //default = 1500, 0x5dc
-    angle = 1000;
+    //  angle = SteeringServoControl_Read();
+    // printf("SteeringServoControl_Read() = %d\n", angle);    //default = 1500, 0x5dc
+    /*  angle = 1000;
     SteeringServoControl_Write(angle);
     Alarm_Write(ON);
     usleep(100000);
     Alarm_Write(OFF);
-  sleep(2);
+    sleep(2);
 
 
     angle = 2000;
@@ -46,8 +46,7 @@ void main(void)
     Alarm_Write(ON);
     usleep(100000);
     Alarm_Write(OFF);
-    sleep(2);
-
+    sleep(2);*/
 
     angle = 1500;
     SteeringServoControl_Write(angle);
@@ -56,9 +55,9 @@ void main(void)
     Alarm_Write(OFF);
     sleep(2);
 
-    speed = 10;
-    DesireSpeed_Write(speed);
-    sleep(2);
+    // speed = 100;
+    // DesireSpeed_Write(speed);
+    // sleep(2);
 #endif  
 
 #ifdef POSITION_CONTROL
@@ -67,7 +66,7 @@ void main(void)
 
     //jobs to be done beforehand;
     SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-    speed = 120; // speed set     --> speed must be set when using position controller
+    speed = 70; // speed set     --> speed must be set when using position controller
     DesireSpeed_Write(speed);
 
     //control on/off
@@ -82,7 +81,7 @@ void main(void)
     PositionProportionPoint_Write(gain);
             
     //position write
-    position_now = 0;  //initialize
+    position_now = 1000;  //initialize
     EncoderCounter_Write(position_now);
     
     //position set

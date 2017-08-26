@@ -39,7 +39,7 @@
 
 #define SERVO_CONTROL     // TY add 6.27
               // To servo control(steering & camera position)
-#define IMGSAVE
+//#define IMGSAVE
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -666,13 +666,9 @@ void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용
 
 }
 
-int ThreeWayOBS(int location){
+int DetectOBSloc(int location){
 
-    printf("\n\n 0. light and beep control\n");
-    Alarm_Write(ON);
-    usleep(100000);
-    Alarm_Write(OFF);
-    usleep(100000);
+    printf("\n\n 0. ThreeWayOBS\n");
     
     if(location == OBS_LEFT){
         printf("OBSTACLE is on left\n");
@@ -693,70 +689,15 @@ int ThreeWayOBS(int location){
 } 
 
 void ThreewaySteering(int location){
-    
-    // if(location == OBS_LEFT){
-    //     return OBS_LEFT;
-    // }
-    // else if(location == OBS_RIGHT){
-    //     return OBS_RIGHT;
-    // }
-    // else if(location == OBS_CENTER){
-//    else printf("LOCATION ERROR!!!")
-  // unsigned char status;
-  //   short speed;
-  //   unsigned char gain;
-  //   int position, position_now;
-  //   short angle;
-  //   int channel;
-  //   int data;
-  //   char sensor;
-  //   int i, j;
-  //   int tol;
-  //   char byte = 0x80;
 
 if(location == OBS_CENTER){
+
     printf("\n\n 1. position control on CENTER \n");
-
-    //jobs to be done beforehand;
-    SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-    speed = 50; // speed set     --> speed must be set when using position controller
-    DesireSpeed_Write(speed);
-
-    //control on/off
-    status = PositionControlOnOff_Read();
-    printf("PositionControlOnOff_Read() = %d\n", status);
-    PositionControlOnOff_Write(CONTROL);
-
-    //position controller gain set
-    gain = PositionProportionPoint_Read();    // default value = 10, range : 1~50
-    printf("PositionProportionPoint_Read() = %d\n", gain);
-    gain = 20;
-    PositionProportionPoint_Write(gain);
-            
-    //position write
-    position_now = 0;  //initialize
-    EncoderCounter_Write(position_now);
-    
-    //position set
-    position=DesireEncoderCount_Read();
-    printf("DesireEncoderCount_Read() = %d\n", position);
-    position = 300;
-    DesireEncoderCount_Write(position);
-
-    position=DesireEncoderCount_Read();
-    printf("DesireEncoderCount_Read() = %d\n", position);
-    
-    tol = 100;    // tolerance
-    while(abs(position_now-position)>tol)
-    {
-        position_now=EncoderCounter_Read();
-        printf("EncoderCounter_Read() = %d\n", position_now);
-    }
-    sleep(1); 
-    }
+    angle += 10;
+    speed += 5;
 
 }
-    
+}    
 
 
 static unsigned int CaptureThread(void *params)
@@ -1056,14 +997,13 @@ void *ControlThread(void *unused)
         //===================================
         //  장애물 처리 모듈 input : imgColor
        // emergencyStopRed(imgColor);    //NYC //TODO flag to kill
-        ThreeWayOBS(OBS_CENTER);
-        ThreewaySteering(OBS_CENTER);
+        int location = DetectOBSloc(OBS_CENTER);
+        ThreewaySteering(location);
         //===================================
 
         // 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
         SteeringServoControl_Write(angle);
         DesireSpeed_Write(speed);
-
 
         #ifdef IMGSAVE
         sprintf(fileName, "captureImage/imgOrigin%d.png", i);
