@@ -6,7 +6,7 @@
  
 //#define LIGHT_BEEP       // to test light and beep
 #define SPEED_CONTROL     // to test speed control
-#define POSITION_CONTROL  // to test postion control
+//#define POSITION_CONTROL  // to test postion control
 #define SERVO_CONTROL     // to test servo control(steering & camera position)
 //#define LINE_TRACE              // to test line trace sensor
 //#define DISTANCE_SENSOR     // to test distance sensor
@@ -136,10 +136,21 @@ void main(void)
     //speed set    
     speed = DesireSpeed_Read();
     printf("DesireSpeed_Read() = %d \n", speed);
-    speed = -10;
+    speed = 130;
     DesireSpeed_Write(speed);
  
     sleep(2);  //run time 
+
+     SteeringServoControl_Write(1200);
+      speed = 100;
+    DesireSpeed_Write(speed);
+    sleep(2);  //run time 
+         SteeringServoControl_Write(1700);
+    sleep(2);  //run time 
+
+      SteeringServoControl_Write(1500);
+    sleep(1);  //run time 
+   
 
     speed = DesireSpeed_Read();
     printf("DesireSpeed_Read() = %d \n", speed);
