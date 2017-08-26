@@ -800,7 +800,45 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
     free(outputParams);
 }
 
+//  디버깅 이미지 생성
+#ifdef  IMGSAVE
+void writeonImage(IplImage* imgResult, char* str_info){
+  char* str = str_info;
 
+  //font
+  CvFont font;
+  cvInitFont(&font, CV_FONT_HERSHEY_PLAIN, 0.9, 0.9, 0, 1, CV_AA);
+  //cvInitFont(&font, 폰트이름, 1.0, 1.0, 0, 1, CV_AA);
+
+  //textPoint
+  CvPoint myPoint = cvPoint(10,235);
+
+  cvPutText(imgResult, str, myPoint, &font, cvScalar(0,0,255,0));
+  //cvPutText(Mat&, string& ,textPoint, &font, cvScalar(255,255,255,0));
+
+}
+
+CvPoint getEndPoint(int angle){
+  CvPoint point;
+  //double x=-1, y=-1;
+  int len = 208;
+  double seta = 90 + (angle-1500)/10;
+
+  point.x = (int)(img_width/2 + len*cos(seta * CV_PI/180.0));
+  point.y = (int)(img_height - len*sin(seta * CV_PI/180.0));
+
+return point;
+}
+
+void drawonImage(IplImage* imgResult, int angle){
+  CvPoint point1, point2;
+  point1.x = img_width/2;
+  point1.y = img_height-20;
+  point2 = getEndPoint(angle);
+
+  cvLine(imgResult, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
+}
+#endif
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -812,7 +850,7 @@ void Find_Center(IplImage* imgResult)
 {
     // speed와 angle은 내부 변수에서 제거하고
     // 조향과 속도조절 부분은 전역변수 angle과 speed의 값만 바꾸도록 한다.
-    
+
     //int angle=1500;
     //SteeringServoControl_Write(angle);
 }
@@ -891,6 +929,15 @@ void *ControlThread(void *unused)
         cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
         cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
         //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
+
+        //  디버그 이미지 생성
+        char str_info[50];
+        sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", i, angle, speed);
+        writeonImage(imgResult, str_info);
+        drawonImage(imgResult, angle);
+        sprintf(fileName1, "DebugImage/imgDebug%d.png", i);
+        cvSaveImage(fileName1, imgResult, 0);
+
         #endif
 
         //TY설명 내용
