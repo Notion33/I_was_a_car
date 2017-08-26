@@ -893,18 +893,21 @@ void Find_Center(IplImage* imgResult)
 {
     int i=0, j=0;
     int count = 0;
-    int refAngle = 1500;        //기준각
-    int minAngleDef = 100;      //차선조정 차각
-    int weakAngleDef = 300;     //약한곡선 차각
-    int maxAngleDef = 500;      //큰곡선 차각
-    int straightSpeed = 130;    //직선속도
-    int turningSpeed = 100;     //곡선속도
+    //TODO 웨이트 주어 회전구간 구현
+    int tWeight = 1;
+    int refAngle = 1500;            //기준각
+    int minAngleDef = 100;          //차선조정 차각
+    int weakAngleDef = 300;         //약한곡선 차각
+    int maxAngleDef = 500*tWeight;  //큰곡선 차각
+    int straightSpeed = 130;        //직선속도
+    int turningSpeed = 100;         //곡선속도
     int width = imgResult->width;
     int height = imgResult->height;
     int spacing = 40;                       // 중앙선 기준으로 spacing만큼은 무시
     int rightTop = 0, leftTop = 0;          // 0~2
     int rightBottom = 0, leftBottom = 0;    // 0~2
 
+    char status[30];
 
     //  직진 코스 읽기
     int checkStraightLineY[4] = {50, 70, 130, 150}; // 상단과 하단의 1/6씩 버림
@@ -967,40 +970,50 @@ void Find_Center(IplImage* imgResult)
         //직선
         angle = refAngle;
         speed = straightSpeed;                  //직진
+        sprintf(status, "Straight!");
 
     } else if(leftTop+rightTop == 3){
         //직선 및 핸들 조정
         if(leftBottom > rightBottom){
             angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
+            sprintf(status, "-- centerline ->");
         } else if(leftBottom < rightBottom){
             angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
+            sprintf(status, "<- centerline --");
         } else if(leftBottom == rightBottom){
             angle = refAngle;                   //직진
+            sprintf(status, "Straight!");
         }
         speed = straightSpeed;
 
     } else if(leftTop == 2 || rightTop == 2){   //Already leftTop+rightTop==2
         //약한 곡선
-        if(leftTop == 2 && leftBottom == 2){
+        if(leftTop == 2 && leftBottom >= 1){
             angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
             speed = straightSpeed;
-        } else if(rightTop == 2 && rightBottom == 2){
+            sprintf(status, "-- centerline ->");
+        } else if(rightTop == 2 && rightBottom >= 1){
             angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
             speed = straightSpeed;
+            sprintf(status, "<- centerline --");
         } else if(leftTop == 2 && rightBottom == 2){
             angle = refAngle + weakAngleDef;    //약한 좌회전
             speed = turningSpeed;
+            sprintf(status, "<- left turn --");
         } else if(rightTop == 2 && leftBottom == 2){
             angle = refAngle - weakAngleDef;    //약한 우회전
             speed = turningSpeed;
+            sprintf(status, "-- right turn ->");
         }
 
     } else if(rightTop+leftTop < 2){
         //큰 곡선 : 최대조향각
         if(leftBottom == 2){
-            angle = refAngle - maxAngleDef;
+            angle = refAngle - maxAngleDef;     //최대조향 우회전
+            sprintf(status, "--- Max Right Turn! >>>");
         } else if(rightTop == 2){
-            angle = refAngle + maxAngleDef;
+            angle = refAngle + maxAngleDef;     //최대조향 좌회전
+            sprintf(status, "<<< Max Left Turn! ---");
         }
         speed = turningSpeed;
     }
@@ -1032,7 +1045,6 @@ void Find_Center(IplImage* imgResult)
 
     #ifdef SHOWLOG
     //TODO 현재상태 문자열로 반환
-    char status[30];
     /*
     if(leftTop==2 && rightTop==2 && leftBottom==0 && rightBottom==0){           //직선, 상반부만 검출됨
         sprintf(status, "Straight!");
@@ -1059,7 +1071,7 @@ void Find_Center(IplImage* imgResult)
     printf("|| %d || %d ||\n",leftBottom, rightBottom);
     printf("============\n");
     printf("Angle : %d  Speed : %d\n", angle, speed);
-    //printf("Current Status : %s\n", status);  //TODO 현재 상태 문자열로 출력
+    printf("Current Status : %s\n", status);  //TODO 현재 상태 문자열로 출력
     #endif
 
     //DesireSpeed_Write(speed);
