@@ -56,6 +56,9 @@
 
 #define whitepx 255
 
+int angle = 1500;
+int speed = 100;
+int colorFlag = 0;
 
 static NvMediaVideoSurface *capSurf = NULL;
 
@@ -457,6 +460,202 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
     return 1;
 }
 
+
+//img를 받아 -> imgResult(노란차선) , imgColor(flag따라 target color) 추출
+static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColor, int color)
+{
+    //color : 1. 살색 2. 흰색차선 3. 검은색신호등 4. 노란색신호등 5. 초록색신호등 6. 빨간색긴급정지  7.노랑&흰색 mix차선
+    NvMediaVideoSurfaceMap surfMap;
+    unsigned int resWidth, resHeight;
+    unsigned char y,u,v;
+    int num;
+
+    if(NvMediaVideoSurfaceLock(capSurf, &surfMap) != NVMEDIA_STATUS_OK)
+    {
+        MESSAGE_PRINTF("NvMediaVideoSurfaceLock() failed in Frame2Ipl()\n");
+        return 0;
+    }
+
+    unsigned char *pY[2] = {surfMap.pY, surfMap.pY2};
+    unsigned char *pU[2] = {surfMap.pU, surfMap.pU2};
+    unsigned char *pV[2] = {surfMap.pV, surfMap.pV2};
+    unsigned int pitchY[2] = {surfMap.pitchY, surfMap.pitchY2};
+    unsigned int pitchU[2] = {surfMap.pitchU, surfMap.pitchU2};
+    unsigned int pitchV[2] = {surfMap.pitchV, surfMap.pitchV2};
+    unsigned int i, j, k, x;
+    unsigned int stepY, stepU, stepV;
+
+    unsigned int bin_num=0;
+
+    resWidth = RESIZE_WIDTH;
+    resHeight = RESIZE_HEIGHT;
+
+    // Frame2Ipl
+    img->nSize = 112;
+    img->ID = 0;
+    img->nChannels = 3;
+    img->alphaChannel = 0;
+    img->depth = IPL_DEPTH_8U;    // 8
+    img->colorModel[0] = 'R';
+    img->colorModel[1] = 'G';
+    img->colorModel[2] = 'B';
+    img->channelSeq[0] = 'B';
+    img->channelSeq[1] = 'G';
+    img->channelSeq[2] = 'R';
+    img->dataOrder = 0;
+    img->origin = 0;
+    img->align = 4;
+    img->width = resWidth;
+    img->height = resHeight;
+    img->imageSize = resHeight*resWidth*3;
+    img->widthStep = resWidth*3;
+    img->BorderMode[0] = 0;
+    img->BorderMode[1] = 0;
+    img->BorderMode[2] = 0;
+    img->BorderMode[3] = 0;
+    img->BorderConst[0] = 0;
+    img->BorderConst[1] = 0;
+    img->BorderConst[2] = 0;
+    img->BorderConst[3] = 0;
+
+    stepY = 0;
+    stepU = 0;
+    stepV = 0;
+    i = 0;
+
+    //노란차선 검출
+    int y_max = 255, u_max = 115, v_max = 255;
+    int y_min = 180, u_min = 0, v_min = 0;
+    //검출할 색상 경계값
+    int cy_max = 255, cu_max = 255, cv_max = 255;
+    int cy_min = 0, cu_min = 0, cv_min = 0;
+
+    //color : 1. 살색 2. 흰색차선 3. 검은색신호등 4. 노란색신호등 5. 초록색신호등 6. 빨간색긴급정지  7.노랑&흰색 mix차선
+    switch (color) {
+        case 1:     //살색
+            cv_min = 45; cv_max = 127;
+            break;
+        case 2:     //흰색 차선
+            cy_min = 200;
+            cu_min = 130;
+            break;
+        case 3:     //검은색 신호등
+            cy_min = 35; cy_max = 50;
+            cu_min = 125;
+            break;
+        case 4:     //노란색 신호등
+            cy_min = 90; cy_max = 105;
+            cv_min = 146;
+            break;
+        case 5:     //초록색 신호등
+            cy_max = 100;
+            cu_max = 127;
+            cv_max = 123;
+            break;
+        case 6:     //빨간색 긴급정지
+            cv_min = 140;
+            break;
+        case 7:     //노랑&흰색 mix 차선
+            cy_min = 171;
+            break;
+        case 8:
+            break;
+
+        default:    //노란차선
+            y_max = 255; u_max = 115; v_max = 255;
+            y_min = 180; u_min = 0; v_min = 0;
+            break;
+    }
+
+    for(j = 0; j < resHeight; j++)
+    {
+        for(k = 0; k < resWidth; k++)
+        {
+            x = ResTableX_720To320[k];
+            y = pY[i][stepY+x];
+            u = pU[i][stepU+x/2];
+            v = pV[i][stepV+x/2];
+
+            // - 39 , 111 , 51, 241
+            num = 3*k+3*resWidth*(j);
+            bin_num = j*imgResult->widthStep + k;
+
+            // 노란차선 : Threshold에 따른 Binary
+            if( y_min<y && y<y_max && u_min<u && u<u_max && v_min<v && v<v_max ) {
+                // 흰색으로
+                imgResult->imageData[bin_num] = (char)255;
+            }
+            else {
+                // 검정색으로
+                imgResult->imageData[bin_num] = (char)0;
+            }
+
+            // Target Color : Threshold에 따른 Binary
+            if( cy_min<y && y<cy_max && cu_min<u && u<cu_max && cv_min<v && v<cv_max ) {
+                // 흰색으로
+                imgColor->imageData[bin_num] = (char)255;
+            }
+            else {
+                // 검정색으로
+                imgColor->imageData[bin_num] = (char)0;
+            }
+
+            img->imageData[num] = y;
+            img->imageData[num+1] = u;
+            img->imageData[num+2] = v;
+
+        }
+        stepY += pitchY[i];
+        stepU += pitchU[i];
+        stepV += pitchV[i];
+    }
+
+
+    NvMediaVideoSurfaceUnlock(capSurf);
+
+    return 1;
+}
+
+void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용해야 급정거 효과 있음
+    int x = 20, y= 30;
+    int width = 280, height = 80;
+    int mThreshold = width*height*0.4;
+    //int isStop = 0;
+    //IplImage* imgEmergency;
+    //imgEmergency = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+    //cvZero(imgEmergency);
+    //cvZero(imgEmergency);
+
+    //적색 px판단
+    int i, j;
+    int count = 0;
+    for(j=y; j<y+height; j++){
+        for(i=x; i<x+width; i++){
+            int px = imgColor->imageData[i + j*imgColor->widthStep];
+            if(px == whitepx){
+                //TODO
+                count++;
+            }
+        }
+    }
+    printf("threshold : %d\n", mThreshold);
+    if(count > mThreshold){
+        //급정지! 대기
+        //speed = 0;
+        printf("\nStop!!! countpx : %d / %d \n\n",count, mThreshold);
+        //DesireSpeed_Write(0);   //정지
+        speed = 0;
+
+        //isStop = 1;
+    }
+    // else if(count < width*height*0.05 && isStop == 1){
+    //     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
+    //     //출발
+    //     //아예 이 함수 플래그 죽이기
+    // }
+
+}
+
 static unsigned int CaptureThread(void *params)
 {
     int i = 0;
@@ -644,7 +843,45 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
     free(outputParams);
 }
 
+//  디버깅 이미지 생성
+#ifdef  IMGSAVE
+void writeonImage(IplImage* imgResult, char* str_info){
+  char* str = str_info;
 
+  //font
+  CvFont font;
+  cvInitFont(&font, CV_FONT_HERSHEY_PLAIN, 0.9, 0.9, 0, 1, CV_AA);
+  //cvInitFont(&font, 폰트이름, 1.0, 1.0, 0, 1, CV_AA);
+
+  //textPoint
+  CvPoint myPoint = cvPoint(10,235);
+
+  cvPutText(imgResult, str, myPoint, &font, cvScalar(0,0,255,0));
+  //cvPutText(Mat&, string& ,textPoint, &font, cvScalar(255,255,255,0));
+
+}
+
+CvPoint getEndPoint(int angle){
+  CvPoint point;
+  //double x=-1, y=-1;
+  int len = 208;
+  double seta = 90 + (angle-1500)/10;
+
+  point.x = (int)(RESIZE_WIDTH/2 + len*cos(seta * CV_PI/180.0));
+  point.y = (int)(RESIZE_HEIGHT - len*sin(seta * CV_PI/180.0));
+
+return point;
+}
+
+void drawonImage(IplImage* imgResult, int angle){
+  CvPoint point1, point2;
+  point1.x = RESIZE_WIDTH/2;
+  point1.y = RESIZE_HEIGHT-20;
+  point2 = getEndPoint(angle);
+
+  cvLine(imgResult, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
+}
+#endif
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -656,8 +893,12 @@ void Find_Center(IplImage* imgResult)
 {
     int i=0, j=0;
     int count = 0;
-    int angle = 1500;
-    int speed = 80;
+    int refAngle = 1500;        //기준각
+    int minAngleDef = 100;      //차선조정 차각
+    int weakAngleDef = 300;     //약한곡선 차각
+    int maxAngleDef = 500;      //큰곡선 차각
+    int straightSpeed = 130;    //직선속도
+    int turningSpeed = 100;     //곡선속도
     int width = imgResult->width;
     int height = imgResult->height;
     int spacing = 40;                       // 중앙선 기준으로 spacing만큼은 무시
@@ -722,6 +963,50 @@ void Find_Center(IplImage* imgResult)
 
     //  교점 분포에 따른 주행 판단
     // TODO TODO 상황별 시뮬레이션 보며 상황문 조정!!
+    if(leftTop+rightTop == 4){
+        //직선
+        angle = refAngle;
+        speed = straightSpeed;                  //직진
+
+    } else if(leftTop+rightTop == 3){
+        //직선 및 핸들 조정
+        if(leftBottom > rightBottom){
+            angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
+        } else if(leftBottom < rightBottom){
+            angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
+        } else if(leftBottom == rightBottom){
+            angle = refAngle;                   //직진
+        }
+        speed = straightSpeed;
+
+    } else if(leftTop == 2 || rightTop == 2){   //Already leftTop+rightTop==2
+        //약한 곡선
+        if(leftTop == 2 && leftBottom == 2){
+            angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
+            speed = straightSpeed;
+        } else if(rightTop == 2 && rightBottom == 2){
+            angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
+            speed = straightSpeed;
+        } else if(leftTop == 2 && rightBottom == 2){
+            angle = refAngle + weakAngleDef;    //약한 좌회전
+            speed = turningSpeed;
+        } else if(rightTop == 2 && leftBottom == 2){
+            angle = refAngle - weakAngleDef;    //약한 우회전
+            speed = turningSpeed;
+        }
+
+    } else if(rightTop+leftTop < 2){
+        //큰 곡선 : 최대조향각
+        if(leftBottom == 2){
+            angle = refAngle - maxAngleDef;
+        } else if(rightTop == 2){
+            angle = refAngle + maxAngleDef;
+        }
+        speed = turningSpeed;
+    }
+
+
+    /*
     if(leftTop==2 && rightTop==2 && leftBottom==0 && rightBottom==0){           //직선, 상반부만 검출됨
         angle = 1500;
     } else if(leftTop+rightTop>=3 && leftBottom==0 && rightBottom==0){          //약한 직선
@@ -739,6 +1024,7 @@ void Find_Center(IplImage* imgResult)
     } else if(leftTop==0 && rightTop<=1 && leftBottom==2 && rightBottom==0) {   //강한 우회전, 좌측차선만 검출
         angle = 1000;   //TODO 범위 더 정확하게
     }
+    */
 
     else {
         //angle 유지
@@ -747,6 +1033,7 @@ void Find_Center(IplImage* imgResult)
     #ifdef SHOWLOG
     //TODO 현재상태 문자열로 반환
     char status[30];
+    /*
     if(leftTop==2 && rightTop==2 && leftBottom==0 && rightBottom==0){           //직선, 상반부만 검출됨
         sprintf(status, "Straight!");
     } else if(leftTop+rightTop>=3 && leftBottom==0 && rightBottom==0){          //약한 직선
@@ -764,19 +1051,19 @@ void Find_Center(IplImage* imgResult)
     } else if(leftTop==0 && rightTop<=1 && leftBottom==2 && rightBottom==0) {   //강한 우회전, 좌측차선만 검출
         sprintf(status, "Max Right Turn! ->>>");
     }
+    */
 
-    //printf("\nstraight : %d,  notStraight : %d\n", straight, notStraight);
     printf("\n");
     printf("============\n");
     printf("|| %d || %d ||\n",leftTop, rightTop);
     printf("|| %d || %d ||\n",leftBottom, rightBottom);
     printf("============\n");
     printf("Angle : %d  Speed : %d\n", angle, speed);
-    printf("Current Status : %s\n", status);  //TODO 현재 상태 문자열로 출력
+    //printf("Current Status : %s\n", status);  //TODO 현재 상태 문자열로 출력
     #endif
 
-    DesireSpeed_Write(speed);
-    SteeringServoControl_Write(angle);
+    //DesireSpeed_Write(speed);
+    //SteeringServoControl_Write(angle);
 }
 
 
@@ -785,6 +1072,7 @@ void *ControlThread(void *unused)
     int i=0;
     char fileName[40];
     char fileName1[40];         // TY add 6.27
+    char fileName_color[40];         // NYC add 8.25
     //char fileName2[30];           // TY add 6.27
     NvMediaTime pt1 ={0}, pt2 = {0};
     NvU64 ptime1, ptime2;
@@ -792,14 +1080,17 @@ void *ControlThread(void *unused)
 
     IplImage* imgOrigin;
     IplImage* imgResult;            // TY add 6.27
+    IplImage* imgColor;             // NYC add 8.25
     //IplImage* imgCenter;          // TY add 6.27
 
     // cvCreateImage
     imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
     imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+    imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
     //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
 
     cvZero(imgResult);          // TY add 6.27
+    cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
     //cvZero(imgCenter);            // TY add 6.27
 
     while(1)
@@ -810,8 +1101,9 @@ void *ControlThread(void *unused)
         GetTime(&pt1);
         ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
-        Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
+        //Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
                                          // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
+        Frame2Ipl_color(imgOrigin, imgResult, imgColor, colorFlag);
 
         pthread_mutex_unlock(&mutex);
 
@@ -824,15 +1116,35 @@ void *ControlThread(void *unused)
         Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
+        //===================================
+        //  장애물 처리 모듈 input : imgColor
+        emergencyStopRed(imgColor);    //NYC //TODO flag to kill
+        //===================================
+
+        // 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
+        SteeringServoControl_Write(angle);
+        DesireSpeed_Write(speed);
+
         #ifdef IMGSAVE
         sprintf(fileName, "captureImage/imgOrigin%d.png", i);
         sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
+        sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
         //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
 
         cvSaveImage(fileName, imgOrigin, 0);
         cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
+        cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
         //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
+
+        //  디버그 이미지 생성
+        char str_info[50];
+        sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", i, angle, speed);
+        writeonImage(imgResult, str_info);
+        drawonImage(imgResult, angle);
+        sprintf(fileName1, "DebugImage/imgDebug%d.png", i);
+        cvSaveImage(fileName1, imgResult, 0);
+
         #endif
 
         //TY설명 내용
@@ -840,7 +1152,7 @@ void *ControlThread(void *unused)
         //imgCenter는 아직 구현 안되어있으며 필요시 아래의 코드 주석처리 해제시 사용가능
         //char fileName2[30] , IplImage* imgCenter, imgCenter = cvCreateImage(cvGetSize(imgOrigin),
         //IPL_DEPTH_8U, 1), cvZero(imgCenter), sprintf(fileName2, "captureImage/imgCenter%d.png", i), cvSaveImage(fileName2, imgCenter, 0)
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // ---------------------------------------------------------------------
 
