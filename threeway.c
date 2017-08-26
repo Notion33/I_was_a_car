@@ -19,12 +19,12 @@ void main(void)
     int position, position_now;
     short angle;
     int channel;
-    int data;
+    int data=0;
     char sensor;
     int i, j;
     int tol;
     char byte = 0x80;
-
+    int flag =0; 
     CarControlInit();
 
     #ifdef SERVO_CONTROL
@@ -136,34 +136,37 @@ void main(void)
     //speed set    
     speed = DesireSpeed_Read();
     printf("DesireSpeed_Read() = %d \n", speed);
-    speed = 100;
+    speed = 80;
     DesireSpeed_Write(speed);
  
-    sleep(2);  //run time 
+    sleep(1);  //run time 
 
      SteeringServoControl_Write(1200);
       speed = 100;
     DesireSpeed_Write(speed);
-    sleep(2);  //run time 
-         SteeringServoControl_Write(1700);
+    sleep(2);
+         SteeringServoControl_Write(1800);
     sleep(2);  //run time 
 /////////////////
      SteeringServoControl_Write(1500);
-   while(data<1000){
-
-//    printf("\n\n 4. distance sensor\n");
-   
-    //printf("Please input ADC channel number\n");
-    //scanf("%d", &channel);
-        //for(j=0; j<50; j++)
-        //{
+    while(flag<2){
+        printf("flag = %d",flag);
+        while(data<1000 && flag==0){
             channel =6;
             data = DistanceSensor(channel);
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
             usleep(100000);
-       // }
+            }
+        flag ++;
+       while(flag<2){ printf("flag = %d",flag);
+        channel =5;
+        data = DistanceSensor(channel);
+        printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+        usleep(100000);
+        if(data>1000)flag++;
     }
-
+        
+}
     ///////////////////
    ///////////////////////
 
