@@ -5,3 +5,5 @@
 #no output file
 *.o
 caputeOpenCV
+captureOpenCV2.c
+main.c

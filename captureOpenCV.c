@@ -675,20 +675,20 @@ int ThreeWayOBS(int location){
     usleep(100000);
     
     if(location == OBS_LEFT){
-        printf("OBSTACLE is on left\n")
+        printf("OBSTACLE is on left\n");
         return OBS_LEFT;
     }
     else if(location == OBS_RIGHT){
 
-        printf("OBSTACLE is on right\n")
+        printf("OBSTACLE is on right\n");
         return OBS_RIGHT;
     }
     else if(location == OBS_CENTER){
 
-        printf("OBSTACLE is on CENTER\n")
+        printf("OBSTACLE is on CENTER\n");
        return OBS_CENTER;
     }
-    else printf("LOCATION ERROR!!!")
+    else printf("LOCATION ERROR!!!");
 
 } 
 
@@ -702,6 +702,17 @@ void ThreewaySteering(int location){
     // }
     // else if(location == OBS_CENTER){
 //    else printf("LOCATION ERROR!!!")
+  // unsigned char status;
+  //   short speed;
+  //   unsigned char gain;
+  //   int position, position_now;
+  //   short angle;
+  //   int channel;
+  //   int data;
+  //   char sensor;
+  //   int i, j;
+  //   int tol;
+  //   char byte = 0x80;
 
 if(location == OBS_CENTER){
     printf("\n\n 1. position control on CENTER \n");
@@ -735,7 +746,7 @@ if(location == OBS_CENTER){
     position=DesireEncoderCount_Read();
     printf("DesireEncoderCount_Read() = %d\n", position);
     
-    tol = 10;    // tolerance
+    tol = 100;    // tolerance
     while(abs(position_now-position)>tol)
     {
         position_now=EncoderCounter_Read();
