@@ -71,6 +71,9 @@ int table_100[256];
 int table_208[256];
 int table_516[256];
 
+bool turn_left_max = false;
+bool turn_right_max = false;
+
 typedef struct
 {
     I2cId i2cDevice;
