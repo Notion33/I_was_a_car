@@ -903,19 +903,27 @@ void Find_Center(IplImage* imgResult)
     int turningSpeed = 100;         //곡선속도
     int width = imgResult->width;
     int height = imgResult->height;
-    int spacing = 40;                       // 중앙선 기준으로 spacing만큼은 무시
+    int spacing = 30;                       // 중앙선 기준으로 spacing만큼은 무시
     int rightTop = 0, leftTop = 0;          // 0~3
     int rightBottom = 0, leftBottom = 0;    // 0~2
+    int rightAssist = 0, leftAssist = 0;    // 0 or 1
 
     char status[30];
 
     //  직진 코스 읽기
-    int checkStraightLineY[4] = {50, 70, 130, 150}; // 상단과 하단의 1/6씩 버림
+    int checkStraightLineY[5] = {55, 70, 80, 130, 150}; // 상단과 하단의 1/6씩 버림
+    //int checkStraightLineY[5] = {65, 75, 80, 150, 170}; // 상단과 하단의 1/6씩 버림
+    if(turn_left_max || turn_right_max){
+        printf("In MAXMODE! \n");
+        checkStraightLineY[0] = 85;
+        checkStraightLineY[1] = 90;
+        checkStraightLineY[2] = 100;
+    }
 
     //  상단부 2줄 읽어서 직진코스 확인
     for (i = 0; i < 2; i++) {
       count = 0;
-      for(j=width/2 + spacing; j<width; j++){ // 우측 상단
+      for(j=width/2 + spacing; j<width-spacing/4; j++){ // 우측 상단
         int idx = checkStraightLineY[i]*imgResult->widthStep + j;
         if(imgResult->imageData[idx] == whitepx){
           count++;
@@ -926,7 +934,7 @@ void Find_Center(IplImage* imgResult)
         }
       }
       count = 0;
-      for(j=width/2 - spacing; j>=0; j--){    // 좌측 상단
+      for(j=width/2 - spacing; j>=0+spacing/4; j--){    // 좌측 상단
         int idx = checkStraightLineY[i]*imgResult->widthStep + j;
         if(imgResult->imageData[idx] == whitepx){
           count++;
@@ -938,8 +946,32 @@ void Find_Center(IplImage* imgResult)
       }
     }
 
+    // 상단 Assist line : 커브 판단 보조
+    count = 0;
+    for(j=width/2 + spacing; j<width; j++){ // 우측 상단
+      int idx = checkStraightLineY[2]*imgResult->widthStep + j;
+      if(imgResult->imageData[idx] == whitepx){
+        count++;
+        if(count>5){    // 차선이라 판단
+          rightAssist = 1;
+          break;
+        }
+      }
+    }
+    count = 0;
+    for(j=width/2 - spacing; j>=0; j--){    // 좌측 상단
+      int idx = checkStraightLineY[2]*imgResult->widthStep + j;
+      if(imgResult->imageData[idx] == whitepx){
+        count++;
+        if(count>5){    // 차선이라 판단
+          leftAssist = 1;
+          break;
+        }
+      }
+    }
+
     //  하단부는 비어야있어야 함
-    for (i = 2; i < 4; i++) {
+    for (i = 3; i < 5; i++) {
       count = 0;
       for(j=width/2 + spacing; j<width; j++){ // 우측 하단
         int idx = checkStraightLineY[i]*imgResult->widthStep + j;
@@ -964,86 +996,270 @@ void Find_Center(IplImage* imgResult)
       }
     }
 
-    //  교점 분포에 따른 주행 판단
-    // TODO TODO 상황별 시뮬레이션 보며 상황문 조정!!
-    if(leftTop+rightTop >= 5){      // 3+3 or 3+2
-        //직선
+    //==========================================================================
+    //==========================================================================
+
+    // // 최대조향각 유지 (매끄럽게 하기위해 or 노이즈 영향 최소화)
+    // if(turn_left_max || turn_right_max){
+    //
+    // }
+
+    // 최대조향 유지가 아닌 경우
+    if(leftTop + rightTop == 6){
+        // 상단 2줄 모두 검출 : 무조건 직진
         angle = refAngle;
-        speed = straightSpeed;                  //직진
+        speed = straightSpeed;
         sprintf(status, "Straight!");
 
-    } else if(leftTop+rightTop >= 4){   //3+1 or 2+2
-        //직선 및 핸들 조정
-        if(leftBottom > rightBottom){
-            angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
-            sprintf(status, "-- centerline ->");
-        } else if(leftBottom < rightBottom){
-            angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
-            sprintf(status, "<- centerline --");
-        } else if(leftBottom == rightBottom){
-            angle = refAngle;                   //직진
-            sprintf(status, "Straight!");
-        }
+    } else if(leftTop + rightTop == 5){
+        angle = refAngle;
         speed = straightSpeed;
+        sprintf(status, "Straight!");
 
-    } else if(leftTop == 3 || rightTop == 3){   //Already leftTop+rightTop==3 이하
-        //약한 곡선
-        if(leftTop == 3 && leftBottom >= 1){
+    } else if(leftTop + rightTop == 4){
+
+        if(leftBottom == rightBottom){  //직진
+            angle = refAngle;
+            speed = straightSpeed;
+            sprintf(status, "Straight!");
+
+        } else if(leftBottom == 1){     //우로 차선조정
             angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
             speed = straightSpeed;
             sprintf(status, "-- centerline ->");
-        } else if(rightTop == 3 && rightBottom >= 1){
+
+        } else if(rightBottom == 1){    //좌로 차선조정
             angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
             speed = straightSpeed;
             sprintf(status, "<- centerline --");
-        } else if(leftTop == 3 && rightBottom == 2){
-            angle = refAngle + weakAngleDef;    //약한 좌회전
-            speed = turningSpeed;
-            sprintf(status, "<- left turn --");
-        } else if(rightTop == 3 && leftBottom == 2){
+
+        } else if(leftBottom == 2){     //약한 우회전
             angle = refAngle - weakAngleDef;    //약한 우회전
             speed = turningSpeed;
             sprintf(status, "-- right turn ->");
-        }
 
-    } else if(leftTop+rightTop == 3){   // right1 + left2 or right2+left1
-        //전방에 약한 회전
-        if(leftTop > rightTop){
-            angle = refAngle - weakAngleDef;    //약한 우회전
-            speed = turningSpeed;
-            sprintf(status, "-- right turn ->");
-        } else if(leftTop < rightTop){
+        } else if(rightBottom == 2){    //약한 좌회전
             angle = refAngle + weakAngleDef;    //약한 좌회전
             speed = turningSpeed;
             sprintf(status, "<- left turn --");
+
         }
 
-    } else if(rightTop+leftTop <= 2){
-        //큰 곡선 : 최대조향각
-        if(rightBottom == 0 && leftBottom == 0){
+    } else if(leftTop + rightTop == 3){
+
+        if(leftTop == 3){               //왼쪽 상단만 검출
+
+            if(rightBottom == 2){       //강한 좌회전
+                angle = refAngle + maxAngleDef;     //최대조향 좌회전
+                speed = turningSpeed;
+                turn_left_max = true;
+                sprintf(status, "<<< Max Left Turn! ---");
+
+            } else if(leftAssist == 1){             //우로 차선이동
+                if(!turn_right_max){
+                    angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
+                    speed = straightSpeed;
+                    sprintf(status, "-- centerline ->");
+                } else {    //최대조향 유지
+                    angle = refAngle - maxAngleDef;     //최대조향 우회전
+                    speed = turningSpeed;
+                    turn_right_max = true;
+                    sprintf(status, "--- Max Right Turn! >>>");
+                }
+
+            } else if(leftBottom >= 1){             //우로 차선이동
+                angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
+                speed = straightSpeed;
+                sprintf(status, "-- centerline ->");
+
+            } else {
+                angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
+                speed = straightSpeed;
+                sprintf(status, "<- centerline --");
+            }
+
+
+        } else if(rightTop == 3){       //오른쪽 상단만 검출
+
+            if(leftBottom == 2){        //강한 우회전
+                angle = refAngle - maxAngleDef;     //최대조향 우회전
+                speed = turningSpeed;
+                turn_right_max = true;
+                sprintf(status, "--- Max Right Turn! >>>");
+
+            } else if(rightAssist == 1){            //좌로 차선이동
+                if(!turn_left_max){
+                    angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
+                    speed = straightSpeed;
+                    sprintf(status, "<- centerline --");
+                } else {    // 최대조향 유지
+                    angle = refAngle + maxAngleDef;     //최대조향 좌회전
+                    speed = turningSpeed;
+                    turn_left_max = true;
+                    sprintf(status, "<<< Max Left Turn! ---");
+                }
+
+
+            } else if(rightBottom >= 1){            //좌로 차선이동
+                angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
+                speed = straightSpeed;
+                sprintf(status, "<- centerline --");
+
+            } else {
+                angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
+                speed = straightSpeed;
+                sprintf(status, "-- centerline ->");
+            }
+
+        } else if(leftTop > rightTop){  //전방에 우회전
+            angle = refAngle - weakAngleDef;    //약한 우회전
+            speed = turningSpeed;
+            sprintf(status, "-- right turn ->");
+
+        } else if(leftTop < rightTop){  //전방에 좌회전
+            angle = refAngle + weakAngleDef;    //약한 좌회전
+            speed = turningSpeed;
+            sprintf(status, "<- left turn --");
+
+        }
+
+    } else if(leftTop + rightTop == 2){
+
+        if(leftTop == rightTop){
+            if(leftBottom == rightBottom){  //직진 1:1
+                angle = refAngle;
+                speed = straightSpeed;
+                sprintf(status, "Straight!");
+
+            } else if(leftBottom > rightBottom){    //약한 우회전
+                angle = refAngle - weakAngleDef;    //약한 우회전
+                speed = turningSpeed;
+                sprintf(status, "-- right turn ->");
+
+            } else if(leftBottom < rightBottom){    //약한 좌회전
+                angle = refAngle + weakAngleDef;    //약한 좌회전
+                speed = turningSpeed;
+                sprintf(status, "<- left turn --");
+
+            }
+
+        } else if(leftTop == 2){
+            if(leftBottom == rightBottom){          //약한 우회전
+                angle = refAngle - weakAngleDef;    //약한 우회전
+                speed = turningSpeed;
+                sprintf(status, "-- right turn ->");
+
+            } else if(leftBottom > rightBottom){
+                // angle = refAngle - weakAngleDef;    //약한 우회전
+                // speed = turningSpeed;
+                // sprintf(status, "-- right turn ->");
+
+                angle = refAngle - maxAngleDef;     //최대조향 우회전
+                speed = turningSpeed;
+                turn_right_max = true;
+                sprintf(status, "--- Max Right Turn! >>>");
+
+            }
+
+        } else if(rightTop == 2){
+            if(leftBottom == rightBottom){          //약한 좌회전
+                angle = refAngle + weakAngleDef;    //약한 좌회전
+                speed = turningSpeed;
+                sprintf(status, "<- left turn --");
+
+            } else if(leftBottom < rightBottom){
+                // angle = refAngle + weakAngleDef;    //약한 좌회전
+                // speed = turningSpeed;
+                // sprintf(status, "<- left turn --");
+
+                angle = refAngle + maxAngleDef;     //최대조향 좌회전
+                speed = turningSpeed;
+                turn_left_max = true;
+                sprintf(status, "<<< Max Left Turn! ---");
+
+            }
+
+        }
+
+    } else if(leftTop + rightTop == 1){ //TODO 튀는 값 존재
+
+        if(leftTop == 1){
+            /*if(leftAssist < rightAssist){   //강한 좌회전
+                angle = refAngle + maxAngleDef;     //최대조향 좌회전
+                speed = turningSpeed;
+                turn_left_max = true;
+                sprintf(status, "<<< Max Left Turn! ---");
+
+            } else */if(leftBottom > rightBottom){   //우로 차선조정
+                angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
+                speed = straightSpeed;
+                sprintf(status, "-- centerline ->");
+            } else if(leftBottom < rightBottom){    //약한 좌회전
+                angle = refAngle + weakAngleDef;    //약한 좌회전
+                speed = turningSpeed;
+                sprintf(status, "<- left turn --");
+            }
+            else if(leftBottom == 0 && rightBottom == 0){
+                angle = refAngle;
+                speed = straightSpeed;
+                sprintf(status, "Straight!");
+            }
+
+        } else if(rightTop == 1){
+            /*if(leftAssist > rightAssist){   //강한 우회전
+                angle = refAngle - maxAngleDef;     //최대조향 우회전
+                speed = turningSpeed;
+                turn_right_max = true;
+                sprintf(status, "--- Max Right Turn! >>>");
+
+            } else */if(leftBottom < rightBottom){   //좌로 차선조정
+                angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
+                speed = straightSpeed;
+                sprintf(status, "<- centerline --");
+
+            } else if(leftBottom > rightBottom){    //약한 우회전
+                angle = refAngle - weakAngleDef;    //약한 우회전
+                speed = turningSpeed;
+                sprintf(status, "-- right turn ->");
+
+            }
+            else if(leftBottom == 0 && rightBottom == 0){
+                angle = refAngle;
+                speed = straightSpeed;
+                sprintf(status, "Straight!");
+            }
+        }
+
+    } else if(leftTop + rightTop == 0){
+        if(leftBottom == rightBottom){          //직진
             angle = refAngle;
-            speed = straightSpeed;                  //직진
+            speed = straightSpeed;
             sprintf(status, "Straight!");
-        }
-    } else if(rightTop+leftTop == 0){
-        //큰 곡선 : 최대조향각
-        if(leftBottom == 2){
+
+        } else if(leftBottom > rightBottom){    //강한 우회전
             angle = refAngle - maxAngleDef;     //최대조향 우회전
             speed = turningSpeed;
+            turn_right_max = true;
             sprintf(status, "--- Max Right Turn! >>>");
-        } else if(rightBottom == 2){
+        } else if(leftBottom < rightBottom){    //강한 좌회전
             angle = refAngle + maxAngleDef;     //최대조향 좌회전
             speed = turningSpeed;
+            turn_left_max = true;
             sprintf(status, "<<< Max Left Turn! ---");
-        } else if(rightBottom == 0 && leftBottom == 0){
-            angle = refAngle;
-            speed = straightSpeed;                  //직진
-            sprintf(status, "Straight!");
         }
     }
 
     else {
         //angle 유지
+    }
+
+    if(turn_left_max || turn_right_max){
+        if(angle != refAngle+maxAngleDef){
+            turn_left_max = false;
+        }
+        if(angle != refAngle-maxAngleDef){
+            turn_right_max = false;
+        }
     }
 
     #ifdef SHOWLOG
@@ -1052,113 +1268,17 @@ void Find_Center(IplImage* imgResult)
     printf("\n");
     printf("============\n");
     printf("|| %d || %d ||\n",leftTop, rightTop);
+    printf("|| %d || %d ||\n",leftAssist, rightAssist);
     printf("|| %d || %d ||\n",leftBottom, rightBottom);
     printf("============\n");
+    printf("Top : %d Assist : %d\n", leftTop+rightTop, leftAssist+rightAssist);
     printf("Angle : %d  Speed : %d\n", angle, speed);
-    printf("Current Status : %s\n", status);  //TODO 현재 상태 문자열로 출력
+    printf("leftMax : %s ||  rightMax : %s\n", turn_left_max ? "true" : "false", turn_right_max ? "true" : "false");
+    printf("Current Status : %s\n\n", status);  //TODO 현재 상태 문자열로 출력
     #endif
 
     //DesireSpeed_Write(speed);
     //SteeringServoControl_Write(angle);
-}
-
-
-void *ControlThread(void *unused)
-{
-    int i=0;
-    char fileName[40];
-    char fileName1[40];         // TY add 6.27
-    char fileName_color[40];         // NYC add 8.25
-    //char fileName2[30];           // TY add 6.27
-    NvMediaTime pt1 ={0}, pt2 = {0};
-    NvU64 ptime1, ptime2;
-    struct timespec;
-
-    IplImage* imgOrigin;
-    IplImage* imgResult;            // TY add 6.27
-    IplImage* imgColor;             // NYC add 8.25
-    //IplImage* imgCenter;          // TY add 6.27
-
-    // cvCreateImage
-    imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
-    imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
-    imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
-    //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
-
-    cvZero(imgResult);          // TY add 6.27
-    cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
-    //cvZero(imgCenter);            // TY add 6.27
-
-    while(1)
-    {
-        pthread_mutex_lock(&mutex);
-        pthread_cond_wait(&cond, &mutex);
-
-        GetTime(&pt1);
-        ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
-
-        //Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
-                                         // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
-        Frame2Ipl_color(imgOrigin, imgResult, imgColor, colorFlag);
-
-        pthread_mutex_unlock(&mutex);
-
-        // TODO : control steering angle based on captured image ---------------
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
-//
-
-        Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
-        /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
-
-        //===================================
-        //  장애물 처리 모듈 input : imgColor
-        emergencyStopRed(imgColor);    //NYC //TODO flag to kill
-        //===================================
-
-        // 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
-        SteeringServoControl_Write(angle);
-        DesireSpeed_Write(speed);
-
-        #ifdef IMGSAVE
-        sprintf(fileName, "captureImage/imgOrigin%d.png", i);
-        sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
-        sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
-        //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
-
-
-        cvSaveImage(fileName, imgOrigin, 0);
-        cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
-        cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
-        //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
-
-        //  디버그 이미지 생성
-        char str_info[50];
-        sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", i, angle, speed);
-        writeonImage(imgResult, str_info);
-        drawonImage(imgResult, angle);
-        sprintf(fileName1, "DebugImage/imgDebug%d.png", i);
-        cvSaveImage(fileName1, imgResult, 0);
-
-        #endif
-
-        //TY설명 내용
-        //imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
-        //imgCenter는 아직 구현 안되어있으며 필요시 아래의 코드 주석처리 해제시 사용가능
-        //char fileName2[30] , IplImage* imgCenter, imgCenter = cvCreateImage(cvGetSize(imgOrigin),
-        //IPL_DEPTH_8U, 1), cvZero(imgCenter), sprintf(fileName2, "captureImage/imgCenter%d.png", i), cvSaveImage(fileName2, imgCenter, 0)
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        // ---------------------------------------------------------------------
-
-        GetTime(&pt2);
-        ptime2 = (NvU64)pt2.tv_sec * 1000000000LL + (NvU64)pt2.tv_nsec;
-        printf("--------------------------------operation time=%llu.%09llu[s]\n", (ptime2-ptime1)/1000000000LL, (ptime2-ptime1)%1000000000LL);
-
-
-        i++;
-    }
 }
 
 int main(int argc, char *argv[])

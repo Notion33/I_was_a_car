@@ -7,6 +7,8 @@
 #include <highgui.h>
 #include <math.h>
 
+#define IMGSAVE
+
 int sim_angle;
 int sim_speed;
 int img_height;
@@ -234,6 +236,12 @@ int main(int argc, char const *argv[]) {
     cvSetTrackbarPos("frame","simulator",index);
 
     cvShowImage("simulator",imgResult);
+
+    //TODO save images
+    #ifdef IMGSAVE
+    sprintf(file_name, "DebugImage/imgDebug%d.png", index);
+    cvSaveImage(file_name, imgResult, 0);
+    #endif
 
     int key = cvWaitKey(200);
     if(key=='q' || key==27){
