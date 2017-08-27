@@ -915,7 +915,7 @@ void Find_Center(IplImage* imgResult)
     //int checkStraightLineY[5] = {65, 75, 80, 150, 170}; // 상단과 하단의 1/6씩 버림
     if(turn_left_max || turn_right_max){
         printf("In MAXMODE! \n");
-        checkStraightLineY[0] = 85;
+        checkStraightLineY[0] = 75;
         checkStraightLineY[1] = 90;
         checkStraightLineY[2] = 100;
     }
@@ -1112,14 +1112,28 @@ void Find_Center(IplImage* imgResult)
             }
 
         } else if(leftTop > rightTop){  //전방에 우회전
-            angle = refAngle - weakAngleDef;    //약한 우회전
-            speed = turningSpeed;
-            sprintf(status, "-- right turn ->");
+            if(leftBottom < rightBottom){
+                angle = refAngle + weakAngleDef;    //약한 좌회전
+                speed = turningSpeed;
+                sprintf(status, "<- left turn --");
+
+            } else {
+                angle = refAngle - weakAngleDef;    //약한 우회전
+                speed = turningSpeed;
+                sprintf(status, "-- right turn ->");
+            }
 
         } else if(leftTop < rightTop){  //전방에 좌회전
-            angle = refAngle + weakAngleDef;    //약한 좌회전
-            speed = turningSpeed;
-            sprintf(status, "<- left turn --");
+            if(leftBottom > rightBottom){
+                angle = refAngle - weakAngleDef;    //약한 우회전
+                speed = turningSpeed;
+                sprintf(status, "-- right turn ->");
+
+            } else {
+                angle = refAngle + weakAngleDef;    //약한 좌회전
+                speed = turningSpeed;
+                sprintf(status, "<- left turn --");
+            }
 
         }
 
@@ -1150,14 +1164,14 @@ void Find_Center(IplImage* imgResult)
                 sprintf(status, "-- right turn ->");
 
             } else if(leftBottom > rightBottom){
-                // angle = refAngle - weakAngleDef;    //약한 우회전
-                // speed = turningSpeed;
-                // sprintf(status, "-- right turn ->");
-
-                angle = refAngle - maxAngleDef;     //최대조향 우회전
+                angle = refAngle - weakAngleDef;    //약한 우회전
                 speed = turningSpeed;
-                turn_right_max = true;
-                sprintf(status, "--- Max Right Turn! >>>");
+                sprintf(status, "-- right turn ->");
+
+                // angle = refAngle - maxAngleDef;     //최대조향 우회전
+                // speed = turningSpeed;
+                // turn_right_max = true;
+                // sprintf(status, "--- Max Right Turn! >>>");
 
             }
 
@@ -1168,14 +1182,14 @@ void Find_Center(IplImage* imgResult)
                 sprintf(status, "<- left turn --");
 
             } else if(leftBottom < rightBottom){
-                // angle = refAngle + weakAngleDef;    //약한 좌회전
-                // speed = turningSpeed;
-                // sprintf(status, "<- left turn --");
-
-                angle = refAngle + maxAngleDef;     //최대조향 좌회전
+                angle = refAngle + weakAngleDef;    //약한 좌회전
                 speed = turningSpeed;
-                turn_left_max = true;
-                sprintf(status, "<<< Max Left Turn! ---");
+                sprintf(status, "<- left turn --");
+
+                // angle = refAngle + maxAngleDef;     //최대조향 좌회전
+                // speed = turningSpeed;
+                // turn_left_max = true;
+                // sprintf(status, "<<< Max Left Turn! ---");
 
             }
 
