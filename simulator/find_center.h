@@ -34,7 +34,7 @@ void Find_Center(IplImage* imgResult)
     int width = imgResult->width;
     int height = imgResult->height;
     int spacing = 40;                       // 중앙선 기준으로 spacing만큼은 무시
-    int rightTop = 0, leftTop = 0;          // 0~2
+    int rightTop = 0, leftTop = 0;          // 0~3
     int rightBottom = 0, leftBottom = 0;    // 0~2
 
     char status[30];
@@ -50,7 +50,7 @@ void Find_Center(IplImage* imgResult)
         if(imgResult->imageData[idx] == whitepx){
           count++;
           if(count>5){    // 차선이라 판단
-            rightTop++;
+            rightTop = rightTop + i+1;    //가까울수록 가중치
             break;
           }
         }
@@ -61,7 +61,7 @@ void Find_Center(IplImage* imgResult)
         if(imgResult->imageData[idx] == whitepx){
           count++;
           if(count>5){    // 차선이라 판단
-            leftTop++;
+            leftTop = leftTop + i+1;      //가까울수록 가중치
             break;
           }
         }
@@ -96,13 +96,13 @@ void Find_Center(IplImage* imgResult)
 
     //  교점 분포에 따른 주행 판단
     // TODO TODO 상황별 시뮬레이션 보며 상황문 조정!!
-    if(leftTop+rightTop == 4){
+    if(leftTop+rightTop >= 5){      // 3+3 or 3+2
         //직선
         angle = refAngle;
         speed = straightSpeed;                  //직진
         sprintf(status, "Straight!");
 
-    } else if(leftTop+rightTop == 3){
+    } else if(leftTop+rightTop >= 4){   //3+1 or 2+2
         //직선 및 핸들 조정
         if(leftBottom > rightBottom){
             angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
@@ -116,58 +116,61 @@ void Find_Center(IplImage* imgResult)
         }
         speed = straightSpeed;
 
-    } else if(leftTop == 2 || rightTop == 2){   //Already leftTop+rightTop==2
+    } else if(leftTop == 3 || rightTop == 3){   //Already leftTop+rightTop==3 이하
         //약한 곡선
-        if(leftTop == 2 && leftBottom >= 1){
+        if(leftTop == 3 && leftBottom >= 1){
             angle = refAngle - minAngleDef;     //핸들 살짝 오른쪽
             speed = straightSpeed;
             sprintf(status, "-- centerline ->");
-        } else if(rightTop == 2 && rightBottom >= 1){
+        } else if(rightTop == 3 && rightBottom >= 1){
             angle = refAngle + minAngleDef;     //핸들 살짝 왼쪽
             speed = straightSpeed;
             sprintf(status, "<- centerline --");
-        } else if(leftTop == 2 && rightBottom == 2){
+        } else if(leftTop == 3 && rightBottom == 2){
             angle = refAngle + weakAngleDef;    //약한 좌회전
             speed = turningSpeed;
             sprintf(status, "<- left turn --");
-        } else if(rightTop == 2 && leftBottom == 2){
+        } else if(rightTop == 3 && leftBottom == 2){
             angle = refAngle - weakAngleDef;    //약한 우회전
             speed = turningSpeed;
             sprintf(status, "-- right turn ->");
         }
 
-    } else if(rightTop+leftTop < 2){
-        //큰 곡선 : 최대조향각
-        if(leftBottom >= 1){
-            angle = refAngle - maxAngleDef;     //최대조향 우회전
-            sprintf(status, "--- Max Right Turn! >>>");
-        } else if(rightTop >= 1){
-            angle = refAngle + maxAngleDef;     //최대조향 좌회전
-            sprintf(status, "<<< Max Left Turn! ---");
+    } else if(leftTop+rightTop == 3){   // right1 + left2 or right2+left1
+        //전방에 약한 회전
+        if(leftTop > rightTop){
+            angle = refAngle - weakAngleDef;    //약한 우회전
+            speed = turningSpeed;
+            sprintf(status, "-- right turn ->");
+        } else if(leftTop < rightTop){
+            angle = refAngle + weakAngleDef;    //약한 좌회전
+            speed = turningSpeed;
+            sprintf(status, "<- left turn --");
         }
-        speed = turningSpeed;
-    }
 
-
-    /*
-    if(leftTop==2 && rightTop==2 && leftBottom==0 && rightBottom==0){           //직선, 상반부만 검출됨
-        angle = 1500;
-    } else if(leftTop+rightTop>=3 && leftBottom==0 && rightBottom==0){          //약한 직선
-        angle = 1500;
-    } else if(leftTop==0 && rightTop==2 && leftBottom==0 && rightBottom>=1) {   //중앙선이탈(우측치우침), 우측차선 크게 검출
-        angle = 1600;   //TODO 더 세밀하게 조향
-    } else if(leftTop==2 && rightTop==0 && leftBottom>=1 && rightBottom==0) {   //중앙선이탈(좌측치우침), 좌측차선 크게 검출
-        angle = 1400;   //TODO 더 세밀하게 조향
-    } else if(leftTop>=1 && rightTop==2 && leftBottom==0 && rightBottom>=1) {   //약한 좌회전, 우측차선 크게 검출
-        angle = 1800;   //TODO 더 세밀하게 조향
-    } else if(leftTop==2 && rightTop>=1 && leftBottom>=1 && rightBottom==0) {   //약한 우회전, 좌측차선 크게 검출
-        angle = 1200;   //TODO 더 세밀하게 조향
-    } else if(leftTop<=1 && rightTop==0 && leftBottom==0 && rightBottom==2) {   //강한 좌회전, 우측차선만 검출
-        angle = 2000;   //TODO 범위 더 정확하게
-    } else if(leftTop==0 && rightTop<=1 && leftBottom==2 && rightBottom==0) {   //강한 우회전, 좌측차선만 검출
-        angle = 1000;   //TODO 범위 더 정확하게
+    } else if(rightTop+leftTop <= 2){
+        //큰 곡선 : 최대조향각
+        if(rightBottom == 0 && leftBottom == 0){
+            angle = refAngle;
+            speed = straightSpeed;                  //직진
+            sprintf(status, "Straight!");
+        }
+    } else if(rightTop+leftTop == 0){
+        //큰 곡선 : 최대조향각
+        if(leftBottom == 2){
+            angle = refAngle - maxAngleDef;     //최대조향 우회전
+            speed = turningSpeed;
+            sprintf(status, "--- Max Right Turn! >>>");
+        } else if(rightBottom == 2){
+            angle = refAngle + maxAngleDef;     //최대조향 좌회전
+            speed = turningSpeed;
+            sprintf(status, "<<< Max Left Turn! ---");
+        } else if(rightBottom == 0 && leftBottom == 0){
+            angle = refAngle;
+            speed = straightSpeed;                  //직진
+            sprintf(status, "Straight!");
+        }
     }
-    */
 
     else {
         //angle 유지
@@ -175,25 +178,6 @@ void Find_Center(IplImage* imgResult)
 
     #ifdef SHOWLOG
     //TODO 현재상태 문자열로 반환
-    /*
-    if(leftTop==2 && rightTop==2 && leftBottom==0 && rightBottom==0){           //직선, 상반부만 검출됨
-        sprintf(status, "Straight!");
-    } else if(leftTop+rightTop>=3 && leftBottom==0 && rightBottom==0){          //약한 직선
-        sprintf(status, "weak Straight!");
-    } else if(leftTop==0 && rightTop==2 && leftBottom==0 && rightBottom==1) {   //중앙선이탈(우측치우침), 우측차선 크게 검출
-        sprintf(status, "<- centerline --");
-    } else if(leftTop==2 && rightTop==0 && leftBottom==1 && rightBottom==0) {   //중앙선이탈(좌측치우침), 좌측차선 크게 검출
-        sprintf(status, "-- centerline ->!");
-    } else if(leftTop>=1 && rightTop==2 && leftBottom==0 && rightBottom>=1) {   //약한 좌회전, 우측차선 크게 검출
-        sprintf(status, "left turn <-");
-    } else if(leftTop==2 && rightTop>=1 && leftBottom>=1 && rightBottom==0) {   //약한 우회전, 좌측차선 크게 검출
-        sprintf(status, "right turn ->");
-    } else if(leftTop<=1 && rightTop==0 && leftBottom==0 && rightBottom==2) {   //강한 좌회전, 우측차선만 검출
-        sprintf(status, "Max Left Turn! <<<-");
-    } else if(leftTop==0 && rightTop<=1 && leftBottom==2 && rightBottom==0) {   //강한 우회전, 좌측차선만 검출
-        sprintf(status, "Max Right Turn! ->>>");
-    }
-    */
 
     printf("\n");
     printf("============\n");
