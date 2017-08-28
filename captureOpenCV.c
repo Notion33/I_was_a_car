@@ -708,16 +708,14 @@ void DetectOBSloc(IplImage* Binaryimg){
         for (i = endpointx; i > endpointy; i--) {
             int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
             if (px == blackpx) {
-                countblack++;//검정색 만나면 스타트! 연속해서 15px 있는지 확인
-                for (k = 0; k < 15; k++) {
-                    int px2 = Binaryimg->imageData[(i - k) + j*Binaryimg->widthStep];
-                    if (px2 == blackpx)
-                        blackseries++;
+             //   countblack++;//검정색 만나면 스타트! 연속해서 15px 있는지 확인
+                for (k = i; k > i- 15; k--) {
+                    int px2 = Binaryimg->imageData[k + j*Binaryimg->widthStep];
+                    if (px2 == blackpx) blackseries++;
                     else break;
                 }
                 if (blackseries == 15) {
                     blackloc = i - 7;   
-                    point1.x = (i - k);
                     break;
                 }
                 else blackseries = 0;
@@ -726,7 +724,7 @@ void DetectOBSloc(IplImage* Binaryimg){
         }
         if (blackseries == 15) break;
     }
-    scanbound.x = i;
+    scanbound.x = k;
     scanbound.y = j;
 
     obsloc = 'c';

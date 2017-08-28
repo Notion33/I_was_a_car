@@ -148,6 +148,12 @@ void main(void)
         }
     }
 
+    SteeringServoControl_Write(1800);
+    sleep(2);  //run time 
+
+    SteeringServoControl_Write(1200);
+    sleep(2);
+
     speed = DesireSpeed_Read();
     printf("DesireSpeed_Read() = %d \n", speed);
 
