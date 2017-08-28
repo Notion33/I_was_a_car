@@ -433,6 +433,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
         for(k = 0; k < resWidth; k++)
         {
             x = ResTableX_720To320[k];
+
             y = pY[i][stepY+x];
             u = pU[i][stepU+x/2];
             v = pV[i][stepV+x/2];
@@ -442,14 +443,14 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult)
             bin_num = j*imgResult->widthStep + k;
             if( u>-39  &&  u<120  &&  v>45   &&   v<245  ) {
                 // 흰색으로
-                imgResult->imageData[bin_num] = (char)255;
+                imgResult->imageData[bin_num] = (char)255; //imgResult = binary image
             }
             else {
                 // 검정색으로
                 imgResult->imageData[bin_num] = (char)0;
             }
 
-            img->imageData[num] = y;
+            img->imageData[num] = y;  // img => yuv
             img->imageData[num+1] = u;
             img->imageData[num+2] = v;
 
@@ -626,7 +627,7 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColo
     return 1;
 }
 
-void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용해야 급정거 효과 있음
+/*void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용해야 급정거 효과 있음
     int x = 20, y= 30;
     int width = 280, height = 80;
     int mThreshold = width*height*0.4;
@@ -664,27 +665,47 @@ void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용
     //     //아예 이 함수 플래그 죽이기
     // }
 
-}
+}*/
 
-int DetectOBSloc(int location){
+void DetectOBSloc(IplImage* Binaryimg){
+     int x = 20, y= 30;
+    int width = 280, height = 80;
+    int mThreshold = width*height*0.4;
 
-    printf("\n\n 0. ThreeWayOBS\n");
-    
-    if(location == OBS_LEFT){
-        printf("OBSTACLE is on left\n");
-        return OBS_LEFT;
+    int i, j;
+    int count = 0;
+    int hwanname[40];
+
+    for(j=y; j<y+height; j++){
+        for(i=x; i<x+width; i++){
+            int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
+            if(px == whitepx){
+                //TODO
+                count++;
+            }
+        }
     }
-    else if(location == OBS_RIGHT){
+    printf("count is %d \n",count);
+    sprintf(hwanname, "img/imgCH %d.png", i);
+        
+    cvSaveImage(hwanname, Binaryimg, 0);            // should be removed when racing
+        
+    // if(location == OBS_LEFT){
+    //     printf("OBSTACLE is on left\n");
+    //     return OBS_LEFT;
+    // }
+    // else if(location == OBS_RIGHT){
 
-        printf("OBSTACLE is on right\n");
-        return OBS_RIGHT;
-    }
-    else if(location == OBS_CENTER){
+    //     printf("OBSTACLE is on right\n");
+    //     return OBS_RIGHT;
+    // }
+    // else if(location == OBS_CENTER){
 
-        printf("OBSTACLE is on CENTER\n");
-       return OBS_CENTER;
-    }
-    else printf("LOCATION ERROR!!!");
+    //     printf("OBSTACLE is on CENTER\n");
+    //    return OBS_CENTER;
+    // }
+    // else printf("LOCATION ERROR!!!");
+    // //cvSaveImage("");
 
 } 
 
@@ -960,12 +981,15 @@ void *ControlThread(void *unused)
     IplImage* imgResult;            // TY add 6.27
     IplImage* imgColor;             // NYC add 8.25
     //IplImage* imgCenter;          // TY add 6.27
+    IplImage* Binaryimg;             //CH for test 8.28
 
     // cvCreateImage
     imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
     imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
     imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
     //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
+    Binaryimg = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+    Binaryimg = cvLoadImage("img/blackwhite.png",1); 
 
     cvZero(imgResult);          // TY add 6.27
     cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
@@ -991,14 +1015,14 @@ void *ControlThread(void *unused)
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
 
-        Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
+        //Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
         //===================================
         //  장애물 처리 모듈 input : imgColor
        // emergencyStopRed(imgColor);    //NYC //TODO flag to kill
-        int location = DetectOBSloc(OBS_CENTER);
-        ThreewaySteering(location);
+        DetectOBSloc(Binaryimg);
+       //ThreewaySteering(location);
         //===================================
 
         // 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
@@ -1006,9 +1030,9 @@ void *ControlThread(void *unused)
         DesireSpeed_Write(speed);
 
         #ifdef IMGSAVE
-        sprintf(fileName, "captureImage/imgOrigin%d.png", i);
-        sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
-        sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
+        sprintf(fileName, "captureImage/imgCHn%d.png", i);
+        sprintf(fileName1, "captureImage/imgResultCH%d.png", i);          // TY add 6.27
+        sprintf(fileName_color, "captureImage/imgColorCH%d.png", i);          // NYC add 8.25
         //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
 
