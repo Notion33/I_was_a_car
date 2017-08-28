@@ -56,6 +56,7 @@
 #define RESIZE_HEIGHT 240
 
 #define whitepx 255
+#define blackpx 0
 
 int angle = 1500;
 int speed = 100;
@@ -671,21 +672,35 @@ void DetectOBSloc(IplImage* Binaryimg){
      int x = 20, y= 30;
     int width = 280, height = 80;
     int mThreshold = width*height*0.4;
+    int startpointx=20;
+    int startpointy=30;
 
     int i, j;
-    int count = 0;
+    int countwhite = 0;
+    int countblack =0;
+
     int hwanname[40];
+    CvPoint point1, point2;
+    point1.x = startpointx;
+    point1.y = startpointy;
+    point2.x = x+width;
+    point2.y = y+height;
 
     for(j=y; j<y+height; j++){
         for(i=x; i<x+width; i++){
             int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
-            if(px == whitepx){
+            if(px == blackpx){
                 //TODO
-                count++;
+                countblack++;
             }
+            else if(px== whitepx)
+                countwhite++;
+
+            cvLine(Binaryimg, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
         }
     }
-    printf("count is %d \n",count);
+    printf("countblack is %d \n",countblack);
+    printf("countwhite is %d \n",countwhite);
     sprintf(hwanname, "img/imgCH %d.png", i);
         
     cvSaveImage(hwanname, Binaryimg, 0);            // should be removed when racing
@@ -986,7 +1001,7 @@ void *ControlThread(void *unused)
     imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
     //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
     Binaryimg = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
-    Binaryimg = cvLoadImage("img/blackwhite2.png", CV_LOAD_IMAGE_GRAYSCALE); 
+    Binaryimg = cvLoadImage("img/blackwhite.png", CV_LOAD_IMAGE_GRAYSCALE); 
 
     cvZero(imgResult);          // TY add 6.27
     cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
