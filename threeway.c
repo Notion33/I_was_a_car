@@ -154,12 +154,17 @@ void main(void)
     SteeringServoControl_Write(1200);
     sleep(2);
 
+    SteeringServoControl_Write(1500);
+    sleep(2);
+   
+
     speed = DesireSpeed_Read();
     printf("DesireSpeed_Read() = %d \n", speed);
 
     speed = 0;
     DesireSpeed_Write(speed);
 
+    
     sleep(1);
 
 
