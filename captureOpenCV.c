@@ -694,16 +694,15 @@ void DetectOBSloc(IplImage* Binaryimg){
                 countblack++;
             }
             else if(px== whitepx)
-                countwhite++;
-
-            cvLine(Binaryimg, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
+                countwhite++;            
         }
     }
+    cvLine(Binaryimg, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
     printf("countblack is %d \n",countblack);
     printf("countwhite is %d \n",countwhite);
     sprintf(hwanname, "img/imgCH %d.png", i);
         
-    cvSaveImage(hwanname, Binaryimg, 0);            // should be removed when racing
+    cvSaveImage(hwanname, Binaryimg, 0);          
         
     // if(location == OBS_LEFT){
     //     printf("OBSTACLE is on left\n");
@@ -1034,6 +1033,7 @@ void *ControlThread(void *unused)
         //  장애물 처리 모듈 input : imgColor
        // emergencyStopRed(imgColor);    //NYC //TODO flag to kill
         DetectOBSloc(Binaryimg);
+        break;
        //ThreewaySteering(location);
         //===================================
 
