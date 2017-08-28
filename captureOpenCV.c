@@ -710,14 +710,11 @@ void DetectOBSloc(IplImage* Binaryimg){
 } 
 
 void ThreewaySteering(int location){
-
-if(location == OBS_CENTER){
-
-    printf("\n\n 1. position control on CENTER \n");
-    angle += 10;
-    speed += 5;
-
-}
+    if(location == OBS_CENTER){
+        printf("\n\n 1. position control on CENTER \n");
+        angle += 10;
+        speed += 5;
+    }
 }    
 
 
@@ -989,7 +986,7 @@ void *ControlThread(void *unused)
     imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
     //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
     Binaryimg = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
-    Binaryimg = cvLoadImage("img/blackwhite.png",1); 
+    Binaryimg = cvLoadImage("img/blackwhite2.png", CV_LOAD_IMAGE_GRAYSCALE); 
 
     cvZero(imgResult);          // TY add 6.27
     cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
