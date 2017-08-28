@@ -681,12 +681,12 @@ void DetectOBSloc(IplImage* Binaryimg){
     int blackloc=0;
     char obsloc;
     
-    int startpointx=136;
-    int startpointy=120;
-    int endpointx = 252;
-    int endpointy = 149;
+    int startpointx=1; //(136,120) (252,149)
+    int startpointy=122;
+    int endpointx = 318;
+    int endpointy = 160;
 
-    CvPoint point1, point2;
+    CvPoint point1, point2,scanbound;
     point1.x = startpointx;
     point1.y = startpointy;
     point2.x = endpointx;
@@ -704,29 +704,38 @@ void DetectOBSloc(IplImage* Binaryimg){
         }
     }
 
-    for(i = endpointy ; i > startpointy ; i--){
-        for(j = endpointx; j> endpointy ; j--){
+    for (j = endpointy; j > startpointy; j--) {
+        for (i = endpointx; i > endpointy; i--) {
             int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
-            if(px == blackpx){ //검정색 만나면 스타트! 연속해서 15px 있는지 확인
-                for(k =0; k<15;k++){
-                    int px2= Binaryimg->imageData[i + (j-k)*Binaryimg->widthStep];
-                    if(px2== blackpx)
+            if (px == blackpx) {
+                countblack++;//검정색 만나면 스타트! 연속해서 15px 있는지 확인
+                for (k = 0; k < 15; k++) {
+                    int px2 = Binaryimg->imageData[(i - k) + j*Binaryimg->widthStep];
+                    if (px2 == blackpx)
                         blackseries++;
                     else break;
-                    }
-                if(blackseries==15){
-                   blackloc = endpointx - 7; 
                 }
-                countblack ++;
+                if (blackseries == 15) {
+                    blackloc = i - 7;   
+                    point1.x = (i - k);
+                    break;
+                }
+                else blackseries = 0;
             }
-           
+            
         }
+        if (blackseries == 15) break;
     }
+    scanbound.x = i;
+    scanbound.y = j;
+
     obsloc = 'c';
-        cvLine(Binaryimg, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
+    cvLine(Binaryimg, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
+    cvLine(Binaryimg, scanbound, point2, CV_RGB(255,255,0), 2, 8, 0);
+   
     printf("countblack is %d \n",countblack);
     printf("countwhite is %d \n",countwhite);
-     printf("black center is %d and obs is on %c \n",blackloc,obsloc);
+    printf("black center is %d and blackseries is on %d \n",blackloc,blackseries);
    
     sprintf(hwanname, "img/imgCH %d.png", i);
         
