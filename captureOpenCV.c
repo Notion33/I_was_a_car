@@ -669,25 +669,31 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColo
 }*/
 
 void DetectOBSloc(IplImage* Binaryimg){
-     int x = 20, y= 30;
     int width = 280, height = 80;
     int mThreshold = width*height*0.4;
-    int startpointx=20;
-    int startpointy=30;
 
-    int i, j;
+
+    int i, j, k;
     int countwhite = 0;
     int countblack =0;
-
+    int blackseries = 0;
     int hwanname[40];
+    int blackloc=0;
+    char obsloc;
+    
+    int startpointx=136;
+    int startpointy=120;
+    int endpointx = 252;
+    int endpointy = 149;
+
     CvPoint point1, point2;
     point1.x = startpointx;
     point1.y = startpointy;
-    point2.x = x+width;
-    point2.y = y+height;
+    point2.x = endpointx;
+    point2.y = endpointy;
 
-    for(j=y; j<y+height; j++){
-        for(i=x; i<x+width; i++){
+    for(j= startpointy; j < endpointy; j++){
+        for(i= startpointx ; i< endpointx; i++){
             int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
             if(px == blackpx){
                 //TODO
@@ -697,9 +703,31 @@ void DetectOBSloc(IplImage* Binaryimg){
                 countwhite++;            
         }
     }
-    cvLine(Binaryimg, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
+
+    for(i = endpointy ; i > startpointy ; i--){
+        for(j = endpointx; j> endpointy ; j--){
+            int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
+            if(px == blackpx){ //검정색 만나면 스타트! 연속해서 15px 있는지 확인
+                for(k =0; k<15;k++){
+                    int px2= Binaryimg->imageData[i + (j-k)*Binaryimg->widthStep];
+                    if(px2== blackpx)
+                        blackseries++;
+                    else break;
+                    }
+                if(blackseries==15){
+                   blackloc = endpointx - 7; 
+                }
+                countblack ++;
+            }
+           
+        }
+    }
+    obsloc = 'c';
+        cvLine(Binaryimg, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
     printf("countblack is %d \n",countblack);
     printf("countwhite is %d \n",countwhite);
+     printf("black center is %d and obs is on %c \n",blackloc,obsloc);
+   
     sprintf(hwanname, "img/imgCH %d.png", i);
         
     cvSaveImage(hwanname, Binaryimg, 0);          
@@ -1000,7 +1028,7 @@ void *ControlThread(void *unused)
     imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
     //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
     Binaryimg = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
-    Binaryimg = cvLoadImage("img/blackwhite.png", CV_LOAD_IMAGE_GRAYSCALE); 
+    Binaryimg = cvLoadImage("img/obstacle3.png", CV_LOAD_IMAGE_GRAYSCALE); 
 
     cvZero(imgResult);          // TY add 6.27
     cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
