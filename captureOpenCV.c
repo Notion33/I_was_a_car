@@ -1308,6 +1308,13 @@ int main(int argc, char *argv[])
         usleep(1000000);
     #endif
 
+    #ifdef SERVO_CONTROL
+        angle = 1500;
+        SteeringServoControl_Write(angle);
+        CameraXServoControl_Write(angle);
+        CameraYServoControl_Write(angle); 
+    #endif
+
 fail: // Run down sequence
     // Destroy vip threads and stream start/done semaphores
     if(vipThread)
