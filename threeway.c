@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include "car_lib.h" //
 
-#define SPEED_CONTROL     // to test speed control
-//#define POSITION_CONTROL  // to test postion control
-#define SERVO_CONTROL     // to test servo control(steering & camera position)
+//#define SPEED_CONTROL     // to test speed control
+#define POSITION_CONTROL  // to test postion control
+//#define SERVO_CONTROL     // to test servo control(steering & camera position)
 //#define DISTANCE_SENSOR     // to test distance sensor
 
 void main(void)
@@ -15,26 +15,42 @@ void main(void)
     short speed;
     unsigned char gain;
     int position, position_now;
-    short angle;
+    short camangle,angle;
     int channel;
     int data=0;
     char sensor;
     int i, j;
     int tol;
     char byte = 0x80;
-    int flag =0; 
+    int flag =0;
+    int escape=0; 
     CarControlInit();
 
+#ifdef SERVO_CONTROL
     /////////SERVO_CONTROL//////////
-
     printf("\n\n 3. servo control\n");
-    
     angle = 1500;
     SteeringServoControl_Write(angle);
     Alarm_Write(ON);
     usleep(100000);
     Alarm_Write(OFF);
     sleep(2);
+
+    //camera y servo set
+
+    camangle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
+    CameraYServoControl_Write(camangle);
+    sleep(1);
+
+    camangle = 1600;
+    CameraYServoControl_Write(camangle);
+    sleep(1);
+    
+    Alarm_Write(ON);
+    usleep(100000);
+    Alarm_Write(OFF);
+    sleep(2); 
+#endif
 
 
 #ifdef POSITION_CONTROL
@@ -43,7 +59,8 @@ void main(void)
 
     //jobs to be done beforehand;
     SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-    speed = 70; // speed set     --> speed must be set when using position controller
+    
+    speed = 100; // speed set     --> speed must be set when using position controller
     DesireSpeed_Write(speed);
 
     //control on/off
@@ -58,19 +75,19 @@ void main(void)
     PositionProportionPoint_Write(gain);
             
     //position write
-    position_now = 1000;  //initialize
+    position_now = 0;  //initialize //0 default
     EncoderCounter_Write(position_now);
     
     //position set
     position=DesireEncoderCount_Read();
     printf("DesireEncoderCount_Read() = %d\n", position);
-    position = 1000;
+    position = 500;
     DesireEncoderCount_Write(position);
 
     position=DesireEncoderCount_Read();
     printf("DesireEncoderCount_Read() = %d\n", position);
     
-    tol = 10;    // tolerance
+    tol = 100;    // tolerance
     while(abs(position_now-position)>tol)
     {
         position_now=EncoderCounter_Read();
@@ -78,8 +95,8 @@ void main(void)
     }
     sleep(1);
 #endif
-  
-//////SPEED_CONTROL//////
+
+#ifdef SPEED_CONTROL
     // 2. speed control ----------------------------------------------------------
     printf("\n\n 2. speed control\n");
 
@@ -128,15 +145,21 @@ void main(void)
     sleep(2);  //run time 
 
     SteeringServoControl_Write(1500);
+
     while(flag<2){
         printf("flag = %d",flag);
-        while(data<1000 && flag==0){
+        while(escape<2){
             channel =6;
             data = DistanceSensor(channel);
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
             usleep(100000);
+            if(data>1000)escape++;
         }
+
         flag ++;
+        Alarm_Write(ON);
+        usleep(100000);
+        Alarm_Write(OFF);
 
         while(flag<2){ 
             printf("flag = %d",flag);
@@ -147,6 +170,9 @@ void main(void)
             if(data>1000) flag++;
         }
     }
+    Alarm_Write(ON);
+    usleep(100000);
+    Alarm_Write(OFF);
 
     SteeringServoControl_Write(1800);
     sleep(2);  //run time 
@@ -157,6 +183,7 @@ void main(void)
     SteeringServoControl_Write(1500);
     sleep(2);
    
+   #endif
 
     speed = DesireSpeed_Read();
     printf("DesireSpeed_Read() = %d \n", speed);
