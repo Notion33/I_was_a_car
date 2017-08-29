@@ -37,6 +37,7 @@
 
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL
+#define LIGHT_BEEP
 //#define IMGSAVE
 //#define ROI
 
@@ -1069,9 +1070,9 @@ int main(int argc, char *argv[])
 
 
 
-    // 3. servo control ----------------------------------------------------------
-    #ifdef SERVO_CONTROL                                    //TY add 6.27
 
+    #ifdef SERVO_CONTROL                                    //TY add 6.27
+        // 3. servo control ----------------------------------------------------------
         printf("0. Car initializing \n");
         CarControlInit();
         printf("\n\n 0.1 servo control\n");
@@ -1083,7 +1084,6 @@ int main(int argc, char *argv[])
         SteeringServoControl_Write(angle);
 
     #endif  
-
 
     #ifdef SPEED_CONTROL
         // 2. speed control ---------------------------------------------------------- TY
@@ -1104,6 +1104,12 @@ int main(int argc, char *argv[])
         //speed set
         speed = 0;
         DesireSpeed_Write(speed);
+    #endif
+
+    #ifdef LIGHT_BEEP
+        //0. light and beep Control --------------------------------------------------
+        CarLight_Write(FRONT_ON);
+        usleep(1000000);
     #endif
 
     printf("1. Create NvMedia capture \n");
@@ -1295,6 +1301,11 @@ int main(int argc, char *argv[])
     #ifdef SPEED_CONTROL    //TY ADD
         speed = 0;
         DesireSpeed_Write(speed);
+    #endif
+
+    #ifdef LIGHT_BEEP
+        CarLight_Write(ALL_OFF);
+        usleep(1000000);
     #endif
 
 fail: // Run down sequence
