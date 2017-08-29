@@ -37,7 +37,7 @@
 
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL
-#define IMGSAVE
+//#define IMGSAVE
 //#define ROI
 
 ////////////////////////////////////////////////////////////////////////////
@@ -659,9 +659,9 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 /////////////////////////////////////  빈공간에 원형만 선언해둠.
 ////////////////////////////////////////////////////////////////////////////////////////////
-void Find_Center(IplImage* imgResult)      //TY add 6.27
+void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
-    int i=0;
+	int i=0;
     int j=0;
     int k=0;
 
@@ -704,7 +704,11 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
     bool continue_turn_right = false;
 
     for(i = y_start_line ; i>y_end_line ; i=i-line_gap){
-        for(j=(imgResult->width)/2 ; j>0 ; j--){                            //Searching the left line point
+		if (turn_right_max == true)
+			j = imgResult->width - 1;
+		else
+			j = (imgResult->width) / 2;
+        for(; j>0 ; j--){                            //Searching the left line point
                 left[y_start_line-i] = j;
                 if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
                     for( k = 0 ; k < low_line_width ; k++){                     //차선이 line_width만큼 연속으로 나오는지 확인
@@ -719,8 +723,12 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
                       break;
                     }
                 }
-        }
-        for(j=(imgResult->width)/2 ; j<imgResult->width ; j++){             //Searching the right line point
+		}
+		if (turn_left_max == true)
+			j = 0 ; 
+		else
+			j = (imgResult->width) / 2 ;
+        for(; j<imgResult->width ; j++){             //Searching the right line point
                 right[y_start_line-i] = j;
                 if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
                       for( k = 0 ; k < low_line_width ; k++){                   //차선이 line_width만큼 연속으로 나오는지 확인
@@ -759,25 +767,25 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
                 	printf("continue_turn_flag_OFF__overCurve_left__\n");
                     break;
                 }
-                else{
+                else if (i == imgResult->width/2 + line_tolerance + 1){
                 	printf("continue_turn_flag_ON__overCurve_left__\n");
                 	continue_turn_left = true;
                 	break;
                 }
             }
         }
-        else if (turn_right_max ==true){
+        else if (turn_right_max == true){
             for(i = 0 ; i < (imgResult->width/2) - line_tolerance ; i++){
             	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255){
                 	continue_turn_right = false;
-                	printf("continue_turn_flag_OFF__2_right__\n");
+                	printf("continue_turn_flag_OFF__2_right__i:%d\n",i);
                     break;
                 }
-                else{
+                else if (i == imgResult->width/2 - line_tolerance - 1){
                 	printf("continue_turn_flag_ON__2_right__\n");
-                	continue_turn_right = true;
+					continue_turn_right = true;
                 	break;
-                }
+				}
             }
         }
     }
@@ -931,8 +939,15 @@ void Find_Center(IplImage* imgResult)      //TY add 6.27
             }
         for(i=0;i<imgResult->widthStep;i++){
             imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
-            }
+			}
+			for(i=0;i<imgResult->widthStep;i++){
+				imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
+			}
+			for(i=0;i<imgResult->widthStep;i++){
+				imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
+			}
     #endif
+
 }
 
 
