@@ -56,15 +56,18 @@
 #define RESIZE_HEIGHT 240
 
 #define whitepx 255
-#define blackpx 0
+#define blackpx 0 // CH added 8.29
 
 int angle = 1500;
 int speed = 100;
 int colorFlag = 0;
 
+///// CH
 #define OBS_LEFT 1
 #define OBS_RIGHT 2
 #define OBS_CENTER 3
+int WhiteFlag = 0;
+///// CH
 
 static NvMediaVideoSurface *capSurf = NULL;
 
@@ -668,6 +671,46 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColo
 
 }*/
 
+void emergencyStopWhite(IplImage* imgColor){ // Find_Center보다 뒤에서 사용해야 급정거 효과 있음
+    int x = 20, y= 30;
+    int width = 280, height = 80;
+    int mThreshold = width*height*0.4;
+    //int isStop = 0;
+    //IplImage* imgEmergency;
+    //imgEmergency = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+    //cvZero(imgEmergency);
+    //cvZero(imgEmergency);
+
+    //적색 px판단
+    int i, j;
+    int count = 0;
+    for(j=y; j<y+height; j++){
+        for(i=x; i<x+width; i++){
+            int px = imgColor->imageData[i + j*imgColor->widthStep];
+            if(px == whitepx){
+                //TODO
+                count++;
+            }
+        }
+    }
+    printf("threshold : %d\n", mThreshold);
+    if(count > mThreshold){
+        //급정지! 대기
+        //speed = 0;
+        printf("\nStop!!! countpx : %d / %d \n\n",count, mThreshold);
+        //DesireSpeed_Write(0);   //정지
+        speed = 0;
+
+        //isStop = 1;
+    }
+    // else if(count < width*height*0.05 && isStop == 1){
+    //     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
+    //     //출발
+    //     //아예 이 함수 플래그 죽이기
+    // }
+
+}
+
 void DetectOBSloc(IplImage* Binaryimg){
     int width = 280, height = 80;
     int mThreshold = width*height*0.4;
@@ -759,11 +802,33 @@ void DetectOBSloc(IplImage* Binaryimg){
 } 
 
 void ThreewaySteering(int location){
-    if(location == OBS_CENTER){
-        printf("\n\n 1. position control on CENTER \n");
-        angle += 10;
-        speed += 5;
+    switch(location){
+        case 1: 
+        printf("\n\n OBS is on Center!  \n Steering to #RIGHT#\n");
+    
+        SteeringServoControl_Write(1200);
+        speed = 100;
+        DesireSpeed_Write(speed);
+        sleep(2);
+
+        SteeringServoControl_Write(1800);
+        sleep(2);  //run time 
+
+        SteeringServoControl_Write(1500);
+        break;
+
+        case 2: //right
+        printf("### OBS is on Right & Center, \n Steering to #Left# \n")
+        break;
+
+        case 3: //left
+        printf("\n\n OBS is on left & Right \n Steering to #Center# \n");
+        break;
+
+
+        
     }
+    
 }    
 
 
@@ -1067,9 +1132,15 @@ void *ControlThread(void *unused)
         //===================================
         //  장애물 처리 모듈 input : imgColor
        // emergencyStopRed(imgColor);    //NYC //TODO flag to kill
-        DetectOBSloc(Binaryimg);
-        break;
-       //ThreewaySteering(location);
+        emergencyStopWhite(imgColor); //CHANGHWAN
+
+        if(WhiteFlag==1)
+        {
+            DetectOBSloc(Binaryimg);
+            break;
+      
+        }
+         //ThreewaySteering(location);
         //===================================
 
         // 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
