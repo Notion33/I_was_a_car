@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include "car_lib.h" //
 
-//#define SPEED_CONTROL     // to test speed control
+#define SPEED_CONTROL     // to test speed control
 #define POSITION_CONTROL  // to test postion control
-//#define SERVO_CONTROL     // to test servo control(steering & camera position)
+#define SERVO_CONTROL     // to test servo control(steering & camera position)
 //#define DISTANCE_SENSOR     // to test distance sensor
 
 void main(void)
@@ -153,7 +153,7 @@ void main(void)
             data = DistanceSensor(channel);
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
             usleep(100000);
-            if(data>1000)escape++;
+            if(data>1500)escape++;
         }
 
         flag ++;
@@ -167,7 +167,7 @@ void main(void)
             data = DistanceSensor(channel);
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
             usleep(100000);
-            if(data>1000) flag++;
+            if(data>1500) flag++;
         }
     }
     Alarm_Write(ON);
