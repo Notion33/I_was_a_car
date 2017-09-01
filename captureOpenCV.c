@@ -602,7 +602,6 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColo
                 imgColor->imageData[bin_num] = (char)0;
             }
 
-
             img->imageData[num] = y;
             img->imageData[num+1] = u;
             img->imageData[num+2] = v;
@@ -944,9 +943,9 @@ void *ControlThread(void *unused)
 
         // TODO : control steering angle based on captured image ---------------
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
-//
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
+        //
 
         Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
