@@ -818,7 +818,7 @@ void ThreewaySteering(int location){
         break;
 
         case 2: //right
-        printf("### OBS is on Right & Center, \n Steering to #Left# \n")
+        printf("### OBS is on Right & Center, \n Steering to #Left# \n");
         break;
 
         case 3: //left
@@ -1100,7 +1100,7 @@ void *ControlThread(void *unused)
     imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
     //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
     Binaryimg = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
-    Binaryimg = cvLoadImage("img/obstacle3.png", CV_LOAD_IMAGE_GRAYSCALE); 
+    Binaryimg = cvLoadImage("img/obstacle1.png", CV_LOAD_IMAGE_GRAYSCALE); 
 
     cvZero(imgResult);          // TY add 6.27
     cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
@@ -1132,7 +1132,7 @@ void *ControlThread(void *unused)
         //===================================
         //  장애물 처리 모듈 input : imgColor
        // emergencyStopRed(imgColor);    //NYC //TODO flag to kill
-        emergencyStopWhite(imgColor); //CHANGHWAN
+       // emergencyStopWhite(imgColor); //CHANGHWAN
 
         if(WhiteFlag==1)
         {
