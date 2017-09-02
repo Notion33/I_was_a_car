@@ -790,7 +790,8 @@ void DetectOBSloc(IplImage* Binaryimg){
 
 } 
 
-void ThreewaySteering(){
+void ThreewaySteering(void)
+{
 
     unsigned char status;
     short tw_speed;
@@ -832,14 +833,12 @@ void ThreewaySteering(){
     sleep(2); 
 
 
-//////////////POSITION_CONTROL//////////
-     // 1. position control -------------------------------------------------------
+            //////////////POSITION_CONTROL//////////
     printf("\n\n 1. position control\n");
 
-    //jobs to be done beforehand;
     SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
     
- //   speed = 100; // speed set     --> speed must be set when using position controller
+     //speed = 100; // speed set     --> speed must be set when using position controller
     DesireSpeed_Write(100);
 
     //control on/off
@@ -874,7 +873,7 @@ void ThreewaySteering(){
     }
     sleep(1);
 
-////////////////// SPEED_CONTROL/////////////
+    ////////////////// SPEED_CONTROL/////////////
     // 2. speed control ----------------------------------------------------------
     printf("\n\n 2. speed control\n");
 
@@ -968,10 +967,7 @@ void ThreewaySteering(){
     tw_speed = 0;
     DesireSpeed_Write(tw_speed);
 
-    
-    sleep(1);
-    
-}    
+}
 
 
 static unsigned int CaptureThread(void *params)
@@ -1300,7 +1296,7 @@ void *ControlThread(void *unused)
         }
             DetectOBSloc(Binaryimg);
             ThreewaySteering();
-        
+            printf("ppaju naom threeway");
             sprintf(fileName1, "img/imgResultCH%d.png", i);          // TY add 6.27
             sprintf(fileName, "img/imgOrigin%d.png", i);
             cvSaveImage(fileName, imgOrigin, 0);
