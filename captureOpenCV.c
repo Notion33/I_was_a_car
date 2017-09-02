@@ -66,7 +66,7 @@ int colorFlag = 0;
 #define OBS_LEFT 1
 #define OBS_RIGHT 2
 #define OBS_CENTER 3
-int WhiteFlag = 0;
+int WhiteFlag = 1;
 int ThreewayFlag = 0;
 ///// CH
 
@@ -733,21 +733,26 @@ void DetectOBSloc(IplImage* Binaryimg){
     endpoint.x = 318; // end ROI
     endpoint.y = 160;
 
-    for(j= startpointy; j < endpointy; j++){
-        for(i= startpointx ; i< endpointx; i++){
+    scanbound.x = 1;
+    scanbound.y = 1; // initialize
+
+    for(j= startpoint.y; j < endpoint.y; j++){
+        for(i= startpoint.x ; i< endpoint.x; i++){
             int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
             if(px == blackpx){
-                //TODO
+            
                 countblack++;
             }
             else if(px== whitepx)
+            
                 countwhite++;            
         }
     }
 
-    for (j = endpointy; j > startpointy; j--) {
-        for (i = endpointx; i > endpointy; i--) {
+    for (j = endpoint.y; j > startpoint.y; j--) {
+        for (i = endpoint.x; i > startpoint.x; i--) {
             int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
+           
             if (px == blackpx) {
              //   countblack++;//검정색 만나면 스타트! 연속해서 15px 있는지 확인
                 for (k = i; k > i- 15; k--) {
@@ -769,14 +774,14 @@ void DetectOBSloc(IplImage* Binaryimg){
     scanbound.y = j;
 
     obsloc = 'c';
-    cvLine(Binaryimg, point1, point2, CV_RGB(255,255,0), 2, 8, 0);
-    cvLine(Binaryimg, scanbound, point2, CV_RGB(255,255,0), 2, 8, 0);
+    cvRectangle(Binaryimg, startpoint, endpoint, CV_RGB(255,255,0), 1, 8, 0); // ROI boundary
+    cvLine(Binaryimg, scanbound, endpoint, CV_RGB(255,255,0), 1, 8, 0);    //scan boundary
    
     printf("countblack is %d \n",countblack);
     printf("countwhite is %d \n",countwhite);
     printf("black center is %d and blackseries is on %d \n",blackloc,blackseries);
    
-    sprintf(hwanname, "img/imgCH %d.png", i);
+    sprintf(hwanname, "img/%d.png", i);
         
     cvSaveImage(hwanname, Binaryimg, 0);          
         
@@ -1283,7 +1288,7 @@ void *ControlThread(void *unused)
     imgColor = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);            // NYC add 6.27
     //imgCenter = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);         // TY add 6.27
     Binaryimg = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
-    Binaryimg = cvLoadImage("img/obstacle1.png", CV_LOAD_IMAGE_GRAYSCALE); 
+    Binaryimg = cvLoadImage("img/obstacle3.png", CV_LOAD_IMAGE_GRAYSCALE); 
 
     cvZero(imgResult);          // TY add 6.27
     cvZero(imgColor);   //TODO 이거 꼭 필요한가요?
