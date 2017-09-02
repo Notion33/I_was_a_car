@@ -632,16 +632,10 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColo
     return 1;
 }
 
-/*void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용해야 급정거 효과 있음
+void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용해야 급정거 효과 있음
     int x = 20, y= 30;
     int width = 280, height = 80;
     int mThreshold = width*height*0.4;
-    //int isStop = 0;
-    //IplImage* imgEmergency;
-    //imgEmergency = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
-    //cvZero(imgEmergency);
-    //cvZero(imgEmergency);
-
     //적색 px판단
     int i, j;
     int count = 0;
@@ -657,20 +651,12 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColo
     printf("threshold : %d\n", mThreshold);
     if(count > mThreshold){
         //급정지! 대기
-        //speed = 0;
         printf("\nStop!!! countpx : %d / %d \n\n",count, mThreshold);
-        //DesireSpeed_Write(0);   //정지
         speed = 0;
 
-        //isStop = 1;
     }
-    // else if(count < width*height*0.05 && isStop == 1){
-    //     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
-    //     //출발
-    //     //아예 이 함수 플래그 죽이기
-    // }
-
-}*/
+ 
+}
 
 void emergencyStopWhite(IplImage* imgColor){ // Find_Center보다 뒤에서 사용해야 급정거 효과 있음
     int x = 20, y= 30;
@@ -804,13 +790,13 @@ void DetectOBSloc(IplImage* Binaryimg){
 
 } 
 
-void ThreewaySteering(int location){
+void ThreewaySteering(){
 
-    unsigned char tw_status;
-    short speed;
+    unsigned char status;
+    short tw_speed;
     unsigned char gain;
     int position, position_now;
-    short camangle,angle;
+    short camangle,tw_angle;
     int channel;
     int data=0;
     char sensor;
@@ -821,11 +807,10 @@ void ThreewaySteering(int location){
     int escape=0; 
     CarControlInit();
 
-#ifdef SERVO_CONTROL
     /////////SERVO_CONTROL//////////
     printf("\n\n 3. servo control\n");
-    angle = 1500;
-    SteeringServoControl_Write(angle);
+    tw_angle = 1500;
+    SteeringServoControl_Write(tw_angle);
     Alarm_Write(ON);
     usleep(100000);
     Alarm_Write(OFF);
@@ -845,18 +830,17 @@ void ThreewaySteering(int location){
     usleep(100000);
     Alarm_Write(OFF);
     sleep(2); 
-#endif
 
 
-#ifdef POSITION_CONTROL
+//////////////POSITION_CONTROL//////////
      // 1. position control -------------------------------------------------------
     printf("\n\n 1. position control\n");
 
     //jobs to be done beforehand;
     SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
     
-    speed = 100; // speed set     --> speed must be set when using position controller
-    DesireSpeed_Write(speed);
+ //   speed = 100; // speed set     --> speed must be set when using position controller
+    DesireSpeed_Write(100);
 
     //control on/off
     status = PositionControlOnOff_Read();
@@ -889,9 +873,8 @@ void ThreewaySteering(int location){
         printf("EncoderCounter_Read() = %d\n", position_now);
     }
     sleep(1);
-#endif
 
-#ifdef SPEED_CONTROL
+////////////////// SPEED_CONTROL/////////////
     // 2. speed control ----------------------------------------------------------
     printf("\n\n 2. speed control\n");
 
@@ -923,17 +906,17 @@ void ThreewaySteering(int location){
     SpeedPIDDifferential_Write(gain);
 
     //speed set    
-    speed = DesireSpeed_Read();
-    printf("DesireSpeed_Read() = %d \n", speed);
-    speed = 80;
-    DesireSpeed_Write(speed);
+    tw_speed = DesireSpeed_Read();
+    printf("DesireSpeed_Read() = %d \n", tw_speed);
+  //  speed = 80;
+    DesireSpeed_Write(80);
  
     sleep(1);  //run time 
 
     SteeringServoControl_Write(1200);
 
-    speed = 100;
-    DesireSpeed_Write(speed);
+    tw_speed = 100;
+    DesireSpeed_Write(tw_speed);
     sleep(2);
 
     SteeringServoControl_Write(1800);
@@ -978,44 +961,15 @@ void ThreewaySteering(int location){
     SteeringServoControl_Write(1500);
     sleep(2);
    
-   #endif
 
-    speed = DesireSpeed_Read();
-    printf("DesireSpeed_Read() = %d \n", speed);
+    tw_speed = DesireSpeed_Read();
+    printf("DesireSpeed_Read() = %d \n", tw_speed);
 
-    speed = 0;
-    DesireSpeed_Write(speed);
+    tw_speed = 0;
+    DesireSpeed_Write(tw_speed);
 
     
     sleep(1);
-
-
-    /*switch(location){
-        case 1: 
-        printf("\n\n OBS is on Center!  \n Steering to #RIGHT#\n");
-    
-        SteeringServoControl_Write(1200);
-        speed = 100;
-        DesireSpeed_Write(speed);
-        sleep(2);
-
-        SteeringServoControl_Write(1800);
-        sleep(2);  //run time 
-
-        SteeringServoControl_Write(1500);
-        break;
-
-        case 2: //right
-        printf("### OBS is on Right & Center, \n Steering to #Left# \n");
-        break;
-
-        case 3: //left
-        printf("\n\n OBS is on left & Right \n Steering to #Center# \n");
-        break;
-
-
-        
-    }*/
     
 }    
 
@@ -1319,16 +1273,40 @@ void *ControlThread(void *unused)
 
         //===================================
         //  장애물 처리 모듈 input : imgColor
-       // emergencyStopRed(imgColor);    //NYC //TODO flag to kill
+        emergencyStopRed(imgColor);    //NYC //TODO flag to kill
+
+//////////////////////////////////////////////////////////// HWan moudule 
        // emergencyStopWhite(imgColor); //CHANGHWAN
 
         if(WhiteFlag==1)
-        {
-            DetectOBSloc(Binaryimg);
-            break;
-      
+        {   
+            static int tempflag=0;
+
+            if(tempflag ==0) {
+
+            CameraYServoControl_Write(1600); //for up
+            sleep(1);
+
+            Alarm_Write(ON);
+            usleep(100000);
+            Alarm_Write(OFF);
+            Alarm_Write(ON);
+            usleep(100000);
+            Alarm_Write(OFF);
+            sleep(2);
+
+            tempflag++;
+            continue ; 
         }
-         //ThreewaySteering(location);
+            DetectOBSloc(Binaryimg);
+            ThreewaySteering();
+        
+            sprintf(fileName1, "img/imgResultCH%d.png", i);          // TY add 6.27
+            sprintf(fileName, "img/imgOrigin%d.png", i);
+            cvSaveImage(fileName, imgOrigin, 0);
+            cvSaveImage(fileName1, imgResult, 0);
+            break;
+        }
         //===================================
 
         // 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
