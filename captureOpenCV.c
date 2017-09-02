@@ -67,6 +67,7 @@ int colorFlag = 0;
 #define OBS_RIGHT 2
 #define OBS_CENTER 3
 int WhiteFlag = 0;
+int ThreewayFlag = 0;
 ///// CH
 
 static NvMediaVideoSurface *capSurf = NULL;
@@ -712,9 +713,9 @@ void emergencyStopWhite(IplImage* imgColor){ // Find_Center보다 뒤에서 사�
 }
 
 void DetectOBSloc(IplImage* Binaryimg){
+
     int width = 280, height = 80;
     int mThreshold = width*height*0.4;
-
 
     int i, j, k;
     int countwhite = 0;
@@ -724,16 +725,13 @@ void DetectOBSloc(IplImage* Binaryimg){
     int blackloc=0;
     char obsloc;
     
-    int startpointx=1; //(136,120) (252,149)
-    int startpointy=122;
-    int endpointx = 318;
-    int endpointy = 160;
-
-    CvPoint point1, point2,scanbound;
-    point1.x = startpointx;
-    point1.y = startpointy;
-    point2.x = endpointx;
-    point2.y = endpointy;
+    CvPoint startpoint, endpoint, scanbound;
+   
+    startpoint.x = 1; //(136,120)  (252,149) // start ROI
+    startpoint.y = 122;
+ 
+    endpoint.x = 318; // end ROI
+    endpoint.y = 160;
 
     for(j= startpointy; j < endpointy; j++){
         for(i= startpointx ; i< endpointx; i++){
