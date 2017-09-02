@@ -62,6 +62,8 @@ int color = 0;
 int white_count = 0;
 int red_count = 0;
 
+FILE* f;
+
 static NvMediaVideoSurface *capSurf = NULL;
 
 pthread_cond_t      cond = PTHREAD_COND_INITIALIZER;
@@ -791,9 +793,59 @@ void emergencyStopRed(){
     //     //출발
     //     //아예 이 함수 플래그 죽이기
     // }
+}
 
+//===================================
+//  Log file module / NYC
+void writeLog(int frameNum){
+    //로그 쓸 준비
+    fprintf(f, "Frame %d", frameNum);
+    // 프레임넘
+    //거리센서 로그
+    writeDistanceLog();
+    //라인센서 로그
+    writeLineSensorLog();
+    //줄내리기
+    fprintf(f, "\n");
+}
+
+void writeDistanceLog(){
+    int data;
+
+    printf("Distance : ");
+    int i = 0;
+    for(i=0; i<6; i++){
+        data = DistanceSensor(i);
+        fprintf(f, data);
+        if(i!=5) fprintf(f, "%d", data);
+        printf("0x%04X(%d) ", data, data);
+    }
+    printf("\n");
+}
+
+void writeLineSensorLog(){
+    sensor = LineSensor_Read();        // black:1, white:0
+    int s = 0;
+
+    printf("LineSensor_Read() = ");
+    for(i=0; i<8; i++)
+    {
+        s = sensor & byte
+        if((i % 4) ==0) printf(" ");
+        if(s) printf("1");
+        else printf("0");
+        sensor = sensor << 1;
+
+        //logging
+        //fprintf(f, s);
+    }
+    printf("\n");
+    //printf("LineSensor_Read() = %d \n", sensor);
+    fprintf(f, ",%d\n", sensor);
 
 }
+//  End of Logfile module
+//===================================
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -874,7 +926,11 @@ void *ControlThread(void *unused)
 				Find_Center(imgResult);
 			}
 		}
-
+		
+		//===================================
+		//  LOG 파일 작성
+        writeLog(i);
+        //===================================
 		// 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
 		SteeringServoControl_Write(angle);
 		DesireSpeed_Write(speed);
@@ -937,6 +993,9 @@ int main(int argc, char *argv[])
 	int i, j;
 	int tol;
 	char byte = 0x80;
+
+	f = fopen("captureImage/sensorlog.txt","w");
+
 	////////////////////////////////
 
 	CaptureInputHandle handle;
@@ -1206,6 +1265,8 @@ int main(int argc, char *argv[])
 		CameraXServoControl_Write(angle);
 		CameraYServoControl_Write(angle);
 	#endif
+
+	fclose(f);
 
 
 fail: // Run down sequence
