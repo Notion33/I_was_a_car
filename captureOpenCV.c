@@ -753,6 +753,48 @@ void drawonImage(IplImage* imgResult, int angle) {
 }
 #endif
 
+void emergencyStopRed(){
+    // int x = 20, y= 0;
+    int width = 280, height = 10;
+    int mThreshold = width*height*0.05;
+
+    //적색 px판단
+    // int i, j;
+    // int count = 0;
+    // for(j=y; j<y+height; j++){
+    //     for(i=x; i<x+width; i++){
+    //         int px = imgColor->imageData[i + j*imgColor->widthStep];
+    //         if(px == whitepx){
+    //             //TODO
+    //             count++;
+    //         }
+    //     }
+    // }
+    printf("threshold : %d\n", mThreshold);
+    if(red_count > mThreshold){
+        //급정지! 대기
+        //speed = 0;
+        printf("\nStop! Red stop / countpx : %d / %d \n\n",count, mThreshold);
+        //DesireSpeed_Write(0);   //정지
+        speed = 0;
+
+        //curFlag = FLAG_STOP_EMERGENCYRED;
+        //isStop = 1;
+    }
+	// else if(count < mThreshold && curFlag == FLAG_STOP_EMERGENCYRED){
+	//
+    //     // TODO 3초 대기
+    //     curFlag = FLAG_STRAIGHT;
+    // }
+    // else if(count < width*height*0.05 && isStop == 1){
+    //     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
+    //     //출발
+    //     //아예 이 함수 플래그 죽이기
+    // }
+
+
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////  Find_Center : TY 영상처리하여 조향값 찾아내는 알고리즘.
@@ -818,6 +860,7 @@ void *ControlThread(void *unused)
 		else {
 			if (red_count > 800) {//TODO : Threashold
 				//emergnecy stop
+				emergencyStopRed();
 			}
 			else if (white_count > 0) {//TODO : Threashold
 				if (white_count < 200) {//TODO
@@ -933,7 +976,7 @@ int main(int argc, char *argv[])
 	angle = 1500;
 	SteeringServoControl_Write(angle);
 
-#endif  
+#endif
 
 #ifdef SPEED_CONTROL
 	// 2. speed control ---------------------------------------------------------- TY
@@ -1163,7 +1206,7 @@ int main(int argc, char *argv[])
 		CameraXServoControl_Write(angle);
 		CameraYServoControl_Write(angle);
 	#endif
-	
+
 
 fail: // Run down sequence
 	// Destroy vip threads and stream start/done semaphores
