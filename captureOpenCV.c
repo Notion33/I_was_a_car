@@ -790,8 +790,7 @@ void DetectOBSloc(IplImage* Binaryimg){
 
 } 
 
-void ThreewaySteering(void)
-{
+void ThreewaySteering(int k){
 
     unsigned char status;
     short tw_speed;
@@ -833,10 +832,10 @@ void ThreewaySteering(void)
     sleep(2); 
 
 
-            //////////////POSITION_CONTROL//////////
+    //////////////POSITION_CONTROL//////////
     printf("\n\n 1. position control\n");
 
-    SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
+    SpeedControlOnOff_Write(CONTROL);       // speed controller must be also ON !!!
     
      //speed = 100; // speed set     --> speed must be set when using position controller
     DesireSpeed_Write(100);
@@ -847,7 +846,7 @@ void ThreewaySteering(void)
     PositionControlOnOff_Write(CONTROL);
 
     //position controller gain set
-    gain = PositionProportionPoint_Read();    // default value = 10, range : 1~50
+    gain = PositionProportionPoint_Read();     // default value = 10, range : 1~50
     printf("PositionProportionPoint_Read() = %d\n", gain);
     gain = 20;
     PositionProportionPoint_Write(gain);
@@ -907,7 +906,7 @@ void ThreewaySteering(void)
     //speed set    
     tw_speed = DesireSpeed_Read();
     printf("DesireSpeed_Read() = %d \n", tw_speed);
-  //  speed = 80;
+    //  speed = 80;
     DesireSpeed_Write(80);
  
     sleep(1);  //run time 
@@ -938,7 +937,7 @@ void ThreewaySteering(void)
         usleep(100000);
         Alarm_Write(OFF);
 
-        while(flag<2){ 
+        while(flag<2){
             printf("flag = %d",flag);
             channel =5;
             data = DistanceSensor(channel);
@@ -966,7 +965,7 @@ void ThreewaySteering(void)
 
     tw_speed = 0;
     DesireSpeed_Write(tw_speed);
-
+    printf("I gonna stop \n");
 }
 
 
@@ -1274,28 +1273,27 @@ void *ControlThread(void *unused)
 //////////////////////////////////////////////////////////// HWan moudule 
        // emergencyStopWhite(imgColor); //CHANGHWAN
 
-        if(WhiteFlag==1)
-        {   
+        if(WhiteFlag==1){   
             static int tempflag=0;
 
-            if(tempflag ==0) {
+            if(tempflag ==0){
+                CameraYServoControl_Write(1600); //for up
+                sleep(1);
 
-            CameraYServoControl_Write(1600); //for up
-            sleep(1);
+                Alarm_Write(ON);
+                usleep(100000);
+                Alarm_Write(OFF);
+                Alarm_Write(ON);
+                usleep(100000);
+                Alarm_Write(OFF);
+                sleep(2);
 
-            Alarm_Write(ON);
-            usleep(100000);
-            Alarm_Write(OFF);
-            Alarm_Write(ON);
-            usleep(100000);
-            Alarm_Write(OFF);
-            sleep(2);
+                tempflag++;
+                continue ; 
+            }
 
-            tempflag++;
-            continue ; 
-        }
             DetectOBSloc(Binaryimg);
-            ThreewaySteering();
+            ThreewaySteering(ON);
             printf("ppaju naom threeway");
             sprintf(fileName1, "img/imgResultCH%d.png", i);          // TY add 6.27
             sprintf(fileName, "img/imgOrigin%d.png", i);
