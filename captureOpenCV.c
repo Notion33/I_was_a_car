@@ -722,6 +722,8 @@ void DetectOBSloc(IplImage* Binaryimg){
     scanbound.x = 1;
     scanbound.y = 1; // initialize
 
+
+///////////////////알골
     for(j= startpoint.y; j < endpoint.y; j++){
         for(i= startpoint.x ; i< endpoint.x; i++){
             int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
@@ -965,7 +967,7 @@ void ThreewaySteering(int k){
 
     tw_speed = 0;
     DesireSpeed_Write(tw_speed);
-    printf("I gonna stop \n");
+    printf("I gonna stop hinghing  \n");
 }
 
 
@@ -1018,7 +1020,7 @@ static unsigned int CaptureThread(void *params)
             break;
         }
 
-        if(i%3 == 0)                        // once in three loop = 10 Hz --> frequency
+        if(i%10 == 0)                        // once in three loop = 10 Hz --> frequency
             pthread_cond_signal(&cond);        // ControlThread() is called
 
         pthread_mutex_unlock(&mutex);        // for ControlThread()
@@ -1259,9 +1261,8 @@ void *ControlThread(void *unused)
 
         // TODO : control steering angle based on captured image ---------------
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
-//
+//////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
+
 
         //Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
@@ -1293,7 +1294,7 @@ void *ControlThread(void *unused)
             }
 
             DetectOBSloc(Binaryimg);
-            ThreewaySteering(ON);
+            ThreewaySteering(1);
             printf("ppaju naom threeway");
             sprintf(fileName1, "img/imgResultCH%d.png", i);          // TY add 6.27
             sprintf(fileName, "img/imgOrigin%d.png", i);
