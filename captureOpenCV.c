@@ -710,6 +710,20 @@ void DetectOBSloc(IplImage* Binaryimg){
     int hwanname[40];
     int blackloc=0;
     char obsloc;
+
+    unsigned char status;
+    short tw_speed;
+    unsigned char gain;
+    int position, position_now;
+    short camangle,tw_angle;
+    int channel;
+    int data=0;
+    char sensor;
+    int tol;
+    char byte = 0x80;
+    int flag =0;
+    int escape=0; 
+    CarControlInit();
     
     CvPoint startpoint, endpoint, scanbound;
    
@@ -771,43 +785,7 @@ void DetectOBSloc(IplImage* Binaryimg){
    
     sprintf(hwanname, "img/%d.png", i);
         
-    cvSaveImage(hwanname, Binaryimg, 0);          
-        
-    // if(location == OBS_LEFT){
-    //     printf("OBSTACLE is on left\n");
-    //     return OBS_LEFT;
-    // }
-    // else if(location == OBS_RIGHT){
-
-    //     printf("OBSTACLE is on right\n");
-    //     return OBS_RIGHT;
-    // }
-    // else if(location == OBS_CENTER){
-
-    //     printf("OBSTACLE is on CENTER\n");
-    //    return OBS_CENTER;
-    // }
-    // else printf("LOCATION ERROR!!!");
-    // //cvSaveImage("");
-
-} 
-
-void ThreewaySteering(int k){
-
-    unsigned char status;
-    short tw_speed;
-    unsigned char gain;
-    int position, position_now;
-    short camangle,tw_angle;
-    int channel;
-    int data=0;
-    char sensor;
-    int i, j;
-    int tol;
-    char byte = 0x80;
-    int flag =0;
-    int escape=0; 
-    CarControlInit();
+    cvSaveImage(hwanname, Binaryimg, 0);     
 
     /////////SERVO_CONTROL//////////
     printf("\n\n 3. servo control\n");
@@ -967,8 +945,26 @@ void ThreewaySteering(int k){
 
     tw_speed = 0;
     DesireSpeed_Write(tw_speed);
-    printf("I gonna stop hinghing  \n");
-}
+    printf("I gonna stop hinghing1  \n");     
+        
+    // if(location == OBS_LEFT){
+    //     printf("OBSTACLE is on left\n");
+    //     return OBS_LEFT;
+    // }
+    // else if(location == OBS_RIGHT){
+
+    //     printf("OBSTACLE is on right\n");
+    //     return OBS_RIGHT;
+    // }
+    // else if(location == OBS_CENTER){
+
+    //     printf("OBSTACLE is on CENTER\n");
+    //    return OBS_CENTER;
+    // }
+    // else printf("LOCATION ERROR!!!");
+    // //cvSaveImage("");
+
+} 
 
 
 static unsigned int CaptureThread(void *params)
@@ -1294,12 +1290,14 @@ void *ControlThread(void *unused)
             }
 
             DetectOBSloc(Binaryimg);
-            ThreewaySteering(1);
             printf("ppaju naom threeway");
             sprintf(fileName1, "img/imgResultCH%d.png", i);          // TY add 6.27
             sprintf(fileName, "img/imgOrigin%d.png", i);
             cvSaveImage(fileName, imgOrigin, 0);
             cvSaveImage(fileName1, imgResult, 0);
+            Alarm_Write(ON);
+            usleep(100000);
+            Alarm_Write(OFF);
             break;
         }
         //===================================
