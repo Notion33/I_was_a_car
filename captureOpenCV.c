@@ -33,11 +33,12 @@
 
 ////////////////////////////////////////////////////////////////////////////
 #include "car_lib.h"    //TY add 6.27
+#include <stdbool.h>
 ////////////////////////////////////////////////////////////////////////////
 
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL              // To servo control(steering & camera position)
-//#define IMGSAVE
+#define IMGSAVE
 #define LIGHT_BEEP
 
 ////////////////////////////////////////////////////////////////////////////
@@ -370,7 +371,7 @@ static int DumpFrame(FILE *fout, NvMediaVideoSurface *surf)
 
 static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 {
-	//color : 1. »¡°£»ö 2. ³ë¶õ»ö 3. ÃÊ·Ï»ö 4.Èò*³ë mix  defalut. ³ë¶õÂ÷¼±°ËÃâ
+	//color : 1. ë¹¨ê°„ìƒ‰ 2. ë…¸ë€ìƒ‰ 3. ì´ˆë¡ìƒ‰ 4.í°*ë…¸ mix  defalut. ë…¸ë€ì°¨ì„ ê²€ì¶œ
 	NvMediaVideoSurfaceMap surfMap;
 	unsigned int resWidth, resHeight;
 	unsigned char y, u, v;
@@ -445,66 +446,66 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 			num = 3 * k + 3 * resWidth*(j);
 			bin_num = j*imgResult->widthStep + k;
 
-			if (y > 200 && u > 130) {//Èò»ö
+			if (y > 200 && u > 130) {//í°ìƒ‰
 				white_count++;
 			}
-			if (v > 140) { //»¡°£»ö
+			if (v > 140) { //ë¹¨ê°„ìƒ‰
 				red_count++;
 			}
 
 			switch (color) {
-			case 1:   //  »¡°£»ö
+			case 1:   //  ë¹¨ê°„ìƒ‰
 				if (v > 140) {
-					// Èò»öÀ¸·Î
+					// í°ìƒ‰ìœ¼ë¡œ
 					imgResult->imageData[bin_num] = (char)255;
 				}
 				else {
-					// °ËÁ¤»öÀ¸·Î
+					// ê²€ì •ìƒ‰ìœ¼ë¡œ
 					imgResult->imageData[bin_num] = (char)0;
 				}
 				break;
 
-			case 2:   //  ³ë¶õ»ö
+			case 2:   //  ë…¸ë€ìƒ‰
 				if (y > 90 && y < 105 && v>146) {
-					// Èò»öÀ¸·Î
+					// í°ìƒ‰ìœ¼ë¡œ
 					imgResult->imageData[bin_num] = (char)255;
 				}
 				else {
-					// °ËÁ¤»öÀ¸·Î
+					// ê²€ì •ìƒ‰ìœ¼ë¡œ
 					imgResult->imageData[bin_num] = (char)0;
 				}
 				break;
 
-			case 3:   //  ÃÊ·Ï»ö
+			case 3:   //  ì´ˆë¡ìƒ‰
 				if (y < 100 && u < 127 && v < 123) {
-					// Èò»öÀ¸·Î
+					// í°ìƒ‰ìœ¼ë¡œ
 					imgResult->imageData[bin_num] = (char)255;
 				}
 				else {
-					// °ËÁ¤»öÀ¸·Î
+					// ê²€ì •ìƒ‰ìœ¼ë¡œ
 					imgResult->imageData[bin_num] = (char)0;
 				}
 				break;
 
-			case 4:   //  Èò*³ë¶û mix
+			case 4:   //  í°*ë…¸ë‘ mix
 				if (y > 140) {
-					// Èò»öÀ¸·Î -> ½ÇÁ¦ Èò»ö&³ë¶û
+					// í°ìƒ‰ìœ¼ë¡œ -> ì‹¤ì œ í°ìƒ‰&ë…¸ë‘
 					imgResult->imageData[bin_num] = (char)255;
 				}
 				else {
-					// °ËÁ¤»öÀ¸·Î
+					// ê²€ì •ìƒ‰ìœ¼ë¡œ
 					imgResult->imageData[bin_num] = (char)0;
 				}
 				break;
 
 
-			default:  //  ±âº» : ³ë¶õ Â÷¼±°ËÃâ
+			default:  //  ê¸°ë³¸ : ë…¸ë€ ì°¨ì„ ê²€ì¶œ
 				if (u > -39 && u < 120 && v>45 && v < 245) {
-					// Èò»öÀ¸·Î
+					// í°ìƒ‰ìœ¼ë¡œ
 					imgResult->imageData[bin_num] = (char)255;
 				}
 				else {
-					// °ËÁ¤»öÀ¸·Î
+					// ê²€ì •ìƒ‰ìœ¼ë¡œ
 					imgResult->imageData[bin_num] = (char)0;
 				}
 				break;
@@ -715,7 +716,7 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 	free(outputParams);
 }
 
-//  µğ¹ö±ë ÀÌ¹ÌÁö »ı¼º
+//  ë””ë²„ê¹… ì´ë¯¸ì§€ ìƒì„±
 #ifdef  IMGSAVE
 void writeonImage(IplImage* imgResult, char* str_info) {
 	char* str = str_info;
@@ -723,7 +724,7 @@ void writeonImage(IplImage* imgResult, char* str_info) {
 	//font
 	CvFont font;
 	cvInitFont(&font, CV_FONT_HERSHEY_PLAIN, 0.9, 0.9, 0, 1, CV_AA);
-	//cvInitFont(&font, ÆùÆ®ÀÌ¸§, 1.0, 1.0, 0, 1, CV_AA);
+	//cvInitFont(&font, í°íŠ¸ì´ë¦„, 1.0, 1.0, 0, 1, CV_AA);
 
 	//textPoint
 	CvPoint myPoint = cvPoint(10, 235);
@@ -754,17 +755,19 @@ void drawonImage(IplImage* imgResult, int angle) {
 	cvLine(imgResult, point1, point2, CV_RGB(255, 255, 0), 2, 8, 0);
 }
 #endif
+
+
 int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way, return 3:nothing
-	
+
 	int i,j,k; //for loop
 
 	int cnt = 0;
 
 	bool FindWhiteBlock = false;
 	bool FindBlackField = false;
-	
-	for(int i = 100;i<130;i++){//Á¤Áö¼±ÀÎÁö ÆÇº° 
-		for(int j = 0;j<120;j++){
+
+	for(i = 100;i<130;i++){//ì •ì§€ì„ ì¸ì§€ íŒë³„
+		for(j = 0;j<120;j++){
 			if((imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>130)){
 				for(k=0; k<200; k++){ //check successive 5 white pixels
 						if(!imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>130)break;
@@ -775,39 +778,39 @@ int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way,
 		}
 		if(cnt==4)return 1;
 		}
-	
-	else{//3Â÷¼±±¸°£ÀÎÁö ÆÇº°
+
+	//else{//3ì°¨ì„ êµ¬ê°„ì¸ì§€ íŒë³„
 		FindWhiteBlock = false;
 		FindBlackField = false;
-		for(int i = 0;i<200;i++){
-		for(int j = 0;j<320;j++){
+		for(i = 0;i<200;i++){
+		for(j = 0;j<320;j++){
 			if(!FindWhiteBlock&&(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>130)){
 				for(k=0; k<5; k++){ //check successive 5 white pixels
-						
+
 						if(!imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>130)break;
-						
+
 						if(k==4)FindWhiteBlock = true;
 					}
 					j = j + k;
-				
+
 			}
 			if(!FindBlackField&FindWhiteBlock&&imgOrigin->imageData[(i*320+j)*3]>35 && imgOrigin->imageData[(i*320+j)*3]<50 && imgOrigin->imageData[(i*320+j)*3+1]>125){
 				for(k=0; k<5; k++){ //check successive 5 white pixels
-						
+
 						if(!(imgOrigin->imageData[(i*320+j)*3]>35 && imgOrigin->imageData[(i*320+j)*3]<50 && imgOrigin->imageData[(i*320+j)*3+1]>125))break;
-						
+
 						if(k==4)FindBlackField = true;
 					}
 					j = j+k;
-				
-				
+
+
 			}
 			if(FindWhiteBlock&&FindBlackField)return 2;
 		}
 		FindWhiteBlock = false;
-		FIndBlackField = false;
+		FindBlackField = false;
 	}
-	}
+	//}
 	return 0;
 }
 
@@ -816,7 +819,7 @@ void emergencyStopRed(){
     int width = 280, height = 10;
     int mThreshold = width*height*0.05;
 
-    //Àû»ö pxÆÇ´Ü
+    //ì ìƒ‰ pxíŒë‹¨
     // int i, j;
     // int count = 0;
     // for(j=y; j<y+height; j++){
@@ -830,10 +833,10 @@ void emergencyStopRed(){
     // }
     printf("threshold : %d\n", mThreshold);
     if(red_count > mThreshold){
-        //±ŞÁ¤Áö! ´ë±â
+        //ê¸‰ì •ì§€! ëŒ€ê¸°
         //speed = 0;
-        printf("\nStop! Red stop / countpx : %d / %d \n\n",count, mThreshold);
-        //DesireSpeed_Write(0);   //Á¤Áö
+        printf("\nStop! Red stop / countpx : %d / %d \n\n",red_count, mThreshold);
+        //DesireSpeed_Write(0);   //ì •ì§€
         speed = 0;
 
         //curFlag = FLAG_STOP_EMERGENCYRED;
@@ -841,27 +844,27 @@ void emergencyStopRed(){
     }
 	// else if(count < mThreshold && curFlag == FLAG_STOP_EMERGENCYRED){
 	//
-    //     // TODO 3ÃÊ ´ë±â
+    //     // TODO 3ì´ˆ ëŒ€ê¸°
     //     curFlag = FLAG_STRAIGHT;
     // }
     // else if(count < width*height*0.05 && isStop == 1){
     //     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
-    //     //Ãâ¹ß
-    //     //¾Æ¿¹ ÀÌ ÇÔ¼ö ÇÃ·¡±× Á×ÀÌ±â
+    //     //ì¶œë°œ
+    //     //ì•„ì˜ˆ ì´ í•¨ìˆ˜ í”Œë˜ê·¸ ì£½ì´ê¸°
     // }
 }
 
 //===================================
 //  Log file module / NYC
 void writeLog(int frameNum){
-    //·Î±× ¾µ ÁØºñ
+    //ë¡œê·¸ ì“¸ ì¤€ë¹„
     fprintf(f, "Frame %d", frameNum);
-    // ÇÁ·¹ÀÓ³Ñ
-    //°Å¸®¼¾¼­ ·Î±×
-    writeDistanceLog();
-    //¶óÀÎ¼¾¼­ ·Î±×
+	// í”„ë ˆì„ë„˜
+    //ê±°ë¦¬ì„¼ì„œ ë¡œê·¸
+    //writeDistanceLog();
+    //ë¼ì¸ì„¼ì„œ ë¡œê·¸
     writeLineSensorLog();
-    //ÁÙ³»¸®±â
+    //ì¤„ë‚´ë¦¬ê¸°
     fprintf(f, "\n");
 }
 
@@ -870,7 +873,7 @@ void writeDistanceLog(){
 
     printf("Distance : ");
     int i = 0;
-    for(i=0; i<6; i++){
+    for(i=1; i<7; i++){
         data = DistanceSensor(i);
         fprintf(f, data);
         if(i!=5) fprintf(f, "%d", data);
@@ -880,41 +883,88 @@ void writeDistanceLog(){
 }
 
 void writeLineSensorLog(){
-    sensor = LineSensor_Read();        // black:1, white:0
+    int sensor = LineSensor_Read();        // black:1, white:0
     int s = 0;
+	int i = 0;
+	char byte = 0x80;
 
     printf("LineSensor_Read() = ");
+	fprintf(f, ", ");
     for(i=0; i<8; i++)
     {
-        s = sensor & byte
+        s = sensor & byte;	//0x80
         if((i % 4) ==0) printf(" ");
         if(s) printf("1");
         else printf("0");
         sensor = sensor << 1;
 
-        //logging
-        //fprintf(f, s);
+		if(s) fprintf(f, "1");
+        else fprintf(f, "0");
     }
     printf("\n");
     //printf("LineSensor_Read() = %d \n", sensor);
-    fprintf(f, ",%d\n", sensor);
+    //fprintf(f, "%d\n", sensor);
 
 }
 //  End of Logfile module
 //===================================
 
+//===================================
+//	ì„  ë°Ÿì„ë•Œ ê¸´ê¸‰íƒˆì¶œ ëª¨ë“ˆ
+int isLine(){
+	int dir = 0;
+	int sensor = LineSensor_Read();        // black:1, white:0
+	int s = 0;
+	int c[8];
+	int i=0;
+
+	for(i=0; i<8; i++)
+    {
+        s = sensor & 0x80;	//0x80
+        if(s) c[i]=1;
+        else c[i]=0;
+        sensor = sensor << 1;
+    }
+
+	if( c[4] == 0 ){
+		//ì„ ì„ ì¤‘ì•™ìœ¼ë¡œ ë°ŸìŒ. ì¤‘ì•™ì„  ë¬´ì‹œ
+		dir = 0;
+	} else if( c[1]==0 || c[2]==0 && c[3]==1 ){
+		angle = 2000;
+		dir = 1;
+	} else if( c[5]==1 && c[6]==0 || c[7]==0 ){
+		angle = 1000;
+		dir = 2;
+	}
+
+	//ë¹„íŠ¸ì—°ì‚°
+	// if(sensor&0xf0 < 0x70){		// 0001 0000 ì´ìƒ
+		// angle = 1000; 			// ìš°íšŒì „
+		// dir = 1;
+	// } else if(sensor&0x87 < 0x07){		// 0000 0010 ì´í•˜
+	// 	angle = 2000;			// ì¢ŒíšŒì „
+	// 	dir = 2;
+	// }
+
+
+	return dir;
+}
+
+//	end of lineEscape()
+//===================================
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////  Find_Center : TY ¿µ»óÃ³¸®ÇÏ¿© Á¶Çâ°ª Ã£¾Æ³»´Â ¾Ë°í¸®Áò.
-/////////////////////////////////////  << ÃßÈÄ Á¶Çâ°ª¸¸ ¹İÈ¯ÇÏ°í, ½ÇÁ¦Á¶ÇâÇÏ´Â ÇÔ¼ö¸¦ µû·Î ºĞ¸®ÇØÁÖ¾î¾ßÇÔ.
-/////////////////////////////////////  ºó°ø°£¿¡ ¿øÇü¸¸ ¼±¾ğÇØµÒ.
+/////////////////////////////////////  Find_Center : TY ì˜ìƒì²˜ë¦¬í•˜ì—¬ ì¡°í–¥ê°’ ì°¾ì•„ë‚´ëŠ” ì•Œê³ ë¦¬ì¦˜.
+/////////////////////////////////////  << ì¶”í›„ ì¡°í–¥ê°’ë§Œ ë°˜í™˜í•˜ê³ , ì‹¤ì œì¡°í–¥í•˜ëŠ” í•¨ìˆ˜ë¥¼ ë”°ë¡œ ë¶„ë¦¬í•´ì£¼ì–´ì•¼í•¨.
+/////////////////////////////////////  ë¹ˆê³µê°„ì— ì›í˜•ë§Œ ì„ ì–¸í•´ë‘ .
 ////////////////////////////////////////////////////////////////////////////////////////////
 void Find_Center(IplImage* imgResult)
 {
-	// speed¿Í angleÀº ³»ºÎ º¯¼ö¿¡¼­ Á¦°ÅÇÏ°í
-	// Á¶Çâ°ú ¼ÓµµÁ¶Àı ºÎºĞÀº Àü¿ªº¯¼ö angle°ú speedÀÇ °ª¸¸ ¹Ù²Ùµµ·Ï ÇÑ´Ù.
+	// speedì™€ angleì€ ë‚´ë¶€ ë³€ìˆ˜ì—ì„œ ì œê±°í•˜ê³ 
+	// ì¡°í–¥ê³¼ ì†ë„ì¡°ì ˆ ë¶€ë¶„ì€ ì „ì—­ë³€ìˆ˜ angleê³¼ speedì˜ ê°’ë§Œ ë°”ê¾¸ë„ë¡ í•œë‹¤.
 
-	//int angle=1500;
+	angle=1500;
 	//SteeringServoControl_Write(angle);
 }
 
@@ -954,9 +1004,14 @@ void *ControlThread(void *unused)
 		// TODO : control steering angle based on captured image ---------------
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////TY.¸¸¾à IMGSAVE(26¹øÂ°ÁÙ)°¡ Á¤ÀÇµÇ¾îÀÖÀ¸¸é imgOrigin.png , imgResult.png ÆÄÀÏÀ» captureImageÆú´õ·Î ÀúÀå.
+//////////////////////////////////////TY.ë§Œì•½ IMGSAVE(26ë²ˆì§¸ì¤„)ê°€ ì •ì˜ë˜ì–´ìˆìœ¼ë©´ imgOrigin.png , imgResult.png íŒŒì¼ì„ captureImageí´ë”ë¡œ ì €ì¥.
 //
-		if (flag == 1) {
+		//ê¸´ê¸‰ì„ íšŒëª¨ë“ˆ
+		int line = isLine();
+		if(line == 1 || line == 2){
+			printf("\nLine Collision!\n\n");
+		}
+		else if (flag == 1) {
 			//intersection
 		}
 		else if (flag == 2) {
@@ -966,24 +1021,25 @@ void *ControlThread(void *unused)
 			//traffic_light
 		}
 		else {
-			if (red_count > 800) {//TODO : Threashold
+			if (red_count > 8000) {//TODO : Threashold
 				//emergnecy stop
 				emergencyStopRed();
 			}
-			else if (white_count > 0) {//TODO : Threashold
-				flag = white_line_process(IplImage* imgOrigin);			
-				printf("flag = %d\n",flag);	
+			else if (white_count > 5000) {//TODO : Threashold
+				flag = white_line_process(imgOrigin);
+				printf("flag = %d\n",flag);
 			}
 			else {
+				printf("\n\nFind_Center!!\n\n");
 				Find_Center(imgResult);
 			}
 		}
-		
+
 		//===================================
-		//  LOG ÆÄÀÏ ÀÛ¼º
+		//  LOG íŒŒì¼ ì‘ì„±
         writeLog(i);
         //===================================
-		// Á¶Çâ°ú ¼ÓµµÃ³¸®´Â ÇÑ ÇÁ·¹ÀÓ´ç ¸¶Áö¸·¿¡ ÇÑ¹ø¿¡ Ã³¸®
+		// ì¡°í–¥ê³¼ ì†ë„ì²˜ë¦¬ëŠ” í•œ í”„ë ˆì„ë‹¹ ë§ˆì§€ë§‰ì— í•œë²ˆì— ì²˜ë¦¬
 		SteeringServoControl_Write(angle);
 		DesireSpeed_Write(speed);
 
@@ -991,16 +1047,16 @@ void *ControlThread(void *unused)
 #ifdef IMGSAVE
 		sprintf(fileName, "captureImage/imgOrigin%d.png", i);
 		sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
-		sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
+		//sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
 		//sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
 
 		cvSaveImage(fileName, imgOrigin, 0);
 		cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
-		cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
+		//cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
 		//cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
 
-		//  µğ¹ö±× ÀÌ¹ÌÁö »ı¼º
+		//  ë””ë²„ê·¸ ì´ë¯¸ì§€ ìƒì„±
 		char str_info[50];
 		sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", i, angle, speed);
 		writeonImage(imgResult, str_info);
@@ -1010,9 +1066,9 @@ void *ControlThread(void *unused)
 
 #endif
 
-		//TY¼³¸í ³»¿ë
-		//imgCenter´Â Â÷¼±°ËÃâ ¹× Á¶ÇâÃ³¸® °á°ú¸¦ È®ÀÎÇÏ±âÀ§ÇØ ÀÌ¹ÌÁö·Î Ãâ·ÂÇÒ °æ¿ì »ç¿ëÇÒ ¿¹Á¤.
-		//imgCenter´Â ¾ÆÁ÷ ±¸Çö ¾ÈµÇ¾îÀÖÀ¸¸ç ÇÊ¿ä½Ã ¾Æ·¡ÀÇ ÄÚµå ÁÖ¼®Ã³¸® ÇØÁ¦½Ã »ç¿ë°¡´É
+		//TYì„¤ëª… ë‚´ìš©
+		//imgCenterëŠ” ì°¨ì„ ê²€ì¶œ ë° ì¡°í–¥ì²˜ë¦¬ ê²°ê³¼ë¥¼ í™•ì¸í•˜ê¸°ìœ„í•´ ì´ë¯¸ì§€ë¡œ ì¶œë ¥í•  ê²½ìš° ì‚¬ìš©í•  ì˜ˆì •.
+		//imgCenterëŠ” ì•„ì§ êµ¬í˜„ ì•ˆë˜ì–´ìˆìœ¼ë©° í•„ìš”ì‹œ ì•„ë˜ì˜ ì½”ë“œ ì£¼ì„ì²˜ë¦¬ í•´ì œì‹œ ì‚¬ìš©ê°€ëŠ¥
 		//char fileName2[30] , IplImage* imgCenter, imgCenter = cvCreateImage(cvGetSize(imgOrigin),
 		//IPL_DEPTH_8U, 1), cvZero(imgCenter), sprintf(fileName2, "captureImage/imgCenter%d.png", i), cvSaveImage(fileName2, imgCenter, 0)
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1038,7 +1094,7 @@ int main(int argc, char *argv[])
 	short speed;
 	unsigned char gain;
 	int position, position_now;
-	short angle;
+	//short angle;
 	int channel;
 	int data;
 	char sensor;
@@ -1092,7 +1148,7 @@ int main(int argc, char *argv[])
 #ifdef SPEED_CONTROL
 	// 2. speed control ---------------------------------------------------------- TY
 	printf("\n\nspeed control\n");
-	PositionControlOnOff_Write(UNCONTROL); // ¿£ÄÚ´õ ¾È¾²°í ÁÖÇàÇÒ °æ¿ì UNCONTROL¼¼ÆÃ
+	PositionControlOnOff_Write(UNCONTROL); // ì—”ì½”ë” ì•ˆì“°ê³  ì£¼í–‰í•  ê²½ìš° UNCONTROLì„¸íŒ…
 										   //control on/off
 	SpeedControlOnOff_Write(CONTROL);
 	//speed controller gain set            // PID range : 1~50 default : 20

@@ -1,7 +1,8 @@
 #no image file
 *.png
 *.jpeg
-
+#no log file
+*.txt
 #no output file
 *.o
 caputeOpenCV
