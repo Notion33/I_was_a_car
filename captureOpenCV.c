@@ -817,7 +817,7 @@ int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way,
 void emergencyStopRed(){
     // int x = 20, y= 0;
     int width = 280, height = 10;
-    int mThreshold = width*height*0.05;
+    int mThreshold = width*height*0.1;
 
     //적색 px판단
     // int i, j;
@@ -965,6 +965,7 @@ void Find_Center(IplImage* imgResult)
 	// 조향과 속도조절 부분은 전역변수 angle과 speed의 값만 바꾸도록 한다.
 
 	angle=1500;
+	speed=100;
 	//SteeringServoControl_Write(angle);
 }
 
@@ -1021,19 +1022,20 @@ void *ControlThread(void *unused)
 			//traffic_light
 		}
 		else {
-			if (red_count > 8000) {//TODO : Threashold
+			if (red_count > 280*10*0.4) {//TODO : Threashold
 				//emergnecy stop
 				emergencyStopRed();
 			}
-			else if (white_count > 5000) {//TODO : Threashold
+			else if (white_count > 500000) {//TODO : Threashold
 				flag = white_line_process(imgOrigin);
-				printf("flag = %d\n",flag);
+				printf("whiteLine : %d / %d\n", white_count, 5000);
 			}
 			else {
 				printf("\n\nFind_Center!!\n\n");
 				Find_Center(imgResult);
 			}
 		}
+		printf("flag = %d\n",flag);
 
 		//===================================
 		//  LOG 파일 작성
@@ -1091,7 +1093,7 @@ int main(int argc, char *argv[])
 
 	//////////////////////////////// TY add 6.27
 	unsigned char status;         // To using CAR Control
-	short speed;
+	//short speed;
 	unsigned char gain;
 	int position, position_now;
 	//short angle;
