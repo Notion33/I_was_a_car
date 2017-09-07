@@ -111,7 +111,7 @@ void main()
 			DesireEncoderCount_Write(10000);
 		}
 
-		if(second_wall_detect == TRUE && third_wall_detect == FALSE && difference_left >= 100 || second_wall_detect == TRUE && third_wall_detect == FALSE && difference_right >= 100)
+		if(second_wall_detect == TRUE && third_wall_detect == FALSE && difference_left >= 100)
 		{
 	
 			parking_space = EncoderCounter_Read();
@@ -133,7 +133,7 @@ void main()
 				printf("parallel_parking\n");
 				#endif
 
-				parallel_parking();
+				parallel_parking_left();
 				break;
 			}
 			else // 그렇지 않을 경우
@@ -143,13 +143,49 @@ void main()
 				printf("vertical_parking\n");
 				#endif
 
-				vertical_parking();
+				vertical_parking_left();
+				break;
+			}
+		}
+
+		if(second_wall_detect == TRUE && third_wall_detect == FALSE && difference_right >= 100)
+		{
+			parking_space = EncoderCounter_Read();
+			DesireEncoderCount_Write(0); // 멈추기
+			PositionControlOnOff_Write(UNCONTROL);
+			third_wall_detect = TRUE;
+
+			#ifdef debug_mode
+			printf("\n\nthird_wall_detect\n");
+			printf("\n\nparking_space is %d\n\n", parking_space);
+			#endif
+
+			DesireSpeed_Write(0);
+
+			if(parking_space > 7000)
+			{
+				#ifdef debug_mode
+				printf("parking space is %d\n", parking_space);
+				printf("parallel_parking\n");
+				#endif
+
+				parallel_parking_right();
+				break;
+			}
+			else
+			{
+				#ifdef debug_mode
+				printf("parking space is %d\n", parking_space);
+				printf("vertical_parking\n");
+				#endif
+
+				vertical_parking_right();
 				break;
 			}
 		}
 }
 
-void parallel_parking() // 수평주차 
+void parallel_parking_left() // 수평주차 
 {
 	EncoderCounter_Write(0);
 	
@@ -272,7 +308,7 @@ void parallel_parking() // 수평주차
 	}
 }
 
-void vertical_parking() // 수직 주차 
+void vertical_parking_left() // 수직 주차 
 {	
 	EncoderCounter_Write(0);
 	
@@ -313,6 +349,193 @@ void vertical_parking() // 수직 주차
 	EncoderCounter_Write(0);
 	
 	SteeringServoControl_Write(2000);
+	
+	while(EncoderCounter_Read() <= 8500)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(50);
+	} // 90도 회전
+
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1496);
+	
+	while(EncoderCounter_Read() <= 3000)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(50);
+	} // 전진
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+void parallel_parking_right() // 수평주차 
+{
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1000);
+	
+	while(EncoderCounter_Read() >= -8500)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(-50);
+	} // 90 turn
+
+	EncoderCounter_Write(0);
+
+	SteeringServoControl_Write(1496);
+
+	while(EncoderCounter_Read() >= -3000)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(-50);
+	}
+	
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1000);
+
+	while(EncoderCounter_Read() <= 4250)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(50);
+	}
+
+	EncoderCounter_Write(0);
+
+	SteeringServoControl_Write(1496);
+
+	while(EncoderCounter_Read() >= -5000)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(-50);
+	}
+
+	EncoderCounter_Write(0);
+
+	SteeringServoControl_Write(1000);
+
+	while(EncoderCounter_Read() <= 2000)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(50);
+	}
+	
+	EncoderCounter_Write(0);
+
+	SteeringServoControl_Write(1496);
+
+	while(EncoderCounter_Read() >= -1500)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(-50);
+	}
+
+	EncoderCounter_Write(0);
+
+	SteeringServoControl_Write(1000);
+
+	while(EncoderCounter_Read() <= 1500)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(50);
+	}
+
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1496);
+	
+	while(EncoderCounter_Read() >= -1500)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(-50);
+	}
+
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1000);
+	
+	while(EncoderCounter_Read() <= 1500)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(50);
+	}
+
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1496);
+	
+	while(EncoderCounter_Read() >= -1000)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(-50);
+	}
+}
+
+void vertical_parking_right() // 수직 주차 
+{	
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1000);
+	
+	while(EncoderCounter_Read() >= -8500)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(-50);
+	} // 90도 회전  
+
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1496);
+	
+	while(EncoderCounter_Read() >= -3000)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(-50);
+	} // 후진 
+
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1496);
+	
+	while(EncoderCounter_Read() <= 3000)
+	{
+		#ifdef debug_mode
+		printf("EncoderCounter_Read() : %d", EncoderCounter_Read());
+		#endif
+		DesireSpeed_Write(50);
+	} // 전진
+
+	EncoderCounter_Write(0);
+	
+	SteeringServoControl_Write(1000);
 	
 	while(EncoderCounter_Read() <= 8500)
 	{
