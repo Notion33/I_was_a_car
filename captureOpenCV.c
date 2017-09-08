@@ -39,7 +39,7 @@
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL
 #define LIGHT_BEEP
-//#define IMGSAVE
+#define IMGSAVE
 //#define ROI
 
 ////////////////////////////////////////////////////////////////////////////
@@ -953,23 +953,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     #endif
 
 }
-void trafficLight(){
-	IplImage *imgOrigin;
-	IplImage *imgResult;
-	int i = 0;
-	while(true) {
-		pthread_mutex_lock(&mutex);
-		pthread_cond_wait(&cond, &mutex);
-		
-		Frame2Ipl(imgOrigin, imgResult);
-		
-		pthread_mutex_unlock(&mutex);
 
-		printf("%d times\n",i++);
-
-		if(i==10) break;	
-	}
-}
 #define CHANNEL1 1
 #define CHANNEL6 6
 #define UPDOWNLINE 70
@@ -994,20 +978,23 @@ void ObjectDetectAndControlSpeed(){
 
 	IplImage *imgOrigin;
 	IplImage *imgResult;
-	int color;
-
+	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
+    	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+	cvZero(imgResult);
 	char fileName1[40]; 
 	printf("started :D :D:D:D:D:D:D:D:D:D");
 	while(true) {
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond, &mutex);
-
+		
 		GetTime(&pt1);
 		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
 		Frame2Ipl(imgOrigin, imgResult);
 
 		pthread_mutex_unlock(&mutex);
+		
+
 		
 		PixLeftUp = 0;
 		PixLeftDown = 0;
@@ -1024,7 +1011,7 @@ void ObjectDetectAndControlSpeed(){
         cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
         //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
         #endif
-
+		printf("waitingnow\n");
 		if(!Departure){
 			for(i = 0;i<UPDOWNLINE;i++)
 				for(j = 0;j<LEFTRIGHTLINE;j++)//left up side
@@ -1056,14 +1043,17 @@ void ObjectDetectAndControlSpeed(){
 				Departure = true;}
 			}
 		else{
-			Find_Center(imgResult);
+			//Find_Center(imgResult);
+			printf("running now");
 			data = DistanceSensor(CHANNEL1);
 			if(data>1900&&data<4000){//거리<11cm미만일시
 				speed = 80;//조절되야함
+				printf("slow down\n");
 				IsDetected = true;
 			}
 			else if(data<1000&&data<1900){
 				IsDetected = true;
+				printf("speed up\n");
 				speed = 120;
 			}
 			else{//탈출조건
@@ -1074,6 +1064,7 @@ void ObjectDetectAndControlSpeed(){
 			}
 			}
 	}
+printf("finished\n");
 }
 
 
@@ -1101,8 +1092,7 @@ void *ControlThread(void *unused)
  	printf("controlthreadstarted");
     while(i<10)
     {
-     //   ObjectDetectAndControlSpeed();
-	 trafficLight();
+     ObjectDetectAndControlSpeed();
         // TODO : control steering angle based on captured image ---------------
 	i++;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
