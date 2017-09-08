@@ -15,6 +15,7 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/time.h>
+#include<stdbool.h>
 
 #include <nvcommon.h>
 #include <nvmedia.h>
@@ -69,6 +70,8 @@ int table_516[256];
 
 bool turn_left_max = false;         //TY add
 bool turn_right_max = false;
+
+int speed = 0;
 
 typedef struct
 {
@@ -950,17 +953,35 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     #endif
 
 }
+void trafficLight(){
+	IplImage *imgOrigin;
+	IplImage *imgResult;
+	int i = 0;
+	while(true) {
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond, &mutex);
+		
+		Frame2Ipl(imgOrigin, imgResult);
+		
+		pthread_mutex_unlock(&mutex);
 
+		printf("%d times\n",i++);
+
+		if(i==10) break;	
+	}
+}
 #define CHANNEL1 1
 #define CHANNEL6 6
 #define UPDOWNLINE 70
 #define LEFTRIGHTLINE 120
 void ObjectDetectAndControlSpeed(){
-	
+	 NvMediaTime pt1 ={0}, pt2 = {0};
+    NvU64 ptime1, ptime2;
+    struct timespec;
 	int data = 0;//sensor data
 	
-	bool Departure = FALSE;
-	bool IsDetected = FALSE;
+	bool Departure = false;
+	bool IsDetected = false;
 
 	int i,j,k = 0;//for loop
 
@@ -971,12 +992,13 @@ void ObjectDetectAndControlSpeed(){
 	double PixRightDown = 0;
 	
 
-	Iplimage *imgOrigin, imgResult;
+	IplImage *imgOrigin;
+	IplImage *imgResult;
 	int color;
 
 	char fileName1[40]; 
-
-	while(TRUE) {
+	printf("started :D :D:D:D:D:D:D:D:D:D");
+	while(true) {
 		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond, &mutex);
 
@@ -1008,7 +1030,7 @@ void ObjectDetectAndControlSpeed(){
 				for(j = 0;j<LEFTRIGHTLINE;j++)//left up side
 					if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3]<55 && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]>125&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<141&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]>120&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<133)
 						PixLeftUp++;
-			PixLeftUp = PixleftUp/(UPDOWNLINE*LEFTRIGHTLINE);
+			PixLeftUp = PixLeftUp/(UPDOWNLINE*LEFTRIGHTLINE);
 
 			for(i = 0;i<UPDOWNLINE;i++)
 				for(j = LEFTRIGHTLINE;j<RESIZE_WIDTH;j++)//Right up side
@@ -1028,20 +1050,20 @@ void ObjectDetectAndControlSpeed(){
 						PixRightDown++;
 			PixRightDown = PixRightDown/((RESIZE_WIDTH-LEFTRIGHTLINE)*(RESIZE_HEIGHT-UPDOWNLINE));
 
-			if(PixleftDown>PixLeftUp&&PixleftDown>PixRightDown&&PixLeftDown>PixRightUp)//교차로 진입로 좌측에 차량이 존재하는 경우
-			else {
+			if(!(PixLeftDown>PixLeftUp&&PixLeftDown>PixRightDown&&PixLeftDown>PixRightUp))//교차로 진입로 좌측에 차량이 존재하는 경우x
+			{
 				printf("GETIN\n");
-				Departure = TRUE;}
+				Departure = true;}
 			}
-		else
+		else{
 			Find_Center(imgResult);
 			data = DistanceSensor(CHANNEL1);
 			if(data>1900&&data<4000){//거리<11cm미만일시
 				speed = 80;//조절되야함
-				IsDetected = TRUE;
+				IsDetected = true;
 			}
 			else if(data<1000&&data<1900){
-				IsDetected = TRUE;
+				IsDetected = true;
 				speed = 120;
 			}
 			else{//탈출조건
@@ -1050,9 +1072,11 @@ void ObjectDetectAndControlSpeed(){
 				if(data>2000)//후방 장애물 10cm 내 발견시  
 				break;
 			}
-			
+			}
 	}
 }
+
+
 void *ControlThread(void *unused)
 {
     int i=0;
@@ -1074,17 +1098,17 @@ void *ControlThread(void *unused)
 
     cvZero(imgResult);          // TY add 6.27
     //cvZero(imgCenter);            // TY add 6.27
- 
-    while(1)
+ 	printf("controlthreadstarted");
+    while(i<10)
     {
-        ObjectDetectAndControlSpeed();
-        printf("finished");
+     //   ObjectDetectAndControlSpeed();
+	 trafficLight();
         // TODO : control steering angle based on captured image ---------------
-
+	i++;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
-
+	printf("controlthreadstarted");
         //Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
