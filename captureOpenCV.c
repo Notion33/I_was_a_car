@@ -951,7 +951,108 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 }
 
+#define CHANNEL1 1
+#define CHANNEL6 6
+#define UPDOWNLINE 70
+#define LEFTRIGHTLINE 120
+void ObjectDetectAndControlSpeed(){
+	
+	int data = 0;//sensor data
+	
+	bool Departure = FALSE;
+	bool IsDetected = FALSE;
 
+	int i,j,k = 0;//for loop
+
+
+	double PixLeftUp = 0;
+	double PixLeftDown = 0;
+	double PixRightUp = 0;
+	double PixRightDown = 0;
+	
+
+	Iplimage *imgOrigin, imgResult;
+	int color;
+
+	char fileName1[40]; 
+
+	while(TRUE) {
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond, &mutex);
+
+		GetTime(&pt1);
+		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+
+		Frame2Ipl(imgOrigin, imgResult);
+
+		pthread_mutex_unlock(&mutex);
+		
+		PixLeftUp = 0;
+		PixLeftDown = 0;
+		PixRightUp = 0;
+		PixRightDown = 0;
+
+		#ifdef IMGSAVE              
+        //sprintf(fileName, "captureImage/imgOrigin%d.png", i);
+        sprintf(fileName1, "captureImage/imgResult%d.png", k++);          // TY add 6.27
+        //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
+
+        
+        //cvSaveImage(fileName, imgOrigin, 0);
+        cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
+        //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
+        #endif
+
+		if(!Departure){
+			for(i = 0;i<UPDOWNLINE;i++)
+				for(j = 0;j<LEFTRIGHTLINE;j++)//left up side
+					if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3]<55 && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]>125&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<141&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]>120&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<133)
+						PixLeftUp++;
+			PixLeftUp = PixleftUp/(UPDOWNLINE*LEFTRIGHTLINE);
+
+			for(i = 0;i<UPDOWNLINE;i++)
+				for(j = LEFTRIGHTLINE;j<RESIZE_WIDTH;j++)//Right up side
+					if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3]<55 && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]>125&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<141&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]>120&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<133)
+						PixRightUp++;
+			PixRightUp = PixRightUp/((RESIZE_WIDTH-LEFTRIGHTLINE)*UPDOWNLINE);
+			
+			for(i = UPDOWNLINE;i< RESIZE_HEIGHT;i++)
+				for(j = 0;j<LEFTRIGHTLINE;j++)//left up side
+					if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3]<55 && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]>125&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<141&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]>120&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<133)
+						PixLeftDown++;
+			PixLeftDown = PixLeftDown/((RESIZE_HEIGHT-UPDOWNLINE)*LEFTRIGHTLINE);
+			
+			for(i = UPDOWNLINE;i< RESIZE_HEIGHT;i++)
+				for(j = LEFTRIGHTLINE;j<RESIZE_WIDTH;j++)//left up side
+					if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3]<55 && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]>125&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<141&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]>120&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<133)
+						PixRightDown++;
+			PixRightDown = PixRightDown/((RESIZE_WIDTH-LEFTRIGHTLINE)*(RESIZE_HEIGHT-UPDOWNLINE));
+
+			if(PixleftDown>PixLeftUp&&PixleftDown>PixRightDown&&PixLeftDown>PixRightUp)//교차로 진입로 좌측에 차량이 존재하는 경우
+			else {
+				printf("GETIN\n");
+				Departure = TRUE;}
+			}
+		else
+			Find_Center(imgResult);
+			data = DistanceSensor(CHANNEL1);
+			if(data>1900&&data<4000){//거리<11cm미만일시
+				speed = 80;//조절되야함
+				IsDetected = TRUE;
+			}
+			else if(data<1000&&data<1900){
+				IsDetected = TRUE;
+				speed = 120;
+			}
+			else{//탈출조건
+				if(IsDetected)break;//장애물을 따라가다가 장애물이 사라졌거나
+				data = DistanceSensor(CHANNEL6);
+				if(data>2000)//후방 장애물 10cm 내 발견시  
+				break;
+			}
+			
+	}
+}
 void *ControlThread(void *unused)
 {
     int i=0;
@@ -976,36 +1077,18 @@ void *ControlThread(void *unused)
  
     while(1)
     {
-        pthread_mutex_lock(&mutex);
-        pthread_cond_wait(&cond, &mutex);
-        
-        GetTime(&pt1);
-        ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
-
-        Frame2Ipl(imgOrigin, imgResult); // save image to IplImage structure & resize image from 720x480 to 320x240
-                                         // TY modified 6.27  Frame2Ipl(imgOrigin) -> Frame2Ipl(imgOrigin, imgResult)
-
-        pthread_mutex_unlock(&mutex);     
-        
+        ObjectDetectAndControlSpeed();
+        printf("finished");
         // TODO : control steering angle based on captured image ---------------
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
 
-        Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
+        //Find_Center(imgResult); // TY Centerline 검출해서 조향해주는 알고리즘
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
-        #ifdef IMGSAVE              
-        //sprintf(fileName, "captureImage/imgOrigin%d.png", i);
-        sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
-        //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
-
-        
-        //cvSaveImage(fileName, imgOrigin, 0);
-        cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
-        //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
-        #endif  
+          
 
         //TY설명 내용
         //imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
@@ -1015,15 +1098,10 @@ void *ControlThread(void *unused)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // ---------------------------------------------------------------------
-            
-        GetTime(&pt2);
-        ptime2 = (NvU64)pt2.tv_sec * 1000000000LL + (NvU64)pt2.tv_nsec;
-        printf("Frame : %d ------------------------operation time=%llu.%09llu[s]\n",i, (ptime2-ptime1)/1000000000LL, (ptime2-ptime1)%1000000000LL);  
-        
-         
-        i++;
     }
 }
+
+
 
 int main(int argc, char *argv[])
 {
