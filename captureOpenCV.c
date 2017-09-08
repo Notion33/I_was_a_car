@@ -1040,29 +1040,34 @@ void ObjectDetectAndControlSpeed(){
 			if(!(PixLeftDown>PixLeftUp&&PixLeftDown>PixRightDown&&PixLeftDown>PixRightUp))//교차로 진입로 좌측에 차량이 존재하는 경우x
 			{
 				printf("GETIN\n");
-				Departure = true;}
+				Alarm_Write(ON);
+    				usleep(100000);
+   				 Alarm_Write(OFF);
+				Departure = true;
 			}
+		}
 		else{
 			//Find_Center(imgResult);
 			printf("running now");
 			data = DistanceSensor(CHANNEL1);
 			if(data>1900&&data<4000){//거리<11cm미만일시
-				speed = 80;//조절되야함
+				speed = 40;//조절되야함
 				printf("slow down\n");
 				IsDetected = true;
 			}
 			else if(data<1000&&data<1900){
 				IsDetected = true;
 				printf("speed up\n");
-				speed = 120;
+				speed = 80;
 			}
 			else{//탈출조건
-				if(IsDetected)break;//장애물을 따라가다가 장애물이 사라졌거나
+				//if(IsDetected)break;//장애물을 따라가다가 장애물이 사라졌거나
 				data = DistanceSensor(CHANNEL6);
-				if(data>2000)//후방 장애물 10cm 내 발견시  
-				break;
+				//if(data>2000)//후방 장애물 10cm 내 발견시  
+				//break;
 			}
 			}
+	DesireSpeed_Write(speed);
 	}
 printf("finished\n");
 }
@@ -1092,6 +1097,11 @@ void *ControlThread(void *unused)
  	printf("controlthreadstarted");
     while(i<10)
     {
+speed = 0;
+DesireSpeed_Write(speed);
+	sleep(3);
+	
+	
      ObjectDetectAndControlSpeed();
         // TODO : control steering angle based on captured image ---------------
 	i++;
@@ -1103,7 +1113,6 @@ void *ControlThread(void *unused)
         /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 
           
-
         //TY설명 내용
         //imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
         //imgCenter는 아직 구현 안되어있으며 필요시 아래의 코드 주석처리 해제시 사용가능
