@@ -697,210 +697,84 @@ void emergencyStopWhite(IplImage* imgColor){ // Find_Center보다 뒤에서 사�
     // }
 
 }
+int Threeway_hardcoding()
+{
+   int tw_speed;
+   //int tw_straight_speed = 100;
+   //int tw_curve_speed = 80;
+   int flag = 0;
+   int escape = 0;
+   int data = 0;
+   int channel;
+   int angle;
 
-void DetectOBSloc(IplImage* Binaryimg){
+   unsigned char status;
+   unsigned char gain;
+   int position, position_now;
+   int tol;
 
-    int width = 280, height = 80;
-    int mThreshold = width*height*0.4;
+   //////////////POSITION_CONTROL//////////
+   SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
+   tw_speed = 100; // speed set     --> speed must be set when using position controller
+   DesireSpeed_Write(tw_speed);
 
-    int i, j, k;
-    int countwhite = 0;
-    int countblack =0;
-    int blackseries = 0;
-    int hwanname[40];
-    int blackloc=0;
-    char obsloc;
-
-    unsigned char status;
-    short tw_speed;
-    unsigned char gain;
-    int position, position_now;
-    short camangle,tw_angle;
-    int channel;
-    int data=0;
-    char sensor;
-    int tol;
-    char byte = 0x80;
-    int flag =0;
-    int escape=0; 
-    CarControlInit();
-    
-    CvPoint startpoint, endpoint, scanbound;
-   
-    startpoint.x = 1; //(136,120)  (252,149) // start ROI
-    startpoint.y = 122;
- 
-    endpoint.x = 318; // end ROI
-    endpoint.y = 160;
-
-    scanbound.x = 1;
-    scanbound.y = 1; // initialize
-
-
-///////////////////알골
-    for(j= startpoint.y; j < endpoint.y; j++){
-        for(i= startpoint.x ; i< endpoint.x; i++){
-            int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
-            if(px == blackpx){
-            
-                countblack++;
-            }
-            else if(px== whitepx)
-            
-                countwhite++;            
-        }
-    }
-
-    for (j = endpoint.y; j > startpoint.y; j--) {
-        for (i = endpoint.x; i > startpoint.x; i--) {
-            int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
+   //control on/off
+   PositionControlOnOff_Write(CONTROL);
+   //position controller gain set
+   gain = 20;
+   PositionProportionPoint_Write(gain);
            
-            if (px == blackpx) {
-             //   countblack++;//검정색 만나면 스타트! 연속해서 15px 있는지 확인
-                for (k = i; k > i- 15; k--) {
-                    int px2 = Binaryimg->imageData[k + j*Binaryimg->widthStep];
-                    if (px2 == blackpx) blackseries++;
-                    else break;
-                }
-                if (blackseries == 15) {
-                    blackloc = i - 7;   
-                    break;
-                }
-                else blackseries = 0;
-            }
-            
-        }
-        if (blackseries == 15) break;
-    }
-    scanbound.x = k;
-    scanbound.y = j;
+   //position write
+   position_now = 0;  //initialize
+   EncoderCounter_Write(position_now);
 
-    obsloc = 'c';
-    cvRectangle(Binaryimg, startpoint, endpoint, CV_RGB(255,255,0), 1, 8, 0); // ROI boundary
-    cvLine(Binaryimg, scanbound, endpoint, CV_RGB(255,255,0), 1, 8, 0);    //scan boundary
-   
-    printf("countblack is %d \n",countblack);
-    printf("countwhite is %d \n",countwhite);
-    printf("black center is %d and blackseries is on %d \n",blackloc,blackseries);
-   
-    sprintf(hwanname, "img/%d.png", i);
-        
-    cvSaveImage(hwanname, Binaryimg, 0);     
 
-    /////////SERVO_CONTROL//////////
-    printf("\n\n 3. servo control\n");
-    tw_angle = 1500;
-    SteeringServoControl_Write(tw_angle);
-    Alarm_Write(ON);
-    usleep(100000);
-    Alarm_Write(OFF);
+
+    SteeringServoControl_Write(1200);//오른쪽 조향
     sleep(2);
-
-    //camera y servo set
-
-    camangle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
-    CameraYServoControl_Write(camangle);
-    sleep(1);
-
-    camangle = 1600;
-    CameraYServoControl_Write(camangle);
-    sleep(1);
-    
-    Alarm_Write(ON);
-    usleep(100000);
-    Alarm_Write(OFF);
-    sleep(2); 
-
-
-    //////////////POSITION_CONTROL//////////
-    printf("\n\n 1. position control\n");
-
-    SpeedControlOnOff_Write(CONTROL);       // speed controller must be also ON !!!
-    
-     //speed = 100; // speed set     --> speed must be set when using position controller
-    DesireSpeed_Write(100);
-
-    //control on/off
-    status = PositionControlOnOff_Read();
-    printf("PositionControlOnOff_Read() = %d\n", status);
-    PositionControlOnOff_Write(CONTROL);
-
-    //position controller gain set
-    gain = PositionProportionPoint_Read();     // default value = 10, range : 1~50
-    printf("PositionProportionPoint_Read() = %d\n", gain);
-    gain = 20;
-    PositionProportionPoint_Write(gain);
-            
-    //position write
-    position_now = 0;  //initialize //0 default
-    EncoderCounter_Write(position_now);
-    
-    //position set
-    position=DesireEncoderCount_Read();
-    printf("DesireEncoderCount_Read() = %d\n", position);
-    position = 500;
+    position = 1000;
     DesireEncoderCount_Write(position);
-
-    position=DesireEncoderCount_Read();
-    printf("DesireEncoderCount_Read() = %d\n", position);
-    
-    tol = 100;    // tolerance
-    while(abs(position_now-position)>tol)
+    while(position_now<position)
     {
         position_now=EncoderCounter_Read();
         printf("EncoderCounter_Read() = %d\n", position_now);
     }
-    sleep(1);
 
-    ////////////////// SPEED_CONTROL/////////////
-    // 2. speed control ----------------------------------------------------------
-    printf("\n\n 2. speed control\n");
-
-    //jobs to be done beforehand;
-    PositionControlOnOff_Write(UNCONTROL); // position controller must be OFF !!!
-
-    //control on/off
-    status=SpeedControlOnOff_Read();
-    printf("SpeedControlOnOff_Read() = %d\n", status);
-    SpeedControlOnOff_Write(CONTROL);
-
-    //speed controller gain set
-    //P-gain
-    gain = SpeedPIDProportional_Read();        // default value = 10, range : 1~50
-    printf("SpeedPIDProportional_Read() = %d \n", gain);
-    gain = 20;
-    SpeedPIDProportional_Write(gain);
-
-    //I-gain
-    gain = SpeedPIDIntegral_Read();        // default value = 10, range : 1~50
-    printf("SpeedPIDIntegral_Read() = %d \n", gain);
-    gain = 20;
-    SpeedPIDIntegral_Write(gain);
-    
-    //D-gain
-    gain = SpeedPIDDifferential_Read();        // default value = 10, range : 1~50
-    printf("SpeedPIDDefferential_Read() = %d \n", gain);
-    gain = 20;
-    SpeedPIDDifferential_Write(gain);
-
-    //speed set    
-    tw_speed = DesireSpeed_Read();
-    printf("DesireSpeed_Read() = %d \n", tw_speed);
-    //  speed = 80;
-    DesireSpeed_Write(80);
- 
-    sleep(1);  //run time 
-
-    SteeringServoControl_Write(1200);
-
-    tw_speed = 100;
-    DesireSpeed_Write(tw_speed);
+    SteeringServoControl_Write(1500);//직진
     sleep(2);
+    position += 1000;
+    DesireEncoderCount_Write(position);
+    while(position_now<position)
+    {
+        position_now=EncoderCounter_Read();
+        printf("EncoderCounter_Read() = %d\n", position_now);
+    }
 
-    SteeringServoControl_Write(1800);
-    sleep(2);  //run time 
+    SteeringServoControl_Write(1800);//왼쪽 조향
+    sleep(2);
+    position += 1000;
+    DesireEncoderCount_Write(position);  //run time 
+    while(position_now<position)
+    {
+        position_now=EncoderCounter_Read();
+        printf("EncoderCounter_Read() = %d\n", position_now);
+    }
 
     SteeringServoControl_Write(1500);
+    sleep(2);
+    PositionControlOnOff_Write(UNCONTROL);
+    SpeedControlOnOff_Write(CONTROL);
+
+    
+    /*SteeringServoControl_Write(1500);
+    usleep(2000);
+    position += 1000;
+    DesireEncoderCount_Write(position);  //run time 
+    while(position_now<position)
+    {
+        position_now=EncoderCounter_Read();
+        printf("EncoderCounter_Read() = %d\n", position_now);
+    }*/
 
     while(flag<2){
         printf("flag = %d",flag);
@@ -909,7 +783,7 @@ void DetectOBSloc(IplImage* Binaryimg){
             data = DistanceSensor(channel);
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
             usleep(100000);
-            if(data>1500)escape++;
+            if(data>900)escape++;
         }
 
         flag ++;
@@ -923,49 +797,71 @@ void DetectOBSloc(IplImage* Binaryimg){
             data = DistanceSensor(channel);
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
             usleep(100000);
-            if(data>1500) flag++;
+            if(data>900) flag++;
         }
     }
+
     Alarm_Write(ON);
     usleep(100000);
     Alarm_Write(OFF);
 
-    SteeringServoControl_Write(1800);
-    sleep(2);  //run time 
+    speed = 0;
+    DesireSpeed_Write(speed);
 
-    SteeringServoControl_Write(1200);
-    sleep(2);
+    // after passing obstacle
+    position_now = 0;  //initialize
+    EncoderCounter_Write(position_now);
 
-    SteeringServoControl_Write(1500);
+	SteeringServoControl_Write(1800);//Left
     sleep(2);
-   
+    position = 1000;
+    DesireEncoderCount_Write(position);
+    while(position_now<position)
+    {
+        position_now=EncoderCounter_Read();
+        printf("EncoderCounter_Read() = %d\n", position_now);
+    }
+
+    SteeringServoControl_Write(1500);//직진
+    sleep(2);
+    position += 1000;
+    DesireEncoderCount_Write(position);
+    while(position_now<position)
+    {
+        position_now=EncoderCounter_Read();
+        printf("EncoderCounter_Read() = %d\n", position_now);
+    }
+
+    SteeringServoControl_Write(1200);//Right
+    sleep(2);
+    position += 1000;
+    DesireEncoderCount_Write(position); 
+    while(position_now<position)
+    {
+        position_now=EncoderCounter_Read();
+        printf("EncoderCounter_Read() = %d\n", position_now);
+    }
+
+	SteeringServoControl_Write(1500);
+    sleep(2);
+    position += 1000;
+    DesireEncoderCount_Write(position); 
+    while(position_now<position)
+    {
+        position_now=EncoderCounter_Read();
+        printf("EncoderCounter_Read() = %d\n", position_now);
+    }
+
+
 
     tw_speed = DesireSpeed_Read();
     printf("DesireSpeed_Read() = %d \n", tw_speed);
 
     tw_speed = 0;
     DesireSpeed_Write(tw_speed);
-    printf("I gonna stop hinghing1  \n");     
-        
-    // if(location == OBS_LEFT){
-    //     printf("OBSTACLE is on left\n");
-    //     return OBS_LEFT;
-    // }
-    // else if(location == OBS_RIGHT){
+    printf("I gonna stop \n");     
 
-    //     printf("OBSTACLE is on right\n");
-    //     return OBS_RIGHT;
-    // }
-    // else if(location == OBS_CENTER){
-
-    //     printf("OBSTACLE is on CENTER\n");
-    //    return OBS_CENTER;
-    // }
-    // else printf("LOCATION ERROR!!!");
-    // //cvSaveImage("");
-
-} 
-
+}
 
 static unsigned int CaptureThread(void *params)
 {
@@ -1289,7 +1185,7 @@ void *ControlThread(void *unused)
                 continue ; 
             }
 
-            DetectOBSloc(Binaryimg);
+            Threeway_hardcoding();
             printf("ppaju naom threeway");
             sprintf(fileName1, "img/imgResultCH%d.png", i);          // TY add 6.27
             sprintf(fileName, "img/imgOrigin%d.png", i);
