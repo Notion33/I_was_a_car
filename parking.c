@@ -30,7 +30,7 @@ void biggerFirst(int num1, int num2) // 순서 배열 함수
 	}
 }
 
-int filteredIR(int num); // 필터링한 적외선 센서값 
+int filteredIR(int num) // 필터링한 적외선 센서값 
 {
 	int sensorValue[5];
 
