@@ -18,21 +18,20 @@ int second_wall_detect = FALSE;
 int third_wall_detect = FALSE; 
 int parking_space = 0;
 
-void biggerFirst(int num1, int num2) // 순서 배열 함수 
+void swap(int *ptr1, int *ptr2) 
 {
-	int num;
+	int temp = *ptr1;
 
-	if(num1 <= num2)
+	if (*ptr1 >= *ptr2)
 	{
-		num = num2;
-		num2 = num1;
-		num1 = num;
+		*ptr1 = *ptr2;
+		*ptr2 = temp;
 	}
 }
 
 int filteredIR(int num) // 필터링한 적외선 센서값 
 {
-	int sensorValue[5];
+	int sensorValue[5] = { 0 };
 
 	for(i=0; i<5; i++)
 	{
@@ -44,19 +43,21 @@ int filteredIR(int num) // 필터링한 적외선 센서값
 		sensorValue[i] /= 10;
 	}
 
-	for(j=0; j<4; j++)
+	for (i = 0; i < 4; i++)
 	{
-		for(i=0; i<4; i++)
+		for (j = 0; j < 4; j++)
 		{
-			biggerFirst(sensorValue[i], sensorValue[i+1])
+			swap(sensorValue + j, sensorValue + j + 1);
 		}
 	}
 
 	return sensorValue[2];
 }
 
-void parallel_parking();
-void vertical_parking();
+void parallel_parking_left();
+void vertical_parking_left();
+void parallel_parking_right();
+void vertical_parking_right();
 
 void main()
 {
@@ -89,7 +90,7 @@ void main()
 		channel_leftPrev = channel_leftNow;
 		channel_rightPrev = channel_rightNow;
 
-		if(first_wall_detect == FALSE && difference_left >= 150 || first_wall_detect == FALSE && difference_right >= 150)
+		if((first_wall_detect == FALSE && difference_left >= 150) || (first_wall_detect == FALSE && difference_right >= 150))
 		{
 			first_wall_detect = TRUE;
 			#ifdef debug_mode
@@ -97,7 +98,7 @@ void main()
 			#endif
 		}
 	
-		if(first_wall_detect == TRUE && second_wall_detect == FALSE && difference_left <= -100 || first_wall_detect == TRUE && second_wall_detect == FALSE && difference_right <= -100)
+		if((first_wall_detect == TRUE && second_wall_detect == FALSE && difference_left <= -100) || (first_wall_detect == TRUE && second_wall_detect == FALSE && difference_right <= -100))
 		{	
 			second_wall_detect = TRUE;
 
