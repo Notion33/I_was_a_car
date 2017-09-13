@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "car_lib.h"
-#include <stdbool.h>
 
+#define TRUE 1
+#define FALSE 0
 #define LEFT 5
 #define RIGHT 3
 #define debug_mode
