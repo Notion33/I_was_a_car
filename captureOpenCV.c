@@ -658,11 +658,47 @@ void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용
  
 }
 
+void swap(int *ptr1, int *ptr2) 
+{
+	int temp = *ptr1;
+
+	if (*ptr1 >= *ptr2)
+	{
+		*ptr1 = *ptr2;
+		*ptr2 = temp;
+	}
+}
+
+int filteredIR(int num) // 필터링한 적외선 센서값 
+{
+	int sensorValue[5] = { 0 };
+
+	for(i=0; i<5; i++)
+	{
+		for(j=0; j<10; j++)
+		{
+			sensorValue[i] += DistanceSensor(num);
+		}
+
+		sensorValue[i] /= 10;
+	}
+
+	for (i = 0; i < 4; i++)
+	{
+		for (j = 0; j < 4; j++)
+		{
+			swap(sensorValue + j, sensorValue + j + 1);
+		}
+	}
+
+	return sensorValue[2];
+}
+
 int Threeway_hardcoding()
 {
    int tw_speed;
-   //int tw_straight_speed = 100;
-   //int tw_curve_speed = 80;
+   int tw_straight_speed = 140;
+   int tw_curve_speed = 80;
    int flag = 0;
    int escape = 0;
    int data = 0;
@@ -671,76 +707,66 @@ int Threeway_hardcoding()
 
    unsigned char status;
    unsigned char gain;
-   int position, position_now;
+   int position_now = 0;
    int tol;
 
-   //////////////POSITION_CONTROL//////////
-   SpeedControlOnOff_Write(CONTROL);   // speed controller must be also ON !!!
-   tw_speed = 140; // speed set     --> speed must be set when using position controller
-   DesireSpeed_Write(tw_speed);
 
-   //control on/off
+   CarControlInit();
+   SpeedControlOnOff_Write(CONTROL); 
    PositionControlOnOff_Write(CONTROL);
-   //position controller gain set
+   DesireSpeed_Write(tw_straight_speed);
+
    gain = 20;
    PositionProportionPoint_Write(gain);
            
-   //position write
-   position_now = 0;  //initialize
-   EncoderCounter_Write(position_now);
-
-   	SteeringServoControl_Write(1500);//straight
-    sleep(2);
-    position = 700;
-    DesireEncoderCount_Write(position);
-    while(position_now<position) // until 700
+   
+    EncoderCounter_Write(position_now);
+    SteeringServoControl_Write(1500);//straight
+    
+    while(EncoderCounter_Read() <= 700) // until 700
     {
-        position_now=EncoderCounter_Read();
-        //printf("EncoderCounter_Read() = %d\n", position_now);
+        DesireSpeed_Write(tw_straight_speed);
+        printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
 
+    EncoderCounter_Write(position_now);
     SteeringServoControl_Write(1150);//오른쪽 조향
-    sleep(2);
-    position += 900;
-    DesireEncoderCount_Write(position);
-    while(position_now<position) // until 1900
+    
+    while(EncoderCounter_Read() <= 1200) 
     {
-        position_now=EncoderCounter_Read();
-        //printf("EncoderCounter_Read() = %d\n", position_now);
+        DesireSpeed_Write(tw_curve_speed);
+        printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
-    SteeringServoControl_Write(1500);//직진
-    sleep(2);
-    position += 600; 
-    DesireEncoderCount_Write(position);
-    while(position_now<position) // until 3500
+    EncoderCounter_Write(position_now);
+    SteeringServoControl_Write(1500);//straight
+    
+    while(EncoderCounter_Read() <= 600) 
     {
-        position_now=EncoderCounter_Read();
-        //printf("EncoderCounter_Read() = %d\n", position_now);
+        DesireSpeed_Write(tw_straight_speed);
+        printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
+    EncoderCounter_Write(position_now);
     SteeringServoControl_Write(1850);//왼쪽 조향
-    sleep(2);
-    position += 900; 
-    DesireEncoderCount_Write(position);  //until 4700
-    while(position_now<position)
+    
+    while(EncoderCounter_Read() <= 900)
     {
-        position_now=EncoderCounter_Read();
-        //printf("EncoderCounter_Read() = %d\n", position_now);
+        DesireSpeed_Write(tw_curve_speed);
+        printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
     SteeringServoControl_Write(1500);
     sleep(4);
     PositionControlOnOff_Write(UNCONTROL);
-    
-
    
+    //왼쪽에 장애물이 있나 없나 확인하는 센서
     while(flag<2){
         printf("flag = %d",flag);
         while(escape<2){
             channel =6;
-            data = DistanceSensor(channel);
+            data = filteredIR(channel);
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
             //sleep(1);
             if(data>1000)escape++;
@@ -754,7 +780,7 @@ int Threeway_hardcoding()
         while(flag<2){
             printf("flag = %d",flag);
             channel =5;
-            data = DistanceSensor(channel);
+            data = filteredIR(channel);
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
             //sleep(1);
             if(data>1000) flag++;
@@ -765,56 +791,44 @@ int Threeway_hardcoding()
     sleep(1);
     Alarm_Write(OFF);
 
-    /*speed = 0;
-    DesireSpeed_Write(speed);*/
-
     // after passing obstacle
-    position_now = 0;  //initialize
-    EncoderCounter_Write(position_now);
-
     PositionControlOnOff_Write(CONTROL);
 
+    EncoderCounter_Write(position_now);
 	SteeringServoControl_Write(1850);//Left
-    sleep(2);
-    position = 900;
-    DesireEncoderCount_Write(position);
-    while(position_now<position)
+  
+    while(EncoderCounter_Read() <= 900)
     {
-        position_now=EncoderCounter_Read();
-        //printf("EncoderCounter_Read() = %d\n", position_now);
+        DesireSpeed_Write(tw_curve_speed);
+        printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
+    EncoderCounter_Write(position_now);
     SteeringServoControl_Write(1500);//직진
-    sleep(2);
-    position += 600;
-    DesireEncoderCount_Write(position);
-    while(position_now<position)
+
+    while(EncoderCounter_Read() <= 600)
     {
-        position_now=EncoderCounter_Read();
-        //printf("EncoderCounter_Read() = %d\n", position_now);
+        DesireSpeed_Write(tw_straight_speed);
+        printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
+    EncoderCounter_Write(position_now);
     SteeringServoControl_Write(1150);//Right
-    sleep(2);
-    position += 900;
-    DesireEncoderCount_Write(position); 
-    while(position_now<position)
+
+    while(EncoderCounter_Read() <= 900)
     {
-        position_now=EncoderCounter_Read();
-        //printf("EncoderCounter_Read() = %d\n", position_now);
+        DesireSpeed_Write(tw_curve_speed);
+        printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
+    EncoderCounter_Write(position_now);
 	SteeringServoControl_Write(1500);
-    sleep(2);
-    position += 1000;
-    DesireEncoderCount_Write(position); 
-    while(position_now<position)
+    
+    while(EncoderCounter_Read() <= 1000)
     {
-        position_now=EncoderCounter_Read();
-        //printf("EncoderCounter_Read() = %d\n", position_now);
+        DesireSpeed_Write(tw_straight_speed);
+        printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
-
-
 
     tw_speed = DesireSpeed_Read();
     printf("DesireSpeed_Read() = %d \n", tw_speed);
