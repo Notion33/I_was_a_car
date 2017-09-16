@@ -733,7 +733,7 @@ int Threeway_hardcoding()
     EncoderCounter_Write(position_now);
     SteeringServoControl_Write(1150);//오른쪽 조향
     
-    while(EncoderCounter_Read() <= 1200) 
+    while(EncoderCounter_Read() <= 4500) 
     {
         DesireSpeed_Write(tw_curve_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
@@ -751,14 +751,13 @@ int Threeway_hardcoding()
     EncoderCounter_Write(position_now);
     SteeringServoControl_Write(1850);//왼쪽 조향
     
-    while(EncoderCounter_Read() <= 900)
+    while(EncoderCounter_Read() <= 4500)
     {
         DesireSpeed_Write(tw_curve_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
     SteeringServoControl_Write(1500);
-    sleep(4);
     PositionControlOnOff_Write(UNCONTROL);
    
     //왼쪽에 장애물이 있나 없나 확인하는 센서
@@ -797,7 +796,7 @@ int Threeway_hardcoding()
     EncoderCounter_Write(position_now);
 	SteeringServoControl_Write(1850);//Left
   
-    while(EncoderCounter_Read() <= 900)
+    while(EncoderCounter_Read() <= 4500)
     {
         DesireSpeed_Write(tw_curve_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
@@ -815,7 +814,7 @@ int Threeway_hardcoding()
     EncoderCounter_Write(position_now);
     SteeringServoControl_Write(1150);//Right
 
-    while(EncoderCounter_Read() <= 900)
+    while(EncoderCounter_Read() <= 4500)
     {
         DesireSpeed_Write(tw_curve_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
