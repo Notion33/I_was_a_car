@@ -26,10 +26,10 @@ int filteredIR(int num) // 필터링한 적외선 센서값
 
 	for(j=0; j<30; j++)
 	{
-		sensorValue[i] += DistanceSensor(num);
+		sensorValue += DistanceSensor(num);
 	}
 
-	sensorValue[i] /= 30;
+	sensorValue /= 30;
 	
 	return sensorValue;
 }
