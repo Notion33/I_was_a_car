@@ -907,6 +907,7 @@ int isLine() {
 }
 //	end of lineEscape()
 //===================================
+
 ///////////////////////////////////////////////////////////////////
 //////white_count에 대한 모듈들/////////////////////////////////
 ////////////////////////////////////////////////////////////////
@@ -1047,7 +1048,8 @@ int detect_signal() {//return 1 : 신호등  return 0 회전교차로 //TODO : �
 	}
 	else {
 		printf("회전 교차로\n");
-		CameraYServoControl_Write(150ㅇ0);
+		CameraYServoControl_Write(1800);
+		color = 0;
 		return 2;
 	}
 }
@@ -1538,6 +1540,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 void *ControlThread(void *unused) {
 	int i = 0;
 	int line = 0;
+	int is_rotary_traffic = 0;
 	int module_process = 0;
 	static int stop_check = 0;
 	static int flag = 0;
@@ -1598,23 +1601,26 @@ void *ControlThread(void *unused) {
 
 		//////정지선 판단까지 & 정지 후 교차로,신호등 판단
 		else if (stop_check == 1) {
-			//정지선
-			if (color == 0) {
-				color = 1;
-				break;
+			if (stop_line_detected == 1) { // 신호등인지 로터리인지 판단
+				is_rotary_traffic = detect_signal()
+					if (is_rotary_traffic == 1) {
+						flag = 3;//신호등
+						stop_check = 0;
+						break;
+					}
+					else if (is_rotary_traffic == 2) {
+						flag = 1;//rotary
+						stop_check = 0;
+						break;
+					}
 			}
+			//정지선
 			stop_line_detected = dectectStop(IplImage* imgResult);//정지선 검출전 주행 정지선 밟으면 return
 			printf("detect stopline\n\n");
 
-			if (stop_line_detected == 1) { // 신호등인지 로터리인지 판단
-				if (detect_signal() == 1) {
-					flag = 3;//신호등
-					stop_check = 0;
-				}
-				else if (detect_signal() == 2) {
-					flag = 1;//rotary
-					stop_check = 0;
-				}
+			if (stop_line_detected>0 && color == 0) {
+				color = 1;
+				break;
 			}
 		}
 
