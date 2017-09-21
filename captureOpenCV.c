@@ -1,14 +1,14 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
- * All information contained herein is proprietary and confidential to NVIDIA
- * Corporation.  Any use, reproduction, or disclosure without the written
- * permission of NVIDIA Corporation is prohibited.
- */
+* Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
+* All information contained herein is proprietary and confidential to NVIDIA
+* Corporation.  Any use, reproduction, or disclosure without the written
+* permission of NVIDIA Corporation is prohibited.
+*/
 
- // edited by Hyundai Autron
- // gcc -I. -I./utils `pkg-config opencv --cflags` -I./include  -c -o captureOpenCV.o captureOpenCV.c
- // gcc -I. -I./utils `pkg-config opencv --cflags` -I./include  -c -o nvthread.o nvthread.c
- // gcc  -o captureOpenCV captureOpenCV.o nvthread.o  -L ./utils -lnvmedia -lnvtestutil_board -lnvtestutil_capture_input -lnvtestutil_i2c -lpthread `pkg-config opencv --libs`
+// edited by Hyundai Autron
+// gcc -I. -I./utils `pkg-config opencv --cflags` -I./include  -c -o captureOpenCV.o captureOpenCV.c
+// gcc -I. -I./utils `pkg-config opencv --cflags` -I./include  -c -o nvthread.o nvthread.c
+// gcc  -o captureOpenCV captureOpenCV.o nvthread.o  -L ./utils -lnvmedia -lnvtestutil_board -lnvtestutil_capture_input -lnvtestutil_i2c -lpthread `pkg-config opencv --libs`
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -657,8 +657,8 @@ static unsigned int CaptureThread(void *params)
 		i++;
 	} // while end
 
-	// Release any left-over frames
-//    if(ctx->displayEnabled && capSurf && capSurf->type != NvMediaSurfaceType_YV16x2) // To allow returning frames after breaking out of the while loop in case of error
+	  // Release any left-over frames
+	  //    if(ctx->displayEnabled && capSurf && capSurf->type != NvMediaSurfaceType_YV16x2) // To allow returning frames after breaking out of the while loop in case of error
 	if (ctx->displayEnabled && capSurf)
 	{
 		NvMediaVideoMixerRender(ctx->mixer, // mixer
@@ -767,156 +767,96 @@ void drawonImage(IplImage* imgResult, int angle) {
 }
 #endif
 
-int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way, return 3:nothing
+void emergencyStopRed() {
+	// int x = 20, y= 0;
+	int width = 280, height = 10;
+	int mThreshold = width*height*0.1;
 
-	int i,j,k; //for loop
-	int cnt = 0;//number of white line for stop
-	bool FindWhiteBlock1 = false;
-	bool FindWhiteBlock2 = false;
-	bool FindBlackField = false;
+	//적색 px판단
+	// int i, j;
+	// int count = 0;
+	// for(j=y; j<y+height; j++){
+	//     for(i=x; i<x+width; i++){
+	//         int px = imgColor->imageData[i + j*imgColor->widthStep];
+	//         if(px == whitepx){
+	//             //TODO
+	//             count++;
+	//         }
+	//     }
+	// }
+	printf("threshold : %d\n", mThreshold);
+	if (red_count > mThreshold) {
+		//급정지! 대기
+		//speed = 0;
+		printf("\nStop! Red stop / countpx : %d / %d \n\n", red_count, mThreshold);
+		//DesireSpeed_Write(0);   //정지
+		speed = 0;
 
-	for(i = 80;i<140;i++){//detect whether it is stopline
-		for(j = 0;j<120;j++){
-			if((imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>130)){//whitepixel
-				for(k=0; k<200; k++){ //check successive 200 white pixels
-						if(!(imgOrigin->imageData[(i*320+j+k)*3]>200 && imgOrigin->imageData[(i*320+j+k)*3+1]>130))break;
-						if(k==199)cnt++;
-					}
-					j = j + k;
-			}
-		}
-		if(cnt==3)return 1;//if whiteline ==3
+		//curFlag = FLAG_STOP_EMERGENCYRED;
+		//isStop = 1;
 	}
-	for(i = 0;i<200;i++){//detect whether it is 3way
-		for(j = 0;j<320;j++){//find whiteblock
-			if(!FindWhiteBlock1&&(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>130)){//firstblocknotdetected&&whitepixel
-				for(k=0; k<5; k++){ //check successive 5 white pixels
-						if(!imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>130)break;
-						if(k==4)FindWhiteBlock1 = true;
-					}
-				j = j + k;
-			}
-			if(!FindBlackField&&FindWhiteBlock1&&imgOrigin->imageData[(i*320+j)*3]>35 && imgOrigin->imageData[(i*320+j)*3]<50 && imgOrigin->imageData[(i*320+j)*3+1]>125){//findblackblock
-				for(k=0; k<5; k++){
-						if(!(imgOrigin->imageData[(i*320+j)*3]>35 && imgOrigin->imageData[(i*320+j)*3]<50 && imgOrigin->imageData[(i*320+j)*3+1]>125))break;
-						if(k==4)FindBlackField = true;
-					}
-				j = j+k;
-			}
-			if(!FindWhiteBlock2&&FindBlackField&FindWhiteBlock1&&(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>130)){//find third block
-				for(k=0; k<5; k++){ //check successive 5 white pixels
-					if(!(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3]<50 && imgOrigin->imageData[(i*320+j)*3+1]>125))break;
-					if(k==4)FindWhiteBlock2 = true;
-					}
-					j = j+k;
-			}
-			if(FindWhiteBlock1&&FindBlackField&&FindWhiteBlock2)return 2;
-			FindWhiteBlock1 = false;
-			FindBlackField = false;
-			FindWhiteBlock2 = false;
-			}
-		}
-
-	for(i = 0;i<240;i++)
-		for(j = 0;j<320;j++){
-			if((imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>130))
-				{imgOrigin->imageData[(i*320+j)*3] = 255;imgOrigin->imageData[(i*320+j)*3+1] = 255;imgOrigin->imageData[(i*320+j)*3+2] = 255;}
-			else {imgOrigin->imageData[(i*320+j)*3] = 0;imgOrigin->imageData[(i*320+j)*3+1] = 0;imgOrigin->imageData[(i*320+j)*3+2] = 0;}
-		}
-
-	cvSaveImage("captureImage/img.png", imgOrigin, 0);
-	return 3;
-}
-void emergencyStopRed(){
-    // int x = 20, y= 0;
-    int width = 280, height = 10;
-    int mThreshold = width*height*0.1;
-
-    //적색 px판단
-    // int i, j;
-    // int count = 0;
-    // for(j=y; j<y+height; j++){
-    //     for(i=x; i<x+width; i++){
-    //         int px = imgColor->imageData[i + j*imgColor->widthStep];
-    //         if(px == whitepx){
-    //             //TODO
-    //             count++;
-    //         }
-    //     }
-    // }
-    printf("threshold : %d\n", mThreshold);
-    if(red_count > mThreshold){
-        //급정지! 대기
-        //speed = 0;
-        printf("\nStop! Red stop / countpx : %d / %d \n\n",red_count, mThreshold);
-        //DesireSpeed_Write(0);   //정지
-        speed = 0;
-
-        //curFlag = FLAG_STOP_EMERGENCYRED;
-        //isStop = 1;
-    }
 	// else if(count < mThreshold && curFlag == FLAG_STOP_EMERGENCYRED){
 	//
-    //     // TODO 3초 대기
-    //     curFlag = FLAG_STRAIGHT;
-    // }
-    // else if(count < width*height*0.05 && isStop == 1){
-    //     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
-    //     //출발
-    //     //아예 이 함수 플래그 죽이기
-    // }
+	//     // TODO 3초 대기
+	//     curFlag = FLAG_STRAIGHT;
+	// }
+	// else if(count < width*height*0.05 && isStop == 1){
+	//     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
+	//     //출발
+	//     //아예 이 함수 플래그 죽이기
+	// }
 }
 
 //===================================
 //  Log file module / NYC
-void writeLog(int frameNum){
-    //로그 쓸 준비
-    fprintf(f, "Frame %d", frameNum);
+void writeLog(int frameNum) {
+	//로그 쓸 준비
+	fprintf(f, "Frame %d", frameNum);
 	// 프레임넘
-    //거리센서 로그
-    //writeDistanceLog();
-    //라인센서 로그
-    writeLineSensorLog();
-    //줄내리기
-    fprintf(f, "\n");
+	//거리센서 로그
+	//writeDistanceLog();
+	//라인센서 로그
+	writeLineSensorLog();
+	//줄내리기
+	fprintf(f, "\n");
 }
 
-void writeDistanceLog(){
-    int data;
+void writeDistanceLog() {
+	int data;
 
-    printf("Distance : ");
-    int i = 0;
-    for(i=1; i<7; i++){
-        data = DistanceSensor(i);
-        fprintf(f, data);
-        if(i!=5) fprintf(f, "%d", data);
-        printf("0x%04X(%d) ", data, data);
-    }
-    printf("\n");
+	printf("Distance : ");
+	int i = 0;
+	for (i = 1; i < 7; i++) {
+		data = DistanceSensor(i);
+		fprintf(f, data);
+		if (i != 5) fprintf(f, "%d", data);
+		printf("0x%04X(%d) ", data, data);
+	}
+	printf("\n");
 }
 
-void writeLineSensorLog(){
-    int sensor = LineSensor_Read();        // black:1, white:0
-    int s = 0;
+void writeLineSensorLog() {
+	int sensor = LineSensor_Read();        // black:1, white:0
+	int s = 0;
 	int i = 0;
 	char byte = 0x80;
 
-    printf("LineSensor_Read() = ");
+	printf("LineSensor_Read() = ");
 	fprintf(f, ", ");
-    for(i=0; i<8; i++)
-    {
-        s = sensor & byte;	//0x80
-        if((i % 4) ==0) printf(" ");
-        if(s) printf("1");
-        else printf("0");
-        sensor = sensor << 1;
+	for (i = 0; i < 8; i++)
+	{
+		s = sensor & byte;	//0x80
+		if ((i % 4) == 0) printf(" ");
+		if (s) printf("1");
+		else printf("0");
+		sensor = sensor << 1;
 
-		if(s) fprintf(f, "1");
-        else fprintf(f, "0");
-    }
-    printf("\n");
-    //printf("LineSensor_Read() = %d \n", sensor);
-    //fprintf(f, "%d\n", sensor);
+		if (s) fprintf(f, "1");
+		else fprintf(f, "0");
+	}
+	printf("\n");
+	//printf("LineSensor_Read() = %d \n", sensor);
+	//fprintf(f, "%d\n", sensor);
 
 }
 //  End of Logfile module
@@ -924,51 +864,39 @@ void writeLineSensorLog(){
 
 //===================================
 //	선 밟을때 긴급탈출 모듈
-int isitLineforstop(){//흰선인경우 return 1 테스트 용도
-	int sensor = LineSensor_Read();
-	int cnt = 0;//흰선이 아닌경우 측정
-	int i;//for loop
-	unsigned char mask = 127;//시작을 1부터 하면 더 최적화 가능?
-	unsigned char result = 0;
-	for(i = 0;i<7;i++){
-		result = mask|sensor;
-		if(result>mask)cnt++;
-		mask = mask>>1;
-		if(cnt>1)return 0;//흰선아님
-	}
-	return 1;//흰선
-}
 
-int isLine(){
+int isLine() {
 	int dir = 0;
 	int sensor = LineSensor_Read();        // black:1, white:0
 	int s = 0;
 	int c[8];
-	int i=0;
+	int i = 0;
 
-	for(i=0; i<8; i++)
-    {
-        s = sensor & 0x80;	//0x80
-        if(s) c[i]=1;
-        else c[i]=0;
-        sensor = sensor << 1;
-    }
+	for (i = 0; i < 8; i++)
+	{
+		s = sensor & 0x80;	//0x80
+		if (s) c[i] = 1;
+		else c[i] = 0;
+		sensor = sensor << 1;
+	}
 
-	if( c[4] == 0 ){
+	if (c[4] == 0) {
 		//선을 중앙으로 밟음. 중앙선 무시
 		dir = 0;
-	} else if( c[1]==0 || c[2]==0 && c[3]==1 ){
+	}
+	else if (c[1] == 0 || c[2] == 0 && c[3] == 1) {
 		angle = 2000;
 		dir = 1;
-	} else if( c[5]==1 && c[6]==0 || c[7]==0 ){
+	}
+	else if (c[5] == 1 && c[6] == 0 || c[7] == 0) {
 		angle = 1000;
 		dir = 2;
 	}
 
 	//비트연산
 	// if(sensor&0xf0 < 0x70){		// 0001 0000 이상
-		// angle = 1000; 			// 우회전
-		// dir = 1;
+	// angle = 1000; 			// 우회전
+	// dir = 1;
 	// } else if(sensor&0x87 < 0x07){		// 0000 0010 이하
 	// 	angle = 2000;			// 좌회전
 	// 	dir = 2;
@@ -977,10 +905,341 @@ int isLine(){
 
 	return dir;
 }
-
 //	end of lineEscape()
 //===================================
+///////////////////////////////////////////////////////////////////
+//////white_count에 대한 모듈들/////////////////////////////////
+////////////////////////////////////////////////////////////////
+/////////////////white_count - 3way,정지선 구분 알고리즘
+////////////////TODO : 정확하게 구분할 알고리즘 필요
+int white_line_process(IplImage* imgOrigin) {//return 1: stopline, return 2:3way, return 0:nothing
 
+	int i, j, k; //for loop
+	int cnt = 0;//number of white line for stop
+	bool FindWhiteBlock1 = false;
+	bool FindWhiteBlock2 = false;
+	bool FindBlackField = false;
+
+	for (i = 80; i < 140; i++) {//detect whether it is stopline
+		for (j = 0; j < 120; j++) {
+			if ((imgOrigin->imageData[(i * 320 + j) * 3] > 200 && imgOrigin->imageData[(i * 320 + j) * 3 + 1] > 130)) {//whitepixel
+				for (k = 0; k < 200; k++) { //check successive 200 white pixels
+					if (!(imgOrigin->imageData[(i * 320 + j + k) * 3] > 200 && imgOrigin->imageData[(i * 320 + j + k) * 3 + 1] > 130))break;
+					if (k == 199)cnt++;
+				}
+				j = j + k;
+			}
+		}
+		if (cnt == 3)return 1;//if whiteline ==3
+	}
+	for (i = 0; i < 200; i++) {//detect whether it is 3way
+		for (j = 0; j < 320; j++) {//find whiteblock
+			if (!FindWhiteBlock1 && (imgOrigin->imageData[(i * 320 + j) * 3] > 200 && imgOrigin->imageData[(i * 320 + j) * 3 + 1] > 130)) {//firstblocknotdetected&&whitepixel
+				for (k = 0; k < 5; k++) { //check successive 5 white pixels
+					if (!imgOrigin->imageData[(i * 320 + j) * 3] > 200 && imgOrigin->imageData[(i * 320 + j) * 3 + 1] > 130)break;
+					if (k == 4)FindWhiteBlock1 = true;
+				}
+				j = j + k;
+			}
+			if (!FindBlackField&&FindWhiteBlock1&&imgOrigin->imageData[(i * 320 + j) * 3] > 35 && imgOrigin->imageData[(i * 320 + j) * 3] < 50 && imgOrigin->imageData[(i * 320 + j) * 3 + 1]>125) {//findblackblock
+				for (k = 0; k < 5; k++) {
+					if (!(imgOrigin->imageData[(i * 320 + j) * 3] > 35 && imgOrigin->imageData[(i * 320 + j) * 3] < 50 && imgOrigin->imageData[(i * 320 + j) * 3 + 1]>125))break;
+					if (k == 4)FindBlackField = true;
+				}
+				j = j + k;
+			}
+			if (!FindWhiteBlock2&&FindBlackField&FindWhiteBlock1 && (imgOrigin->imageData[(i * 320 + j) * 3] > 200 && imgOrigin->imageData[(i * 320 + j) * 3 + 1] > 130)) {//find third block
+				for (k = 0; k < 5; k++) { //check successive 5 white pixels
+					if (!(imgOrigin->imageData[(i * 320 + j) * 3] > 200 && imgOrigin->imageData[(i * 320 + j) * 3] < 50 && imgOrigin->imageData[(i * 320 + j) * 3 + 1]>125))break;
+					if (k == 4)FindWhiteBlock2 = true;
+				}
+				j = j + k;
+			}
+			if (FindWhiteBlock1&&FindBlackField&&FindWhiteBlock2)return 2;
+			FindWhiteBlock1 = false;
+			FindBlackField = false;
+			FindWhiteBlock2 = false;
+		}
+	}
+
+	for (i = 0; i < 240; i++)
+		for (j = 0; j < 320; j++) {
+			if ((imgOrigin->imageData[(i * 320 + j) * 3] > 200 && imgOrigin->imageData[(i * 320 + j) * 3 + 1] > 130))
+			{
+				imgOrigin->imageData[(i * 320 + j) * 3] = 255; imgOrigin->imageData[(i * 320 + j) * 3 + 1] = 255; imgOrigin->imageData[(i * 320 + j) * 3 + 2] = 255;
+			}
+			else { imgOrigin->imageData[(i * 320 + j) * 3] = 0; imgOrigin->imageData[(i * 320 + j) * 3 + 1] = 0; imgOrigin->imageData[(i * 320 + j) * 3 + 2] = 0; }
+		}
+
+	cvSaveImage("captureImage/img.png", imgOrigin, 0);
+	return 0;
+}
+
+
+////////////////////////////////////////////////////////////////////
+///////////////신호등&&&회전 교차로/////////////////////////////////
+///////////////////////////////////////////////////////////////////
+
+//정지선 구분!!
+int Stop_line() {
+	int line_cnt = 0;
+	int i;
+
+	for (i = 0; i < 7; i++) {
+		if (!(LineSensor_Read() >> i & 0x1)) {
+			line_cnt++;
+		}
+	}
+	printf("line_cnt = %d\n", line_cnt);
+	if (line_cnt > 5) { //linesensor 5개이상 감지
+		return 1;
+	}
+	return 0;
+}
+
+//정지선을 보고 정지선에 도달하기 전까지 주행
+int dectectStop(IplImage* imgResult) {
+	int x, y;
+	static int stop_camera = 0;
+
+	/*	if (Stop_line() == 1) {
+	speed = 0;
+	printf("stop!!!!!!\n");
+	return 1;
+	}
+	else {
+	Find_Center(imgResult);
+	speed = 50;
+	return 0;
+	}
+	*/
+	if (Stop_line() == 1 && stop_camera > 3) { //stop_camera 의 계수 test따라 변경(최적화 만들기)
+		speed = 0;
+		stop_camera = 0;
+		printf("stop!!!!!!\n");
+		return 1;
+	}
+	else {
+		Find_Center(imgResult);
+		speed = 50;
+
+		printf("white count =%d\n", white_count);
+		if (white_count > 2000) {//TODO 5cm에 대한 pixel수 잡히는 정도 측정
+			Alarm_Write(ON);
+			usleep(1000);
+			stop_camera++;
+			printf("stop camera = %d\n", stop_camera);
+		}
+		return 0;
+	}
+}
+
+//카메라를 들어 회전교차로인지 신호등인지 구분
+int detect_signal() {//return 1 : 신호등  return 0 회전교차로 //TODO : 허프변환
+	int x, y;
+
+	CameraYServoControl_Write(1500);
+
+	//TODO : 허프서클하여 원조건 추가
+	if (red_count > 200) {
+		printf("신호등\n");
+		return 1;
+	}
+	else {
+		printf("회전 교차로\n");
+		CameraYServoControl_Write(150ㅇ0);
+		return 2;
+	}
+}
+
+//신호등 알고리즘
+int Traffic_Light(IplImage* imgResult) {
+
+	int x, y;
+	int white_count = 0;
+	int start_x = 0, end_x = 320;
+	int start_y = 0, end_y = 240;
+
+	CameraYServoControl_Write(1500);
+	//cvWaitKey(100);
+	printf("color = %d\n", color);
+
+	for (x = start_x; x < end_x; x++) {
+		for (y = start_y; y < end_y; y++) {
+			//result_img->imageData[y*(result_img->widthStep) + x] = 255;
+			if (imgResult->imageData[y*(imgResult->widthStep) + x] == 255) {
+				white_count++;
+			}
+		}
+	}
+
+	printf("white count %d", white_count);
+	if (color == 3 && white_count < 200) {
+		printf("회전교차로\n");
+		return 3;
+	}
+	if (color == 5) {
+		if (white_count > 100 && white_count < 250) {
+			return 1;
+		}
+		else if (white_count >= 250) {
+			return 2;
+		}
+	}
+	else if (white_count > 500) {
+		color++;
+	}
+	//cvWaitKey(200);
+}
+
+//회전 교차로 알고리즘
+void rotary() {
+
+	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
+	NvU64 ptime1, ptime2;
+	struct timespec;
+	int data = 0;//sensor data
+
+	bool Departure = false;
+	bool IsDetected = false;
+
+	int i, j, k = 0;//for loop
+
+
+	double PixLeftUp = 0;
+	double PixLeftDown = 0;
+	double PixRightUp = 0;
+	double PixRightDown = 0;
+
+
+	IplImage *imgOrigin;
+	IplImage *imgResult;
+	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
+	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+	cvZero(imgResult);
+	char fileName1[40];
+	printf(" rotary started :D :D:D:D:D:D:D:D:D:D\n\n");
+	while (true) {
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond, &mutex);
+
+		GetTime(&pt1);
+		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+
+		Frame2Ipl(imgOrigin, imgResult, 4);
+
+		pthread_mutex_unlock(&mutex);
+
+
+
+		PixLeftUp = 0;
+		PixLeftDown = 0;
+		PixRightUp = 0;
+		PixRightDown = 0;
+
+#ifdef IMGSAVE              
+		//sprintf(fileName, "captureImage/imgOrigin%d.png", i);
+		sprintf(fileName1, "captureImage/imgResult%d.png", k++);          // TY add 6.27
+																		  //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
+
+
+																		  //cvSaveImage(fileName, imgOrigin, 0);
+		cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
+														//cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
+#endif
+		printf("waitingnow\n");
+		if (!Departure) {
+			for (i = 0; i < ROTARYUPDOWNLINE; i++)
+				for (j = 0; j < ROTARYLEFTRIGHTLINE; j++)//left up side
+					if (imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] < 55 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1]>125 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] < 141 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2]>120 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] < 133)
+						PixLeftUp++;
+			PixLeftUp = PixLeftUp / (ROTARYUPDOWNLINE*ROTARYLEFTRIGHTLINE);
+
+			for (i = 0; i < ROTARYUPDOWNLINE; i++)
+				for (j = ROTARYLEFTRIGHTLINE; j < RESIZE_WIDTH; j++)//Right up side
+					if (imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] < 55 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1]>125 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] < 141 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2]>120 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] < 133)
+						PixRightUp++;
+			PixRightUp = PixRightUp / ((RESIZE_WIDTH - ROTARYLEFTRIGHTLINE)*ROTARYUPDOWNLINE);
+
+			for (i = ROTARYUPDOWNLINE; i < RESIZE_HEIGHT; i++)
+				for (j = 0; j < ROTARYLEFTRIGHTLINE; j++)//left up side
+					if (imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] < 55 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1]>125 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] < 141 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2]>120 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] < 133)
+						PixLeftDown++;
+			PixLeftDown = PixLeftDown / ((RESIZE_HEIGHT - ROTARYUPDOWNLINE)*ROTARYLEFTRIGHTLINE);
+
+			for (i = ROTARYUPDOWNLINE; i < RESIZE_HEIGHT; i++)
+				for (j = ROTARYLEFTRIGHTLINE; j < RESIZE_WIDTH; j++)//left up side
+					if (imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] < 55 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1]>125 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] < 141 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2]>120 && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] < 133)
+						PixRightDown++;
+			PixRightDown = PixRightDown / ((RESIZE_WIDTH - ROTARYLEFTRIGHTLINE)*(RESIZE_HEIGHT - ROTARYUPDOWNLINE));
+
+			//if(!(PixLeftDown>=PixLeftUp&&PixLeftDown>=PixRightDown&&PixLeftDown>=PixRightUp))//교차로 진입로 좌측에 차량이 존재하는 경우x
+			if (PixRightDown >= PixLeftUp&&PixRightDown >= PixLeftDown&&PixRightDown >= PixRightUp)//테스토 용도
+			{
+				printf("GETIN\n");
+				Alarm_Write(ON);
+				usleep(100000);
+				Alarm_Write(OFF);
+				Departure = true;
+			}
+		}
+		else {
+			Find_Center(imgResult);
+			printf("running now");
+			data = DistanceSensor(CHANNEL1);
+			if (data > 1900 && data < 4000) {//거리<11cm미만일시
+				speed = 40;//조절되야함
+				printf("slow down\n");
+				IsDetected = true;
+			}
+			else if (data < 1000 && data < 1900) {
+				IsDetected = true;
+				//printf("speed up\n");
+				//speed = 80;
+			}
+			else {//탈출조건
+				if (IsDetected)break;//장애물을 따라가다가 장애물이 사라졌거나
+				data = DistanceSensor(CHANNEL4);
+				if (data > 2000)//후방 장애물 10cm 내 발견시  
+					break;
+			}
+		}
+		DesireSpeed_Write(speed);
+	}
+	printf("rotary finished\n");
+}
+
+//3way 알고리즘
+///함수를 넣어주세요!!
+
+//flag에 따른 모듈 변화(1 = 회전교차로 2 = 3way 3 = 신호등)
+//TODO flag 유지 or 함수가 끝났으면 flag = 0 으로 바꿔주기
+int flag_module(int flag, IplImage* imgResult) {
+
+	//rotary
+	if (flag == 1) {
+		printf("rotary module\n\n");
+		rotary();
+		return 1;
+	}
+	//3차선
+	else if (flag == 2) {
+		printf("3way module\n\n");
+		/*
+		3차선 구간
+		*/
+		return 2;
+	}
+	//신호등
+	else if (flag == 3) {
+		printf("trafficlight module\n\n");
+		trafficlight(imgResult);
+		return 3;
+	}
+}
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////white count에 대한 모듈들//////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////  Find_Center : TY 영상처리하여 조향값 찾아내는 알고리즘.
@@ -989,459 +1248,304 @@ int isLine(){
 ////////////////////////////////////////////////////////////////////////////////////////////
 void Find_Center(IplImage* imgResult)		//TY add 6.27
 {
-	int i=0;
-    int j=0;
-    int k=0;
+	int i = 0;
+	int j = 0;
+	int k = 0;
 
-    int y_start_line = 150;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
-    int y_end_line = 130;
-    int y_high_start_line = 110;
-    int y_high_end_line = 90;
+	int y_start_line = 150;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
+	int y_end_line = 130;
+	int y_high_start_line = 110;
+	int y_high_end_line = 90;
 
-    int valid_left_amount = 0;
-    int valid_right_amount = 0;
-    int valid_high_left_amount = 0;
-    int valid_high_right_amount = 0;
+	int valid_left_amount = 0;
+	int valid_right_amount = 0;
+	int valid_high_left_amount = 0;
+	int valid_high_right_amount = 0;
 
-    int left_line_start = 0;
-    int left_line_end = 0;
-    int right_line_start = 0;
-    int right_line_end = 0;
-    int bottom_line = 200;
-    int line_tolerance = 70;
-    int low_line_width = 20;
-    int high_line_width = 10;
-    int curve_speed = 100;       //default : 60
-    int straight_speed = 130;    //default : 90
+	int left_line_start = 0;
+	int left_line_end = 0;
+	int right_line_start = 0;
+	int right_line_end = 0;
+	int bottom_line = 200;
+	int line_tolerance = 70;
+	int low_line_width = 20;
+	int high_line_width = 10;
+	int curve_speed = 100;       //default : 60
+	int straight_speed = 130;    //default : 90
 
-    int line_gap = 5;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
-    int tolerance = 25; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
-    int high_tolerance = 60;
-    int angle=1500;
-    float low_line_weight = 320; // control angle weight
-    float high_line_weight = 80;
-    float control_angle = 0;
+	int line_gap = 5;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
+	int tolerance = 25; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
+	int high_tolerance = 60;
+	int angle = 1500;
+	float low_line_weight = 320; // control angle weight
+	float high_line_weight = 80;
+	float control_angle = 0;
 
-    int left[240] = {0};
-    int right[240] = {imgResult->width-1};
-    float left_slope[2] = {0.0};
-    float right_slope[2] = {0.0};
+	int left[240] = { 0 };
+	int right[240] = { imgResult->width - 1 };
+	float left_slope[2] = { 0.0 };
+	float right_slope[2] = { 0.0 };
 
-    bool continue_turn_left = false;
-    bool continue_turn_right = false;
+	bool continue_turn_left = false;
+	bool continue_turn_right = false;
 
-    for(i = y_start_line ; i>y_end_line ; i=i-line_gap){
+	for (i = y_start_line; i > y_end_line; i = i - line_gap) {
 		if (turn_right_max == true)
 			j = imgResult->width - 1;
 		else
 			j = (imgResult->width) / 2;
-        for(; j>0 ; j--){                            //Searching the left line point
-                left[y_start_line-i] = j;
-                if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                    for( k = 0 ; k < low_line_width ; k++){                     //차선이 line_width만큼 연속으로 나오는지 확인
-                        if( j-k <= 0)
-                          k = low_line_width - 1;
-                        else if(imgResult->imageData[i*imgResult->widthStep + j - k] == 255)
-                          continue;
-                        break;
-                    }
-                    if(k = low_line_width - 1){
-                      valid_left_amount++;
-                      break;
-                    }
-                }
+		for (; j > 0; j--) {                            //Searching the left line point
+			left[y_start_line - i] = j;
+			if (imgResult->imageData[i*imgResult->widthStep + j] == 255) {
+				for (k = 0; k < low_line_width; k++) {                     //차선이 line_width만큼 연속으로 나오는지 확인
+					if (j - k <= 0)
+						k = low_line_width - 1;
+					else if (imgResult->imageData[i*imgResult->widthStep + j - k] == 255)
+						continue;
+					break;
+				}
+				if (k = low_line_width - 1) {
+					valid_left_amount++;
+					break;
+				}
+			}
 		}
 		if (turn_left_max == true)
-			j = 0 ;
+			j = 0;
 		else
-			j = (imgResult->width) / 2 ;
-        for(; j<imgResult->width ; j++){             //Searching the right line point
-                right[y_start_line-i] = j;
-                if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                      for( k = 0 ; k < low_line_width ; k++){                   //차선이 line_width만큼 연속으로 나오는지 확인
-                        if( j + k >= imgResult->widthStep)
-                          k = low_line_width - 1;
-                        else if(imgResult->imageData[i*imgResult->widthStep + j + k] == 255)
-                          continue;
-                        break;
-                    }
-                    if(k = low_line_width - 1){
-                      valid_right_amount++;
-                      break;
-                    }
-                }
-        }
-        if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
-            if(valid_left_amount >= valid_right_amount && turn_left_max == false){
-            	printf("continue_turn_right set!\n");
-                continue_turn_right = true;
-            }
-            else if(valid_right_amount >= valid_left_amount && turn_right_max == false){
-            	printf("continue_turn_left set!\n");
-                continue_turn_left = true;
-            }
-            printf("valid_left_amount = %d , valid_right_amount = %d \n",valid_left_amount,valid_right_amount);
-            break;
-        }
-    }
-
-    if (continue_turn_left == false && continue_turn_right == false){          //turn max flag가 false인 경우 1. 직선 2. 과다곡선
-        printf("continue_turn_flag_off__1__\n");
-        if(turn_left_max == true){                                  //2. 과다곡선인 경우, 차선이 정상검출범위내로 돌아올때까지 턴 유지
-            for(i = imgResult->widthStep -1 ; i > (imgResult->width/2) + line_tolerance ; i--){
-            	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255){
-                	continue_turn_left = false;
-                	printf("continue_turn_flag_OFF__overCurve_left__\n");
-                    break;
-                }
-                else if (i == imgResult->width/2 + line_tolerance + 1){
-                	printf("continue_turn_flag_ON__overCurve_left__\n");
-                	continue_turn_left = true;
-                	break;
-                }
-            }
-        }
-        else if (turn_right_max == true){
-            for(i = 0 ; i < (imgResult->width/2) - line_tolerance ; i++){
-            	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255){
-                	continue_turn_right = false;
-                	printf("continue_turn_flag_OFF__2_right__i:%d\n",i);
-                    break;
-                }
-                else if (i == imgResult->width/2 - line_tolerance - 1){
-                	printf("continue_turn_flag_ON__2_right__\n");
-					continue_turn_right = true;
-                	break;
+			j = (imgResult->width) / 2;
+		for (; j < imgResult->width; j++) {             //Searching the right line point
+			right[y_start_line - i] = j;
+			if (imgResult->imageData[i*imgResult->widthStep + j] == 255) {
+				for (k = 0; k < low_line_width; k++) {                   //차선이 line_width만큼 연속으로 나오는지 확인
+					if (j + k >= imgResult->widthStep)
+						k = low_line_width - 1;
+					else if (imgResult->imageData[i*imgResult->widthStep + j + k] == 255)
+						continue;
+					break;
 				}
-            }
-        }
-    }
-
-    if (continue_turn_left == false && continue_turn_right == false){   //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
-            printf("continue_turn_flag_all_off__3__\n");
-            for(i=0;i<=valid_left_amount;i++){                        //좌측 차선 검출
-                if(left[i*line_gap]!=0){
-                    left_line_start = y_start_line - i * line_gap;
-                    left_line_end = y_start_line - (i + valid_left_amount) * line_gap;
-                    break;
-                }
-            }
-            for(i=0;i<=valid_right_amount;i++){                        //우측 차선 검출
-                if(right[i*line_gap]!=imgResult->width-1){
-                    right_line_start = y_start_line - i * line_gap;
-                    right_line_end = y_start_line - (i + valid_right_amount) * line_gap;
-                    break;
-                }
-            }
-
-            printf("\nleft line = ");
-            for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
-            printf("    valid left line = %d\n",valid_left_amount);
-            printf("right line = ");
-            for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
-            printf("    valid right line = %d\n",valid_right_amount);
-
-            if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
-                left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
-            }
-            else left_slope[0] = 0;
-
-            if(valid_right_amount > 1){                                          //우측 차선 기울기 계산
-                right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
-            }
-            else right_slope[0] = 0;
-
-            control_angle = (left_slope[0] + right_slope[0])*low_line_weight;        //차량 조향 기울기 계산
-
-            printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
-            printf("Control_Angle_low : %f \n\n",control_angle);
-        }
-
-    turn_left_max = continue_turn_left;             //현재 프레임에서 최대조향이라고 판단할 경우, 최대조향 전역변수 set.
-    turn_right_max = continue_turn_right;
-
-    if(turn_left_max == false && turn_right_max == false && control_angle == 0.0 ){   //아랫쪽차선 검출시도후, 직진주행 하는 경우,
-        printf("Does not detected low_lain\n");
-        for(i = y_high_start_line ; i>y_high_end_line ; i=i-line_gap){
-          for(j=(imgResult->width)/2 ; j>0 ; j--){                            //Searching the left line point
-                  left[y_high_start_line-i] = j;
-                  if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                      for( k = 0 ; k < high_line_width ; k++){                     //차선이 line_width만큼 연속으로 나오는지 확인
-                          if( j-k <= 0)
-                            k = high_line_width - 1;
-                          else if(imgResult->imageData[i*imgResult->widthStep + j - k] == 255)
-                            continue;
-                          break;
-                      }
-                      if(k = high_line_width - 1){
-                        valid_high_left_amount++;
-                        break;
-                      }
-                  }
-          }
-          for(j=(imgResult->width)/2 ; j<imgResult->width ; j++){             //Searching the right line point
-                  right[y_high_start_line-i] = j;
-                  if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
-                        for( k = 0 ; k < high_line_width ; k++){                   //차선이 line_width만큼 연속으로 나오는지 확인
-                          if( j + k >= imgResult->widthStep)
-                            k = high_line_width - 1;
-                          else if(imgResult->imageData[i*imgResult->widthStep + j + k] == 255)
-                            continue;
-                          break;
-                      }
-                      if(k = high_line_width - 1){
-                        valid_high_right_amount++;
-                        break;
-                      }
-                  }
-          }
-        //   if(left[y_high_start_line-i]>((imgResult->width/2)-high_tolerance)||right[y_high_start_line-i]<((imgResult->width/2)+high_tolerance))     //검출된 차선이 화면중앙부근에 있는경우, 아랫쪽차선까지 올수있도록 무시
-        //       break;
-        }
-
-        for(i=0;i<=valid_high_left_amount;i++){                        //좌측 차선 검출
-            if(left[i*line_gap]!=0){
-                left_line_start = y_high_start_line - i * line_gap;
-                left_line_end = y_high_start_line - (i + valid_high_left_amount) * line_gap;
-                break;
-            }
-        }
-        for(i=0;i<=valid_high_right_amount;i++){                        //우측 차선 검출
-            if(right[i*line_gap]!=imgResult->width-1){
-                right_line_start = y_high_start_line - i * line_gap;
-                right_line_end = y_high_start_line - (i + valid_right_amount) * line_gap;
-                break;
-            }
-        }
-
-      printf("\nleft high line = ");
-      for(i=0;i<valid_high_left_amount;i++)printf("%d  ",left[i*line_gap]);
-      printf("    valid high left line = %d\n",valid_high_left_amount);
-      printf("right high line = ");
-      for(i=0;i<valid_high_right_amount;i++)printf("%d ",right[i*line_gap]);
-      printf("    valid high right line = %d\n",valid_high_right_amount);
-
-      if(valid_high_left_amount > 1){                                          //좌측 차선 기울기 계산
-          left_slope[0] = (float)(left[0] - left[(valid_high_left_amount-1)*line_gap])/(float)(valid_high_left_amount*line_gap);
-      }
-      else left_slope[0] = 0;
-
-      if(valid_high_right_amount > 1){                                          //우측 차선 기울기 계산
-          right_slope[0] = (float)(right[0] - right[(valid_high_right_amount-1)*line_gap])/(float)(valid_high_right_amount*line_gap);
-      }
-      else right_slope[0] = 0;
-
-      control_angle = (left_slope[0] + right_slope[0])*high_line_weight;        //차량 조향 기울기 계산
-
-      printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
-      printf("Control_Angle_high : %f \n\n",control_angle);
-
-      if(abs(control_angle)>100)    //위쪽차선에서 과하게 꺾을경우, 방지 ; 코너에서 인코스로 들어오는걸 방지
-        control_angle = 0;
-
-    }
-
-
-    if (turn_left_max == true)                      //차량 조향각도 판별
-        angle = 2000;
-    else if (turn_right_max == true)
-        angle = 1000;
-    else{
-        angle = 1500 + control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
-		angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
-    }
-    SteeringServoControl_Write(angle);
-
-    #ifdef SPEED_CONTROL
-        if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
-           speed = curve_speed;
-        else
-           speed = straight_speed;
-    #endif
-
-    #ifdef ROI
-        for(i=0;i<imgResult->widthStep;i++){
-            imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
-            }
-        for(i=0;i<imgResult->widthStep;i++){
-            imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
+				if (k = low_line_width - 1) {
+					valid_right_amount++;
+					break;
+				}
 			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
+		}
+		if (left[y_start_line - i] > ((imgResult->width / 2) - tolerance) || right[y_start_line - i] < ((imgResult->width / 2) + tolerance)) {     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
+			if (valid_left_amount >= valid_right_amount && turn_left_max == false) {
+				printf("continue_turn_right set!\n");
+				continue_turn_right = true;
 			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
+			else if (valid_right_amount >= valid_left_amount && turn_right_max == false) {
+				printf("continue_turn_left set!\n");
+				continue_turn_left = true;
 			}
-    #endif
-
-}
-void befwhitelinedriving(){//정지선을 보고 정지선에 도달하기 전까지 주행
-	int speed = 60;//#define으로 빼야함
-	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
-	NvU64 ptime1, ptime2;
-	struct timespec;
-
-	IplImage* imgOrigin;
-	IplImage* imgResult;            // TY add 6.27
-
-	// cvCreateImage
-	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
-	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
-	cvZero(imgResult);          // TY add 6.27
-	while (1){
-		if(isitLineforstop())break;
-		pthread_mutex_lock(&mutex);
-		pthread_cond_wait(&cond, &mutex);
-
-		GetTime(&pt1);
-		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
-
-		Frame2Ipl(imgOrigin, imgResult, color);
-
-		pthread_mutex_unlock(&mutex);
-
-		Find_Center(imgResult);
-
-		DesireSpeed_Write(speed);//조정되어야함
+			printf("valid_left_amount = %d , valid_right_amount = %d \n", valid_left_amount, valid_right_amount);
+			break;
+		}
 	}
+
+	if (continue_turn_left == false && continue_turn_right == false) {          //turn max flag가 false인 경우 1. 직선 2. 과다곡선
+		printf("continue_turn_flag_off__1__\n");
+		if (turn_left_max == true) {                                  //2. 과다곡선인 경우, 차선이 정상검출범위내로 돌아올때까지 턴 유지
+			for (i = imgResult->widthStep - 1; i > (imgResult->width / 2) + line_tolerance; i--) {
+				if (imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255) {
+					continue_turn_left = false;
+					printf("continue_turn_flag_OFF__overCurve_left__\n");
+					break;
+				}
+				else if (i == imgResult->width / 2 + line_tolerance + 1) {
+					printf("continue_turn_flag_ON__overCurve_left__\n");
+					continue_turn_left = true;
+					break;
+				}
+			}
+		}
+		else if (turn_right_max == true) {
+			for (i = 0; i < (imgResult->width / 2) - line_tolerance; i++) {
+				if (imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255) {
+					continue_turn_right = false;
+					printf("continue_turn_flag_OFF__2_right__i:%d\n", i);
+					break;
+				}
+				else if (i == imgResult->width / 2 - line_tolerance - 1) {
+					printf("continue_turn_flag_ON__2_right__\n");
+					continue_turn_right = true;
+					break;
+				}
+			}
+		}
+	}
+
+	if (continue_turn_left == false && continue_turn_right == false) {   //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
+		printf("continue_turn_flag_all_off__3__\n");
+		for (i = 0; i <= valid_left_amount; i++) {                        //좌측 차선 검출
+			if (left[i*line_gap] != 0) {
+				left_line_start = y_start_line - i * line_gap;
+				left_line_end = y_start_line - (i + valid_left_amount) * line_gap;
+				break;
+			}
+		}
+		for (i = 0; i <= valid_right_amount; i++) {                        //우측 차선 검출
+			if (right[i*line_gap] != imgResult->width - 1) {
+				right_line_start = y_start_line - i * line_gap;
+				right_line_end = y_start_line - (i + valid_right_amount) * line_gap;
+				break;
+			}
+		}
+
+		printf("\nleft line = ");
+		for (i = 0; i < valid_left_amount; i++)printf("%d  ", left[i*line_gap]);
+		printf("    valid left line = %d\n", valid_left_amount);
+		printf("right line = ");
+		for (i = 0; i < valid_right_amount; i++)printf("%d ", right[i*line_gap]);
+		printf("    valid right line = %d\n", valid_right_amount);
+
+		if (valid_left_amount > 1) {                                          //좌측 차선 기울기 계산
+			left_slope[0] = (float)(left[0] - left[(valid_left_amount - 1)*line_gap]) / (float)(valid_left_amount*line_gap);
+		}
+		else left_slope[0] = 0;
+
+		if (valid_right_amount > 1) {                                          //우측 차선 기울기 계산
+			right_slope[0] = (float)(right[0] - right[(valid_right_amount - 1)*line_gap]) / (float)(valid_right_amount*line_gap);
+		}
+		else right_slope[0] = 0;
+
+		control_angle = (left_slope[0] + right_slope[0])*low_line_weight;        //차량 조향 기울기 계산
+
+		printf("left_slope : %f ,right_slope : %f   	", left_slope[0], right_slope[0]);
+		printf("Control_Angle_low : %f \n\n", control_angle);
+	}
+
+	turn_left_max = continue_turn_left;             //현재 프레임에서 최대조향이라고 판단할 경우, 최대조향 전역변수 set.
+	turn_right_max = continue_turn_right;
+
+	if (turn_left_max == false && turn_right_max == false && control_angle == 0.0) {   //아랫쪽차선 검출시도후, 직진주행 하는 경우,
+		printf("Does not detected low_lain\n");
+		for (i = y_high_start_line; i > y_high_end_line; i = i - line_gap) {
+			for (j = (imgResult->width) / 2; j > 0; j--) {                            //Searching the left line point
+				left[y_high_start_line - i] = j;
+				if (imgResult->imageData[i*imgResult->widthStep + j] == 255) {
+					for (k = 0; k < high_line_width; k++) {                     //차선이 line_width만큼 연속으로 나오는지 확인
+						if (j - k <= 0)
+							k = high_line_width - 1;
+						else if (imgResult->imageData[i*imgResult->widthStep + j - k] == 255)
+							continue;
+						break;
+					}
+					if (k = high_line_width - 1) {
+						valid_high_left_amount++;
+						break;
+					}
+				}
+			}
+			for (j = (imgResult->width) / 2; j < imgResult->width; j++) {             //Searching the right line point
+				right[y_high_start_line - i] = j;
+				if (imgResult->imageData[i*imgResult->widthStep + j] == 255) {
+					for (k = 0; k < high_line_width; k++) {                   //차선이 line_width만큼 연속으로 나오는지 확인
+						if (j + k >= imgResult->widthStep)
+							k = high_line_width - 1;
+						else if (imgResult->imageData[i*imgResult->widthStep + j + k] == 255)
+							continue;
+						break;
+					}
+					if (k = high_line_width - 1) {
+						valid_high_right_amount++;
+						break;
+					}
+				}
+			}
+			//   if(left[y_high_start_line-i]>((imgResult->width/2)-high_tolerance)||right[y_high_start_line-i]<((imgResult->width/2)+high_tolerance))     //검출된 차선이 화면중앙부근에 있는경우, 아랫쪽차선까지 올수있도록 무시
+			//       break;
+		}
+
+		for (i = 0; i <= valid_high_left_amount; i++) {                        //좌측 차선 검출
+			if (left[i*line_gap] != 0) {
+				left_line_start = y_high_start_line - i * line_gap;
+				left_line_end = y_high_start_line - (i + valid_high_left_amount) * line_gap;
+				break;
+			}
+		}
+		for (i = 0; i <= valid_high_right_amount; i++) {                        //우측 차선 검출
+			if (right[i*line_gap] != imgResult->width - 1) {
+				right_line_start = y_high_start_line - i * line_gap;
+				right_line_end = y_high_start_line - (i + valid_right_amount) * line_gap;
+				break;
+			}
+		}
+
+		printf("\nleft high line = ");
+		for (i = 0; i < valid_high_left_amount; i++)printf("%d  ", left[i*line_gap]);
+		printf("    valid high left line = %d\n", valid_high_left_amount);
+		printf("right high line = ");
+		for (i = 0; i < valid_high_right_amount; i++)printf("%d ", right[i*line_gap]);
+		printf("    valid high right line = %d\n", valid_high_right_amount);
+
+		if (valid_high_left_amount > 1) {                                          //좌측 차선 기울기 계산
+			left_slope[0] = (float)(left[0] - left[(valid_high_left_amount - 1)*line_gap]) / (float)(valid_high_left_amount*line_gap);
+		}
+		else left_slope[0] = 0;
+
+		if (valid_high_right_amount > 1) {                                          //우측 차선 기울기 계산
+			right_slope[0] = (float)(right[0] - right[(valid_high_right_amount - 1)*line_gap]) / (float)(valid_high_right_amount*line_gap);
+		}
+		else right_slope[0] = 0;
+
+		control_angle = (left_slope[0] + right_slope[0])*high_line_weight;        //차량 조향 기울기 계산
+
+		printf("left_slope : %f ,right_slope : %f   	", left_slope[0], right_slope[0]);
+		printf("Control_Angle_high : %f \n\n", control_angle);
+
+		if (abs(control_angle) > 100)    //위쪽차선에서 과하게 꺾을경우, 방지 ; 코너에서 인코스로 들어오는걸 방지
+			control_angle = 0;
+
+	}
+
+
+	if (turn_left_max == true)                      //차량 조향각도 판별
+		angle = 2000;
+	else if (turn_right_max == true)
+		angle = 1000;
+	else {
+		angle = 1500 + control_angle;                                  // Range : 1000(Right)~1500(default)~2000(Left)
+		angle = angle > 2000 ? 2000 : angle < 1000 ? 1000 : angle;           // Bounding the angle range
+	}
+	SteeringServoControl_Write(angle);
+
+#ifdef SPEED_CONTROL
+	if (angle < 1200 || angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
+		speed = curve_speed;
+	else
+		speed = straight_speed;
+#endif
+
+#ifdef ROI
+	for (i = 0; i < imgResult->widthStep; i++) {
+		imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
+	}
+	for (i = 0; i < imgResult->widthStep; i++) {
+		imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
+	}
+	for (i = 0; i < imgResult->widthStep; i++) {
+		imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
+	}
+	for (i = 0; i < imgResult->widthStep; i++) {
+		imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
+	}
+#endif
+
 }
 
-int detecttrafficsignal(){//어떻게 할지 논의가 필요 : 신호등인가 로터리인가를 판단해 주는 부분
-	//신호등 테스트 시 return 1 주석 풀어주세요
-
-
-	//return 1;
-
-	return 0;
-}
-
-void rotary(){
-
-     NvMediaTime pt1 ={0}, pt2 = {0};
-    NvU64 ptime1, ptime2;
-    struct timespec;
-    int data = 0;//sensor data
-
-    bool Departure = false;
-    bool IsDetected = false;
-
-    int i,j,k = 0;//for loop
-
-
-    double PixLeftUp = 0;
-    double PixLeftDown = 0;
-    double PixRightUp = 0;
-    double PixRightDown = 0;
-
-
-    IplImage *imgOrigin;
-    IplImage *imgResult;
-    imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
-    imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
-    cvZero(imgResult);
-    char fileName1[40];
-    printf(" rotary started :D :D:D:D:D:D:D:D:D:D\n\n");
-    while(true) {
-        pthread_mutex_lock(&mutex);
-        pthread_cond_wait(&cond, &mutex);
-
-        GetTime(&pt1);
-        ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
-
-        Frame2Ipl(imgOrigin, imgResult,4);
-
-        pthread_mutex_unlock(&mutex);
-
-
-
-        PixLeftUp = 0;
-        PixLeftDown = 0;
-        PixRightUp = 0;
-        PixRightDown = 0;
-
-        #ifdef IMGSAVE
-        //sprintf(fileName, "captureImage/imgOrigin%d.png", i);
-        sprintf(fileName1, "captureImage/imgResult%d.png", k++);          // TY add 6.27
-        //sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
-
-
-        //cvSaveImage(fileName, imgOrigin, 0);
-        cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
-        //cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
-        #endif
-        printf("waitingnow\n");
-        if(!Departure){
-            for(i = 0;i<ROTARYUPDOWNLINE;i++)
-                for(j = 0;j<ROTARYLEFTRIGHTLINE;j++)//left up side
-                    if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3]<55 && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]>125&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<141&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]>120&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<133)
-                        PixLeftUp++;
-            PixLeftUp = PixLeftUp/(ROTARYUPDOWNLINE*ROTARYLEFTRIGHTLINE);
-
-            for(i = 0;i<ROTARYUPDOWNLINE;i++)
-                for(j = ROTARYLEFTRIGHTLINE;j<RESIZE_WIDTH;j++)//Right up side
-                    if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3]<55 && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]>125&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<141&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]>120&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<133)
-                        PixRightUp++;
-            PixRightUp = PixRightUp/((RESIZE_WIDTH-ROTARYLEFTRIGHTLINE)*ROTARYUPDOWNLINE);
-
-            for(i = ROTARYUPDOWNLINE;i< RESIZE_HEIGHT;i++)
-                for(j = 0;j<ROTARYLEFTRIGHTLINE;j++)//left up side
-                    if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3]<55 && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]>125&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<141&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]>120&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<133)
-                        PixLeftDown++;
-            PixLeftDown = PixLeftDown/((RESIZE_HEIGHT-ROTARYUPDOWNLINE)*ROTARYLEFTRIGHTLINE);
-
-            for(i = ROTARYUPDOWNLINE;i< RESIZE_HEIGHT;i++)
-                for(j = ROTARYLEFTRIGHTLINE;j<RESIZE_WIDTH;j++)//left up side
-                    if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3]<55 && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]>125&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<141&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]>120&&imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1]<133)
-                        PixRightDown++;
-            PixRightDown = PixRightDown/((RESIZE_WIDTH-ROTARYLEFTRIGHTLINE)*(RESIZE_HEIGHT-ROTARYUPDOWNLINE));
-
-            //if(!(PixLeftDown>=PixLeftUp&&PixLeftDown>=PixRightDown&&PixLeftDown>=PixRightUp))//교차로 진입로 좌측에 차량이 존재하는 경우x
-            if(PixRightDown>=PixLeftUp&&PixRightDown>=PixLeftDown&&PixRightDown>=PixRightUp)//테스토 용도
-            {
-                printf("GETIN\n");
-                Alarm_Write(ON);
-                    usleep(100000);
-                 Alarm_Write(OFF);
-                Departure = true;
-            }
-        }
-        else{
-            Find_Center(imgResult);
-            printf("running now");
-            data = DistanceSensor(CHANNEL1);
-            if(data>1900&&data<4000){//거리<11cm미만일시
-                speed = 40;//조절되야함
-                printf("slow down\n");
-                IsDetected = true;
-            }
-            else if(data<1000&&data<1900){
-                IsDetected = true;
-                //printf("speed up\n");
-                //speed = 80;
-            }
-            else{//탈출조건
-                if(IsDetected)break;//장애물을 따라가다가 장애물이 사라졌거나
-                data = DistanceSensor(CHANNEL4);
-                if(data>2000)//후방 장애물 10cm 내 발견시
-                break;
-            }
-        }
-    	DesireSpeed_Write(speed);
-    }
-	printf("rotary finished\n");
-}
-void trafficlight(){
-	return 0;
-}
-
-
-void *ControlThread(void *unused){
+void *ControlThread(void *unused) {
 	int i = 0;
 	int line = 0;
+	int module_process = 0;
+	static int stop_check = 0;
+	static int flag = 0;
+	static int stop_line_detected = 0;
 	char fileName[40];
 	char fileName1[40];         // TY add 6.27
 	char fileName_color[40];         // NYC add 8.25
-	//char fileName2[30];           // TY add 6.27
+									 //char fileName2[30];           // TY add 6.27
 	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
 	NvU64 ptime1, ptime2;
 	struct timespec;
@@ -1449,7 +1553,7 @@ void *ControlThread(void *unused){
 	IplImage* imgOrigin;
 	IplImage* imgResult;            // TY add 6.27
 
-	// cvCreateImage
+									// cvCreateImage
 	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
 	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
 
@@ -1469,84 +1573,83 @@ void *ControlThread(void *unused){
 
 		// TODO : control steering angle based on captured image ---------------
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
-//
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
+		//
 		//긴급선회모듈
 		sprintf(fileName, "captureImage/rotaryimg.png", i);
 		cvSaveImage(fileName, imgResult, 0);
 		int line = isLine();
 		/*
-			긴급 탈출은 적외선 값을 읽어서 독자 쓰레드를 파야 할지도 모른다고 코멘트 주셨습니다.
-			주차는 독자 로직으로 해야할것 같다고 동재선배님이 코멘트 주셨습니다.
+		긴급 복귀은 적외선 값을 읽어서 독자 쓰레드를 파야 할지도 모른다고 코멘트 주셨습니다.
+		주차는 독자 로직으로 해야할것 같다고 동재선배님이 코멘트 주셨습니다.
 		*/
-		if(line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);
-		else if (red_count > 280*10*0.4){//TODO : Threashold
-			printf("\nStop! Red stop / countpx : %d / %d \n\n",red_count, mThreshold);
-			speed = 0;
+		if (line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);
 
-			//emergencyStopRed();// 수정완료
+		//emergency red 돌발 정지 모듈
+		else if (red_count > 280 * 10 * 0.4) {
+			emergencyStopRed();
+		}
 
+		//flag에 따른 모듈 변화(1 = 회전교차로 2= 3way 3= 신호등) 
+		else if (flag > 0) {
+			flag = flag_module(flag, imgResult);
+		}
+
+		//////정지선 판단까지 & 정지 후 교차로,신호등 판단
+		else if (stop_check == 1) {
+			//정지선
+			if (color == 0) {
+				color = 1;
+				break;
 			}
-		else if (white_count > 500){//2000bef for test down {//TODO : Threashold
-			///////////////////////////////////
-			printf("whiteLine : %d / %d\n", white_count, 5000);
-			switch(white_line_process(imgOrigin)){
-				case 1:{
-					printf("stopline detected\n\n");
-					befwhitelinedriving(); 					//정지선 검출전 주행 정지선 밟으면 return
+			stop_line_detected = dectectStop(IplImage* imgResult);//정지선 검출전 주행 정지선 밟으면 return
+			printf("detect stopline\n\n");
 
-					printf("sensor detect stopline\n\n");
-
-					if(detecttrafficsignal(imgOrigin)){ // 신호등인지 로터리인지 판단 신호등 3 로터리 4
-						printf("trafficlight module\n\n");
-						trafficlight();
-					}
-					else{
-						printf("rotary module\n\n");
-						rotary();
-					}
+			if (stop_line_detected == 1) { // 신호등인지 로터리인지 판단
+				if (detect_signal() == 1) {
+					flag = 3;//신호등
+					stop_check = 0;
 				}
-				case 2:{
-					printf("3way detected\n\n");
-					while(1){
-						Alarm_Write(ON);
-                    	usleep(100000);
-                 		Alarm_Write(OFF);
-            		 }
-					/*
-
-							3차선 구간
-										*/
+				else if (detect_signal() == 2) {
+					flag = 1;//rotary
+					stop_check = 0;
 				}
-				default:printf("nothing new\n\n");
 			}
 		}
-		else if(0){
-		//////////////////////////////////////////
-		//주차를 위한 공간
-			printf("parking module on(VERTICAL)\n\n");
-		//////////////////////////////
-			printf("parking module on(HORIZONTAL)\n\n");
-		/////////////////////////////////////////
+
+		//흰색 인식 후 점선(3차선)인지 정지선인지 판단
+		else if (white_count > 500) {//2000bef for test down 
+			module_process = white_line_process(imgOrigin);
+			//3차선
+			if (module_process == 2) {
+				flag = 2;
+				printf("3way detected\n\n");
+			}
+			else if (module_process == 1)
+				stop_check = 1;
 		}
-		else{
-		printf("\n\nFind_Center!!\n\n");
-		Find_Center(imgResult);
+
+		//평상시 Find_Center 작동
+		else {
+			printf("\n\nFind_Center!!\n\n");
+			Find_Center(imgResult);
 		}
-		#ifdef IMGSAVE
+
+
+#ifdef IMGSAVE
 		sprintf(fileName, "captureImage/imgOrigin%d.png", i);
 		sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
-		//sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
-		//sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
+																		//sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
+																		//sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
 
 		cvSaveImage(fileName, imgOrigin, 0);
 		cvSaveImage(fileName1, imgResult, 0);           // TY add 6.27
-		//cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
-		//cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
+														//cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
+														//cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
 
-		//  디버그 이미지 생성
+														//  디버그 이미지 생성
 		char str_info[50];
 		sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", i, angle, speed);
 		writeonImage(imgResult, str_info);
@@ -1558,13 +1661,9 @@ void *ControlThread(void *unused){
 		DesireSpeed_Write(speed);
 		//===================================
 		//  LOG 파일 작성
-        writeLog(i);
-        //===================================
+		writeLog(i);
+		//===================================
 		// 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
-
-
-
-
 
 		//TY설명 내용
 		//imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
@@ -1591,7 +1690,7 @@ int main(int argc, char *argv[])
 
 	//////////////////////////////// TY add 6.27
 	unsigned char status;         // To using CAR Control
-	//short speed;
+								  //short speed;
 	unsigned char gain;
 	int position, position_now;
 	//short angle;
@@ -1602,7 +1701,7 @@ int main(int argc, char *argv[])
 	int tol;
 	char byte = 0x80;
 
-	f = fopen("captureImage/sensorlog.txt","w");
+	f = fopen("captureImage/sensorlog.txt", "w");
 
 	////////////////////////////////
 
@@ -1857,28 +1956,28 @@ int main(int argc, char *argv[])
 	NvSemaphoreDecrement(vipDoneSem, NV_TIMEOUT_INFINITE);
 	err = 0;
 
-	#ifdef SPEED_CONTROL    //TY ADD
-		speed = 0;
-		DesireSpeed_Write(speed);
-	#endif
+#ifdef SPEED_CONTROL    //TY ADD
+	speed = 0;
+	DesireSpeed_Write(speed);
+#endif
 
-	#ifdef LIGHT_BEEP
-		CarLight_Write(ALL_OFF);
-		usleep(1000000);
-	#endif
+#ifdef LIGHT_BEEP
+	CarLight_Write(ALL_OFF);
+	usleep(1000000);
+#endif
 
-	#ifdef SERVO_CONTROL
-		angle = 1500;
-		SteeringServoControl_Write(angle);
-		CameraXServoControl_Write(angle);
-		CameraYServoControl_Write(angle);
-	#endif
+#ifdef SERVO_CONTROL
+	angle = 1500;
+	SteeringServoControl_Write(angle);
+	CameraXServoControl_Write(angle);
+	CameraYServoControl_Write(angle);
+#endif
 
 	fclose(f);
 
 
 fail: // Run down sequence
-	// Destroy vip threads and stream start/done semaphores
+	  // Destroy vip threads and stream start/done semaphores
 	if (vipThread)
 		NvThreadDestroy(vipThread);
 	if (vipDoneSem)
@@ -1921,7 +2020,7 @@ fail: // Run down sequence
 		case AnalogDevices_ADV7180: // TBD
 			break;
 		case AnalogDevices_ADV7182: // TBD
-			//testutil_capture_input_close(handle);
+									//testutil_capture_input_close(handle);
 			break;
 		default:
 			break;
