@@ -658,100 +658,81 @@ void emergencyStopRed(IplImage* imgColor){ // Find_Center보다 뒤에서 사용
  
 }
 
-void swap(int *ptr1, int *ptr2) 
-{
-	int temp = *ptr1;
 
-	if (*ptr1 >= *ptr2)
-	{
-		*ptr1 = *ptr2;
-		*ptr2 = temp;
-	}
+int filteredIR(int num) // 필터링한 적외선 센서값
+{
+int sensorValue = 0;
+int i;
+for(i=0; i<25; i++)
+{
+sensorValue += DistanceSensor(num);
+}
+sensorValue /= 25;
+return sensorValue;
 }
 
-int filteredIR(int num) // 필터링한 적외선 센서값 
-{
-	int sensorValue[5] = { 0 };
-
-	for(i=0; i<5; i++)
-	{
-		for(j=0; j<10; j++)
-		{
-			sensorValue[i] += DistanceSensor(num);
-		}
-
-		sensorValue[i] /= 10;
-	}
-
-	for (i = 0; i < 4; i++)
-	{
-		for (j = 0; j < 4; j++)
-		{
-			swap(sensorValue + j, sensorValue + j + 1);
-		}
-	}
-
-	return sensorValue[2];
-}
 
 int Threeway_hardcoding()
 {
    int tw_speed;
-   int tw_straight_speed = 140;
-   int tw_curve_speed = 80;
+   int tw_straight_speed = 140;//직진 속도
+   int tw_curve_speed = 105;//조향 속도
    int flag = 0;
    int escape = 0;
    int data = 0;
    int channel;
    int angle;
+   int weight = 120; //encoder 전용 weight
+   int t = 1; //t=1 이면 왼쪽에 장애물이 있으므로 오른쪽으로 피하고, t=-1 이면 오른쪽에 장애물이 있으므로 왼쪽으로 피함.
+              //영상처리후 t 값결정!!
 
    unsigned char status;
    unsigned char gain;
-   int position_now = 0;
+   int position_now = 0;//encoder 초기화
    int tol;
-
+   
 
    CarControlInit();
    SpeedControlOnOff_Write(CONTROL); 
-   PositionControlOnOff_Write(CONTROL);
-   DesireSpeed_Write(tw_straight_speed);
+   PositionControlOnOff_Write(UNCONTROL);// encoder는 이상하게 Uncontrol화 시켜야함
+   DesireSpeed_Write(tw_straight_speed);//초기 스피드 
 
    gain = 20;
    PositionProportionPoint_Write(gain);
            
    
     EncoderCounter_Write(position_now);
-    SteeringServoControl_Write(1500);//straight
+    SteeringServoControl_Write(1500);//직진
     
-    while(EncoderCounter_Read() <= 700) // until 700
+    while(EncoderCounter_Read() <= 20 * weight) 
     {
         DesireSpeed_Write(tw_straight_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
 
-    EncoderCounter_Write(position_now);
-    SteeringServoControl_Write(1150);//오른쪽 조향
+    EncoderCounter_Write(position_now);//엔코더 초기화
+    SteeringServoControl_Write(1500 - t * 400);//오른쪽 조향 1100, 왼쪽 조향 1900; 이것은 t값에 따라 바뀜!! 아래 설명 생략
     
-    while(EncoderCounter_Read() <= 4500) 
+    while(EncoderCounter_Read() <= 50 * weight) 
     {
         DesireSpeed_Write(tw_curve_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
     EncoderCounter_Write(position_now);
-    SteeringServoControl_Write(1500);//straight
+    SteeringServoControl_Write(1500);//직진
     
-    while(EncoderCounter_Read() <= 600) 
+    while(EncoderCounter_Read() <= 30 * weight) 
     {
         DesireSpeed_Write(tw_straight_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
     EncoderCounter_Write(position_now);
-    SteeringServoControl_Write(1850);//왼쪽 조향
+    SteeringServoControl_Write(1500 + t * 400);//왼쪽 조향  1900, 오른쪽 조향 1100; 위와 똑같은 이론
     
-    while(EncoderCounter_Read() <= 4500)
+    while(EncoderCounter_Read() <= 50 * weight)
     {
         DesireSpeed_Write(tw_curve_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
@@ -765,15 +746,14 @@ int Threeway_hardcoding()
         printf("flag = %d",flag);
         while(escape<2){
             channel =6;
-            data = filteredIR(channel);
+            data = filteredIR(channel); // 필터링 한 센서값을 이용 
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
-            //sleep(1);
-            if(data>1000)escape++;
+            if(data>900)escape++; // 최대한 멀리서도 볼 수 있게 값 설정!
         }
 
         flag ++;
         Alarm_Write(ON);
-        sleep(1);
+        usleep(500000);// 알람을 키고 끄는데 걸리는 적당한 시간!
         Alarm_Write(OFF);
 
         while(flag<2){
@@ -781,22 +761,21 @@ int Threeway_hardcoding()
             channel =5;
             data = filteredIR(channel);
             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
-            //sleep(1);
-            if(data>1000) flag++;
+            if(data>900) flag++;
         }
     }
 
     Alarm_Write(ON);
-    sleep(1);
+    usleep(500000);
     Alarm_Write(OFF);
 
-    // after passing obstacle
-    PositionControlOnOff_Write(CONTROL);
+    //장애물을 피한 후 
+    //PositionControlOnOff_Write(CONTROL);
 
     EncoderCounter_Write(position_now);
-	SteeringServoControl_Write(1850);//Left
+	SteeringServoControl_Write(1500 + t * 400);//Left 1900
   
-    while(EncoderCounter_Read() <= 4500)
+    while(EncoderCounter_Read() <= 50 * weight)
     {
         DesireSpeed_Write(tw_curve_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
@@ -805,16 +784,16 @@ int Threeway_hardcoding()
     EncoderCounter_Write(position_now);
     SteeringServoControl_Write(1500);//직진
 
-    while(EncoderCounter_Read() <= 600)
+    while(EncoderCounter_Read() <= 30 * weight)
     {
         DesireSpeed_Write(tw_straight_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
     }
 
     EncoderCounter_Write(position_now);
-    SteeringServoControl_Write(1150);//Right
+    SteeringServoControl_Write(1500 - t * 400);//Right 1100
 
-    while(EncoderCounter_Read() <= 4500)
+    while(EncoderCounter_Read() <= 50 * weight)
     {
         DesireSpeed_Write(tw_curve_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
@@ -823,7 +802,7 @@ int Threeway_hardcoding()
     EncoderCounter_Write(position_now);
 	SteeringServoControl_Write(1500);
     
-    while(EncoderCounter_Read() <= 1000)
+    while(EncoderCounter_Read() <= 25 * weight)
     {
         DesireSpeed_Write(tw_straight_speed);
         printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read());
