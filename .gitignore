@@ -8,3 +8,6 @@ caputeOpenCV
 captureOpenCV2.c
 main.c
 saveobstacle 10.jpg
+white_check.c
+obs2.c
+obs1.c
