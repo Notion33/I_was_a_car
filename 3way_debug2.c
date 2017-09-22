@@ -1546,6 +1546,7 @@ void changhwan(){
 	
 	bool center_of_3way =false;
 	bool middle_of_3way =false;
+	int detect_object =0;
 
 	IplImage* imgOrigin;
 	IplImage* imgResult;            // TY add 6.27
@@ -1629,6 +1630,12 @@ void changhwan(){
 				data = DistanceSensor(channel);
             	printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
             	usleep(100000);
+
+            	if(data>561) detect_object++;
+            	if(detect_object>2){
+
+            	 	while(1) {DesireSpeed_Write(0);    }
+				}
 				 			
 		}
 				/*	if(픽셀이 좌우가 숫자 각으면){
