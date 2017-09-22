@@ -1484,11 +1484,37 @@ void changhwan(){
 		pthread_mutex_unlock(&mutex);
 
 		new_white_count=0;
+		left_white_count=0;
+		right_white_count = 0;
 
 		if(center_of_3way == false){ // 차량이 아직 흰석 중앙에 위치 하지 않음. 더 조향해야함
-			printf("\n center of 3way is false \n");
-			for(i = 50;i<200;i++){
-					for(j = 20;j<160;j++){
+			printf("\n center of 3way is ///false/// \n");
+			
+			if(middle_of_3way == false){ // middle of 3_way == false , 중앙보다 덜 갔을때 계속 조향
+				printf("\n middle_of_3way == ///false/// \n");
+
+				for(i = 50;i<200;i++){
+					for(j=160; j<320; j++){
+						if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100){
+							imgResult->imageData[i*320+j] = 255;
+							new_white_count ++;	//white pixel in right
+						}
+						else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
+						else imgResult->imageData[i*320+j] = 127;
+					}
+				}
+				if(new_white_count>1000) middle_of_3way=true;
+
+				else {
+					SteeringServoControl_Write(2000);
+					DesireSpeed_Write(80);
+				}
+			}
+			else { //middle of 3way == true
+				printf("\n //middle//_of_3way == ///true/// \n");
+
+				for(i = 50;i<200;i++){
+					for(j = 0;j<160;j++){
 						if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100){
 							imgResult->imageData[i*320+j] = 255;//white pixel in left
 							left_white_count ++;
@@ -1496,7 +1522,7 @@ void changhwan(){
 						else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
 						else imgResult->imageData[i*320+j] = 127;
 					}
-					for(j=160; j<300; j++){
+					for(j=160; j<320; j++){
 						if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100){
 							imgResult->imageData[i*320+j] = 255;
 							right_white_count ++;	//white pixel in right
@@ -1505,22 +1531,19 @@ void changhwan(){
 						else imgResult->imageData[i*320+j] = 127;
 					}
 				}
-			if (left_white_count>1000 && right_white_count>1000)
-				middle_of_3way = true;
+				if ((left_white_count>800 && right_white_count>800)||(left_white_count<300 && right_white_count<300)){
+					center_of_3way = true;
+				}
+			}
+		}
 
-			if(middle_of_3way == false){ // middle of 3_way == false , 중앙보다 덜 갔을때 계속 조향
-				printf("\n === car is in the middle of 3way ==== \n");
-				SteeringServoControl_Write(2000);
-				DesireSpeed_Write(80);
-			}
-			else { //middle of 3way == true 이면
+		else { //center of 3way == true 이면
 				// 흰샌 점선이 차량 중앙을 지나 오른쪽에 치우쳤을때 중앙 기준 흰색 픽셀이 좌우 비슷해질때까지 조향
-				printf("\n === car is in the middle of 3way ==== \n");
-				Alarm_Write(ON);
-				sleep(1);
-				Alarm_Write(OFF);
-				DesireSpeed_Write(0);				
-			}
+				printf("\n //center// of 3way == ///true/// \n");
+				 Alarm_Write(ON);
+//				 sleep(1);
+	//			 Alarm_Write(OFF);
+				 DesireSpeed_Write(0);				
 		}
 				/*	if(픽셀이 좌우가 숫자 각으면){
 						SteeringServoControl_Write(2000);
@@ -1532,7 +1555,7 @@ void changhwan(){
 					}*/
 		printf("\n new_white_count = %d \n\n",new_white_count);
 		printf("\n right_white_count = %d \n\n",right_white_count);
-		printf("\n left_white_count = %d \n\n",left_white_count);
+		printf("\n left_white_count = %d \n\n",left_white_count); 
 		printf("\n num = %d \n",num);
 		sprintf(fileName, "imgsaved/0922_%d.png", num);          // TY add 6.27
 		num++;
