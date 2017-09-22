@@ -1537,6 +1537,8 @@ void changhwan(){
 	int num =0;
 	int i = 0;
 	int j = 0;
+	int data= 0;
+	int channel =1;
 	
 	int new_white_count=0;
 	int	left_white_count = 0;
@@ -1623,8 +1625,10 @@ void changhwan(){
 		else { //center of 3way == true 이면
 				// 흰샌 점선이 차량 중앙을 지나 오른쪽에 치우쳤을때 중앙 기준 흰색 픽셀이 좌우 비슷해질때까지 조향
 				printf("\n //center// of 3way == ///true/// \n");
-				color=4;
 				Find_Center_dr2(imgResult);
+				data = DistanceSensor(channel);
+            	printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+            	usleep(100000);
 				 			
 		}
 				/*	if(픽셀이 좌우가 숫자 각으면){
