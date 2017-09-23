@@ -1525,6 +1525,127 @@ void trafficlight(){
 	return 0;
 }
 
+void detect_hwan(){
+	int width = 280, height = 80;
+    int mThreshold = width*height*0.4;
+
+    int i, j, k;
+    int countwhite = 0;
+    int countblack =0;
+    int blackseries = 0;
+    int hwanname[40];
+    int blackloc=0;
+    char obsloc;
+
+    unsigned char status;
+    short tw_speed;
+    unsigned char gain;
+    int position, position_now;
+    int channel;
+    int data=0;
+    char sensor;
+    int tol;
+    char byte = 0x80;
+    int flag =0;
+    int escape=0; 
+    CarControlInit();
+    
+    CvPoint startpoint, endpoint, scanbound;
+   
+    startpoint.x = 1; //(136,120)  (252,149) // start ROI
+    startpoint.y = 122;
+ 
+    endpoint.x = 318; // end ROI
+    endpoint.y = 160;
+
+    scanbound.x = 1;
+    scanbound.y = 1; // initialize
+
+ 
+    IplImage* imgOrigin;
+	IplImage* imgResult; 
+
+    imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
+	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+
+	cvZero(imgResult);          // TY add 6.27
+
+	CameraYServoControl_Write(1600); 	//camera up
+    sleep(1);
+
+		/////////////////////////////
+	pthread_mutex_lock(&mutex);
+	pthread_cond_wait(&cond, &mutex);
+
+	GetTime(&pt1);
+	ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+
+	Frame2Ipl(imgOrigin, imgResult, color);
+
+	pthread_mutex_unlock(&mutex);
+	////////////////////////////////
+
+	for(i = 0;i<200;i++){
+		for(j=0; j<320; j++){
+			if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100){
+				imgResult->imageData[i*320+j] = 255;
+				new_white_count ++;	//white pixel in right
+			}
+			else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
+			else imgResult->imageData[i*320+j] = 127;
+		}
+	}
+
+///////////////////알골
+  /*  for(j= startpoint.y; j < endpoint.y; j++){
+        for(i= startpoint.x ; i< endpoint.x; i++){
+            int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
+            if(px == blackpx){
+            
+                countblack++;
+            }
+            else if(px== whitepx)
+            
+                countwhite++;            
+        }
+    }
+
+    for (j = endpoint.y; j > startpoint.y; j--) {
+        for (i = endpoint.x; i > startpoint.x; i--) {
+            int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
+           
+            if (px == blackpx) {
+             //   countblack++;//검정색 만나면 스타트! 연속해서 15px 있는지 확인
+                for (k = i; k > i- 15; k--) {
+                    int px2 = Binaryimg->imageData[k + j*Binaryimg->widthStep];
+                    if (px2 == blackpx) blackseries++;
+                    else break;
+                }
+                if (blackseries == 15) {
+                    blackloc = i - 7;   
+                    break;
+                }
+                else blackseries = 0;
+            }
+            
+        }
+        if (blackseries == 15) break;
+    }
+    scanbound.x = k;
+    scanbound.y = j;*/
+
+    cvRectangle(Binaryimg, startpoint, endpoint, CV_RGB(255,255,0), 1, 8, 0); // ROI boundary
+  //  cvLine(Binaryimg, scanbound, endpoint, CV_RGB(255,255,0), 1, 8, 0);    //scan boundary
+   
+    // printf("countblack is %d \n",countblack);
+    // printf("countwhite is %d \n",countwhite);
+    // printf("black center is %d and blackseries is on %d \n",blackloc,blackseries);
+   
+    sprintf(hwanname, "img/%d.png", i);
+        
+    cvSaveImage(hwanname, Binaryimg, 0);     
+}
+
 void changhwan(){
 
 	char fileName[40];
@@ -1914,9 +2035,11 @@ void ControlThread(void *unused){
 
 					printf("3way detected\n\n");
 					Alarm_Write(ON);
+					sleep(1);
 					Alarm_Write(OFF);
-					changhwan();
-
+					sleep(1);
+					//changhwan();
+					detect_hwan();
 					/*
 							3차선 구간
 										*/
