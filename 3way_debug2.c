@@ -1740,8 +1740,8 @@ void changhwan(){
 		
 			if(middle_of_3way == false){ // middle of 3_way == false , 중앙보다 덜 갔을때 계속 조향
 	//			printf("\n middle_of_3way == ///false/// \n");
-				printf("new_white_count = %d \n
-						center of 3way is %s  /  middle_of_3way is %s \n",new_white_count,center_of_3way ? "true" : "false", middle_of_3way ? "true" : "false");
+				printf("new_white_count = %d",new_white_count);
+				printf("center of 3way is %s // middle_of_3way is %s \n",center_of_3way ? "true" : "false", middle_of_3way ? "true" : "false");
 
 
 				for(i = 50;i<200;i++){
@@ -1755,18 +1755,20 @@ void changhwan(){
 					}
 				}
 
-				if(new_white_count>1000){ 
+				if(new_white_count>1200){ 
 					middle_of_3way=true;
-					DesireSpeed_Write(0);
-					sleep(1);
-					printf("new_white_count = %d \n
-						center of 3way is %s  /  middle_of_3way is %s \n",new_white_count,center_of_3way ? "true" : "false", middle_of_3way ? "true" : "false");
+					SteeringServoControl_Write(2000);
+					DesireSpeed_Write(80);
+				
+				printf("new_white_count = %d",new_white_count);
+				printf("center of 3way is %s // middle_of_3way is %s \n",center_of_3way ? "true" : "false", middle_of_3way ? "true" : "false");
 
 				}
 
 				else {
 					SteeringServoControl_Write(2000);
 					DesireSpeed_Write(80);
+					
 				}
 			}
 			else { //middle of 3way == true
@@ -1793,12 +1795,12 @@ void changhwan(){
 				if ((left_white_count>800 && right_white_count>800)||(left_white_count<300 && right_white_count<300)){
 					center_of_3way = true;
 				}
-			}
+			}	
 		}
 
 		else { //center of 3way == true 이면
 				// 흰샌 점선이 차량 중앙을 지나 오른쪽에 치우쳤을때 중앙 기준 흰색 픽셀이 좌우 비슷해질때까지 조향
-				printf("\n //center// of 3way == ///true/// \n");
+				printf("\n /////////find center algorithm///////// \n");
 				Find_Center_dr2(imgResult);
 				data = DistanceSensor(channel);
             	printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
@@ -1833,7 +1835,7 @@ void changhwan(){
 		
 		num++;
    		cvSaveImage(fileName, imgResult, 0); 
-   		cvSaveImage(fileName1, imgOrigin, 0);  
+   	//	cvSaveImage(fileName1, imgOrigin, 0);  
   
    		         // TY add 6.27	
 
