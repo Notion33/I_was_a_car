@@ -1702,6 +1702,7 @@ void changhwan(){
 	int j = 0;
 	int data= 0;
 	int channel =1;
+	int cc=0;
 	
 	int new_white_count=0;
 	int	left_white_count = 0;
@@ -1801,23 +1802,33 @@ void changhwan(){
 		else { //center of 3way == true 이면
 				// 흰샌 점선이 차량 중앙을 지나 오른쪽에 치우쳤을때 중앙 기준 흰색 픽셀이 좌우 비슷해질때까지 조향
 				printf("\n /////////find center algorithm///////// \n");
-				Find_Center_dr2(imgResult);
-				data = DistanceSensor(channel);
-            	printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
-            	usleep(100000);
+				SteeringServoControl_Write(1200);           	
+				while( cc <10)
+					{
+						DesireSpeed_Write(70);
+						cc++;
+					}
+            
+			//	Find_Center_dr2(imgResult);
+				// data = DistanceSensor(channel);
+    //         	printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+    //         	usleep(100000);
 
-            	if(data>561) detect_object++;
-            	if(detect_object>1){
+            	// if(data>561) detect_object++;
+            	// if(detect_object>1){
 
             		DesireSpeed_Write(0);
             		SteeringServoControl_Write(1500);
             	 	DesireSpeed_Write(-80);
             	 	sleep(1);
   	           		DesireSpeed_Write(0);
-             	 	Threeway_hardcoding();
-				}
-				 			
+  	           		int detction = detect_hwan();
+  	           		printf("\ndetection = %d\n",detction);
+  	           		while(1){printf("system end");}
+             	// 	Threeway_hardcoding();
 		}
+				 			
+		
 				/*	if(픽셀이 좌우가 숫자 각으면){
 						SteeringServoControl_Write(2000);
 						DesireSpeed_Write(80);
