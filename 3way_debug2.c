@@ -1564,8 +1564,7 @@ int detect_hwan(){
     CvPoint startpoint, endpoint, scanbound,centstart,centend;
    
 	centstart.x=106;
-	centstart.y=122;
-	
+	centstart.y=122;	
 	centend.x=213;
 	centend.y=160;
 
@@ -1617,20 +1616,20 @@ int detect_hwan(){
     for(i = 50;i<200;i++){
         for(j=0; j<106; j++){
             int px = imgResult->imageData[i + j*imgResult->widthStep];
-            if(px == 0){
+            if(px <130 && px>120){
                 left_obj++;
             }
         }
 
-        for(j=107; j<216; j++){
+        for(j=106; j<213; j++){
             int px = imgResult->imageData[i + j*imgResult->widthStep];
-            if(px == 0){
+            if(px <130 && px>120){
                 center_obj++;
             }
         }
-        for(j=217; j<320; j++){
+        for(j=213; j<320; j++){
             int px = imgResult->imageData[i + j*imgResult->widthStep];
-            if(px == 0){
+            if(px <130 && px>120){
                 right_obj++;
             }
         }
@@ -1819,12 +1818,30 @@ void changhwan(){
 
             		DesireSpeed_Write(0);
             		SteeringServoControl_Write(1500);
-            	 	DesireSpeed_Write(-80);
+            	 	DesireSpeed_Write(-70);
             	 	sleep(1);
   	           		DesireSpeed_Write(0);
-  	           		int detction = detect_hwan();
-  	           		printf("\ndetection = %d\n",detction);
-  	           		while(1){printf("system end");}
+  	           		int ndetection = detect_hwan();
+  	           		if(ndetection < 0) {
+  	           			
+            		SteeringServoControl_Write(1200);
+            		sleep(1);
+            	 	DesireSpeed_Write(80);
+            		sleep(1);
+            			DesireSpeed_Write(0);
+  	           	
+  	           		}
+  	           		else if(ndetection>0){
+  	           		SteeringServoControl_Write(1800);
+            		sleep(1);
+            		DesireSpeed_Write(80);
+            		sleep(1);
+            			DesireSpeed_Write(0);
+  	      
+  	           		}
+  	           		printf("\ndetection = %d\n",ndetection);
+  	           		while(1){printf("system end\n");
+  	           		sleep(1);}
              	// 	Threeway_hardcoding();
 		}
 				 			
