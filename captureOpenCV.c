@@ -691,6 +691,12 @@ int Threeway_hardcoding()
    static int flag_tw = 1;//3차선 전용 flag
    static int flag_YL = 0;//3차선 노란색 검출 flag
 
+   int x = 0, y = 0; //x 축 및 y 축
+   int height_y = 240; // frame2IPL y축 
+   int width_x = 320; // frame2IPL x축 
+   int YELLOW_TW = 0; // 3차선 노란선 검출용 변수
+
+   
    unsigned char status;
    unsigned char gain;
    int position_now = 0;
@@ -718,6 +724,19 @@ int Threeway_hardcoding()
    Frame2Ipl(imgOrigin, imgResult, color);
 
    pthread_mutex_unlock(&mutex);
+
+    
+   //총 픽셀은 320 *240 = 76800
+   for (y = 0; y <= height_y; y++)
+   {
+       for (x = 0; x <= width_x; x++)
+       {
+           if (imgResult->imageData[y * width_x + x] == whitepx)//Find white pixels
+           {
+                YELLOW_TW++;
+           }
+       }
+   }
 /*
    count=0;
 
@@ -842,34 +861,70 @@ int Threeway_hardcoding()
    else if (flag_tw == 10)
    {
        //PositionControlOnOff_Write(UNCONTROL);
-	   /*if (노란색 검출)
-	   {
-		   flag_YL++;
-	   }*/
-	   //else <<센서 발견시 !
-
-	   while (flag_sensor<1) {
-		   printf("flag_sensor = %d", flag_sensor);
-		   while (escape<2) {
-			   channel = 6;
-			   data = filteredIR(channel); // 필터링 한 센서값을 이용 
-			   printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
-			   if (data>1100&&data<1700)escape++; // 최대한 멀리서도 볼 수 있게 값 설정!
-		   }
-
-           flag_sensor++;
-           
-           /*
-		   while (flag_sensor<2) {
-			   printf("flag_sensor = %d", flag_sensor);
-			   channel = 5;
-			   data = filteredIR(channel);
-			   printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
-			   if (data>1100&&data<1700) flag_sensor++;
-		   
-	   }*/
       
-	   flag_tw++;
+       /*
+       
+       if (YELLOW_TW >= 500)
+	   {
+            speed = 0;
+            usleep(100000);
+            flag_YL++;
+           
+       }
+       */
+	   //else <<센서 발견시 !
+       if (t == 1)
+       {
+	        while (flag_sensor<1) {
+		        printf("flag_sensor = %d", flag_sensor);
+		        while (escape<2) {
+			        channel = 6;
+			        data = filteredIR(channel); // 필터링 한 센서값을 이용 
+			        printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+			        if (data>1100&&data<1700)escape++; // 최대한 멀리서도 볼 수 있게 값 설정!
+                }
+           
+                 flag_sensor++;
+           
+                /*
+		        while (flag_sensor<2) {
+			        printf("flag_sensor = %d", flag_sensor);
+			        channel = 5;
+			        data = filteredIR(channel);
+			        printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+			        if (data>1100&&data<1700) flag_sensor++;
+		   
+	            }*/
+      
+	                flag_tw++;
+             }
+        }
+   
+        else if (t == -1)
+        {
+            while (flag_sensor<1) {
+            printf("flag_sensor = %d", flag_sensor);
+            while (escape<2) {
+             channel = 2;
+             data = filteredIR(channel); // 필터링 한 센서값을 이용 
+                printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+                if (data>1100&&data<1700)escape++; // 최대한 멀리서도 볼 수 있게 값 설정!
+            }
+    
+        flag_sensor++;
+    
+    /*
+         while (flag_sensor<2) {
+             printf("flag_sensor = %d", flag_sensor);
+            channel = 3;
+             data = filteredIR(channel);
+             printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+         if (data>1100&&data<1700) flag_sensor++;
+    
+        }*/
+
+        flag_tw++;
+        }
    }
    speed = 0;
    usleep(100000);
@@ -1034,7 +1089,7 @@ else if (flag_tw == 12)
 	   flag_YL++;
    }
 
-   else if (flag_YL == 8)//후진 엔코더 적용
+   else if (flag_YL == 8)
    {
 	   if (position_now > 50 * weight_tw)
 		   flag_YL++;
