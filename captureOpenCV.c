@@ -999,7 +999,7 @@ int Stop_line() {
 }
 
 //정지선을 보고 정지선에 도달하기 전까지 주행
-int dectectStop(IplImage* imgResult) {
+int dectectStop() {
 	int x, y;
 	static int stop_camera = 0;
 
@@ -1036,13 +1036,22 @@ int dectectStop(IplImage* imgResult) {
 }
 
 //카메라를 들어 회전교차로인지 신호등인지 구분
-int detect_signal() {//return 1 : 신호등  return 0 회전교차로 //TODO : 허프변환
+int detect_signal(IplImage* imgResult) {//return 1 : 신호등  return 0 회전교차로 //TODO : test 후 roi잡기
 	int x, y;
+	IplImage* canny_img;
+	CvMemStorage* storage;
+	CvSeq* seqCircle;
+	
 
 	CameraYServoControl_Write(1500);
+	cvCanny(imgResult, canny_img, 50, 200, 3);
+	
+	storage = cvCreateMemStorage(0);
+	seqCircle = cvHoughCircles(canny_img, storage, CV_HOUGH_GRADIENT, 1, 10, 200, 15, 10, 30);
+	//(이미지,검출된 원의 메모리,CV_HOUGH_GRADIENT,해상도,원의중심사이의 최소거리,canny임계값,원판단허프변환,최소,최대반지름)
+	printf("seqLines->total = %d\n", seqCircle->total);
 
-	//TODO : 허프서클하여 원조건 추가
-	if (red_count > 200) {
+	if(seqCircle->total > 0) {
 		printf("신호등\n");
 		return 1;
 	}
@@ -1052,21 +1061,80 @@ int detect_signal() {//return 1 : 신호등  return 0 회전교차로 //TODO : �
 		color = 0;
 		return 2;
 	}
+
+	/*if (red_count > 200) {
+		printf("신호등\n");
+		return 1;
+	}
+	else {
+		printf("회전 교차로\n");
+		CameraYServoControl_Write(1800);
+		color = 0;
+		return 2;
+	}*/
 }
 
 //신호등 알고리즘
-int Traffic_Light(IplImage* imgResult) {
+int Traffic_Light(IplImage* imgResult) {//TODO cvHoughCircle matadata test  //TODO : imgResult roi잡기
+	//int x, y;
+	//int white_count = 0;
+	//int start_x = 0, end_x = 320;
+	//int start_y = 0, end_y = 240;
+	int i;
+	IplImage* canny_img;
+	CvMemStorage* storage;
+	CvSeq* seqCircle;
+	float* circle;
+	int cx, cy, radius;
+	static int red = 0, yellow = 0, green = 0;
+	float err = 0.1;
+	int side = 0; leftgreen = 0, rightgreen=0;
 
-	int x, y;
-	int white_count = 0;
-	int start_x = 0, end_x = 320;
-	int start_y = 0, end_y = 240;
-
-	CameraYServoControl_Write(1500);
-	//cvWaitKey(100);
+	printf("traffic\n");
+	cvCanny(imgResult, canny_img, 50, 200, 3);
 	printf("color = %d\n", color);
 
-	for (x = start_x; x < end_x; x++) {
+	storage = cvCreateMemStorage(0);
+	seqCircle = cvHoughCircles(canny_img, storage, CV_HOUGH_GRADIENT, 1, 10, 200, 15, 5, 30);
+	//(이미지,검출된 원의 메모리,CV_HOUGH_GRADIENT,해상도,원의중심사이의 최소거리,canny임계값,원판단허프변환,최소,최대반지름)
+	printf("seqCircle->total = %d\n", seqCircle->total);
+
+	for (i = 0; i < seqCircle->total; i++) {
+		circle = (float*)cvGetSeqElem(seqCircle, i);
+		cx = cvRound(circle[0]);
+		cy = cvRound(circle[1]);
+		radius = cvRound(circle[2]);
+		printf("cx =%d  cy =%d  radius =%d", cx, cy, radius);
+
+		if(color ==1)
+			red += cvRound(circle[0]);
+		else if(color ==2)
+			yellow += cvRound(circle[0]);
+		else if(color ==3)
+			green += cvRound(circle[0]);
+	}
+	if (color == 1)
+		red /= seqCircle->total;
+	else if (color == 2)
+		yellow /= seqCircle->total;
+	else if (color == 3){
+		green /= seqCircle->total;
+		side = yellow - red;
+		leftgreen = yellow + side;
+		rightgreen = yellow + side * 2;
+
+		printf("green : %d  left : %d   right :%d", green, leftgreen, rightgreen)
+			if (green >= leftgreen + leftgreen*err&& green <= leftgreen - leftgreen*err)
+				return 1;//left
+			else if (green >= rightgreen + rightgreen*err&& green <= rightgreen - rightgreen*err)
+				return 2;//right
+	}
+	
+	if (seqCircle->total > 0 &&color<3) {
+		color++; 
+	}
+
+	/*for (x = start_x; x < end_x; x++) {
 		for (y = start_y; y < end_y; y++) {
 			//result_img->imageData[y*(result_img->widthStep) + x] = 255;
 			if (imgResult->imageData[y*(imgResult->widthStep) + x] == 255) {
@@ -1074,7 +1142,6 @@ int Traffic_Light(IplImage* imgResult) {
 			}
 		}
 	}
-
 	printf("white count %d", white_count);
 	if (color == 3 && white_count < 200) {
 		printf("회전교차로\n");
@@ -1090,10 +1157,88 @@ int Traffic_Light(IplImage* imgResult) {
 	}
 	else if (white_count > 500) {
 		color++;
-	}
+	}*/
 	//cvWaitKey(200);
+	return 0;
+}
+int AfterTraffic(int traffic,IplImage* imgResult) {
+	int x = 0, y = 0;
+	int end_x = imgResult->width, end_y = imgResult->height;
+	int white_count = 0;
+	static int front = 0;
+	printf("After Traffic\n");
+	
+	CameraYServoControl_Write(1800);
+	
+	if (color == 3 || speed ==0) {
+		color = 4;
+		angle = 1500;
+		speed = 50;
+		if (traffic == 1)
+			return 1;
+		else if (traffic == 2)
+			return 2;
+	}
+
+	if (front == 0) {
+		for (x =0; x < end_x; x++) {
+			for (y = 100; y < end_y; y++) {
+				//result_img->imageData[y*(result_img->widthStep) + x] = 255;
+				if (imgResult->imageData[y*(imgResult->widthStep) + x] == 255) {
+					white_count++;
+				}
+			}
+		}
+		if (white_count > 200)
+			front = 1;
+	}
+	else {
+		if (traffic == 1) {//left
+			printf("turn left\n");
+			angle = 2000;
+			//엔코더
+			return 3;
+		}
+		else if (traffic == 2) {//right
+			printf("turn right\n");
+			angle = 1000;
+			//엔코더
+			return 3;
+		}
+	}
+	if (traffic == 1)
+		return 1;
+	else if (traffic == 2)
+		return 2;
 }
 
+int endMission(IplImage* imgResult) {
+	int x, y;
+	int white_count = 0, black_count =0;
+	static int stop = 0;
+	printf("end Mission\n");
+	Find_Center(imgResult);
+	speed = 50;
+	
+	for (x = 0; x < imgResult->width; x++) {
+		for (y = 100; y < imgResult->height; y++) {
+			//result_img->imageData[y*(result_img->widthStep) + x] = 255;
+			if (stop == 0&& imgResult->imageData[y*(imgResult->widthStep) + x] == 255) {
+				white_count++;
+			}
+			else if (stop == 1 &&imgResult->imageData[y*(imgResult->widthStep) + x] == 0) {
+				black_count++;
+			}
+		}
+	}
+	if (stop ==0&&white_count > 30000)
+		stop = 1;
+	if (stop == 1 && black_count > 40000) {
+		speed = 0;
+		return 5;
+	}
+	return 4;
+}
 //회전 교차로 알고리즘
 void rotary() {
 
@@ -1216,8 +1361,8 @@ void rotary() {
 
 //flag에 따른 모듈 변화(1 = 회전교차로 2 = 3way 3 = 신호등)
 //TODO flag 유지 or 함수가 끝났으면 flag = 0 으로 바꿔주기
-int flag_module(int flag, IplImage* imgResult) {
-
+int flag_module(int flag, IplImage* imgResult) {//TODO : 구간 나가면 return 돌려주기
+	static int traffic = 0;
 	//rotary
 	if (flag == 1) {
 		printf("rotary module\n\n");
@@ -1235,7 +1380,14 @@ int flag_module(int flag, IplImage* imgResult) {
 	//신호등
 	else if (flag == 3) {
 		printf("trafficlight module\n\n");
-		trafficlight(imgResult);
+		if (traffic == 0) 
+			traffic = trafficlight(imgResult);
+		else if (traffic == 1 || traffic == 2) 
+			traffic = AfterTraffic(traffic, imgResult);
+		else if (traffic == 4) 
+			traffic = endMission();
+		else if (traffic == 5)
+			speed = 0;
 		return 3;
 	}
 }
@@ -1602,25 +1754,24 @@ void *ControlThread(void *unused) {
 		//////정지선 판단까지 & 정지 후 교차로,신호등 판단
 		else if (stop_check == 1) {
 			if (stop_line_detected == 1) { // 신호등인지 로터리인지 판단
-				is_rotary_traffic = detect_signal()
+				is_rotary_traffic = detect_signal(imgResult);
 					if (is_rotary_traffic == 1) {
 						flag = 3;//신호등
 						stop_check = 0;
-						break;
 					}
 					else if (is_rotary_traffic == 2) {
 						flag = 1;//rotary
 						stop_check = 0;
-						break;
 					}
 			}
 			//정지선
-			stop_line_detected = dectectStop(IplImage* imgResult);//정지선 검출전 주행 정지선 밟으면 return
-			printf("detect stopline\n\n");
+			if(speed >0){
+				stop_line_detected = dectectStop();//정지선 검출전 주행 정지선 밟으면 return
+				printf("detect stopline\n\n");
+			}
 
 			if (stop_line_detected>0 && color == 0) {
 				color = 1;
-				break;
 			}
 		}
 
