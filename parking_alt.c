@@ -24,6 +24,7 @@ int second_right_detect = FALSE;
 int third_right_detect = FALSE;
 
 int parking_space = 0;
+int sensor = 0;
 
 int i;
 
@@ -50,7 +51,7 @@ void main()
 	PositionControlOnOff_Write(UNCONTROL);
 	SpeedControlOnOff_Write(CONTROL);
 	SteeringServoControl_Write(1470);
-	DesireSpeed_Write(120);
+	DesireSpeed_Write(70);
 	channel_leftPrev = filteredIR(LEFT);
 	channel_rightPrev = filteredIR(RIGHT);
 
@@ -199,13 +200,16 @@ void vertical_parking_left() // ?섏쭅 二쇱감
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1496);
-	while(EncoderCounter_Read() >= -3000)
+	while(1)
 	{
-		/*
-			후진할때 PSD 센서 이용할 부분 
-		                           		*/
-		DesireSpeed_Write(-120);
-	} // ?꾩쭊 
+		sensor = filteredIR(4);
+		printf("sensor = %d \n", sensor);
+		if(sensor >= 600)
+		{
+			DesireSpeed_Write(0);
+			break;
+		}
+	} 
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1496);
@@ -240,13 +244,16 @@ void vertical_parking_right() // ?섏쭅 二쇱감
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1496);
-	while(EncoderCounter_Read() >= -5000)
+	while(1)
 	{
-		/*
-			후진할때 PSD 센서 이용할 부분 
-			                        	*/	
-		DesireSpeed_Write(-120);
-	} // ?꾩쭊 
+		sensor = filteredIR(4);
+		printf("sensor = %d \n", sensor);
+		if(sensor >= 600)
+		{
+			DesireSpeed_Write(0);
+			break;
+		}
+	}
 
 	DesireSpeed_Write(0);
 	CarLight_Write(ALL_ON);
@@ -298,13 +305,16 @@ void parallel_parking_right()
 
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1470);
-	while(EncoderCounter_Read() >= -4500)
+	while(1)
 	{
-		/*
-			후진할때 PSD 센서 이용할 부분 
-			                           	*/							 
-		DesireSpeed_Write(-120);
-	}   
+		sensor = filteredIR(4);
+		printf("sensor = %d \n", sensor);
+		if(sensor >= 600)
+		{
+			DesireSpeed_Write(0);
+			break;
+		}
+	}
 
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(2000);
@@ -365,13 +375,16 @@ void parallel_parking_left()
 	
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1470);	
-	while(EncoderCounter_Read() >= -4500)
+	while(1)
 	{
-		/*
-			후진할때 PSD 센서 이용할 부분 
-		                           	   	*/
-		DesireSpeed_Write(-120);
-	}   
+		sensor = filteredIR(4);
+		printf("sensor = %d \n", sensor);
+		if(sensor >= 600)
+		{
+			DesireSpeed_Write(0);
+			break;
+		}
+	}  
 	
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1000);	
