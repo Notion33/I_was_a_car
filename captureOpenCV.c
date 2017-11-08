@@ -1481,8 +1481,9 @@ void *ControlThread(void *unused){
 			주차는 독자 로직으로 해야할것 같다고 동재선배님이 코멘트 주셨습니다.
 		*/
 		if(line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);
+		//int mThreshold = 280*10*0.4;
 		else if (red_count > 280*10*0.4){//TODO : Threashold
-			printf("\nStop! Red stop / countpx : %d / %d \n\n",red_count, mThreshold);
+			//printf("\nStop! Red stop / countpx : %d / %d \n\n",red_count, mThreshold);
 			speed = 0;
 
 			//emergencyStopRed();// 수정완료
