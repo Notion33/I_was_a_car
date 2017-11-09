@@ -1525,7 +1525,7 @@ void trafficlight(){
 	return 0;
 }
 
-int detect_hwan(){
+int detect_obstacle(){
 	int width = 280, height = 80;
     int mThreshold = width*height*0.4;
 	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
@@ -1563,21 +1563,6 @@ int detect_hwan(){
     
     CvPoint startpoint, endpoint, scanbound,centstart,centend;
    
-	centstart.x=106;
-	centstart.y=122;	
-	centend.x=213;
-	centend.y=160;
-
-    startpoint.x = 1; //(136,120)  (252,149) // start ROI
-    startpoint.y = 122;
- 
-    endpoint.x = 318; // end ROI
-    endpoint.y = 160;
-
-    scanbound.x = 1;
-    scanbound.y = 1; // initialize
-
- 
     IplImage* imgOrigin;
 	IplImage* imgResult; 
 
@@ -1601,34 +1586,39 @@ int detect_hwan(){
 	pthread_mutex_unlock(&mutex);
 	////////////////////////////////
 
-	for(i = 0;i<200;i++){
-		for(j=0; j<320; j++){
-			if(imgOrigin->imageData[(i*320+j)*3]>167 && imgOrigin->imageData[(i*320+j)*3+1]>161){
-				imgResult->imageData[i*320+j] = 255;
-		//		new_white_count ++;	//white pixel in right
-			}
-			else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
-			else imgResult->imageData[i*320+j] = 127;
-		}
-	}
+//=========== algorithm
 
-///////////////////알골
+	centstart.x=106;
+	centstart.y=122;	
+	
+	centend.x=213;
+	centend.y=160;
+
+    startpoint.x = 1; //(136,120)  (252,149) // start ROI
+    startpoint.y = 122;
+ 
+    endpoint.x = 318; // end ROI
+    endpoint.y = 160;
+
+    scanbound.x = 1;
+    scanbound.y = 1; // initialize
+    
     for(i = 50;i<200;i++){
         for(j=0; j<106; j++){
-            int px = imgResult->imageData[i + j*imgResult->widthStep];
+            int px = imgResult->imageData[i*imgResult->widthStep+j];
             if(px <130 && px>120){
                 left_obj++;
             }
         }
 
         for(j=106; j<213; j++){
-            int px = imgResult->imageData[i + j*imgResult->widthStep];
+            int px = imgResult->imageData[i*imgResult->widthStep+j];
             if(px <130 && px>120){
                 center_obj++;
             }
         }
         for(j=213; j<320; j++){
-            int px = imgResult->imageData[i + j*imgResult->widthStep];
+            int px = imgResult->imageData[i*imgResult->widthStep+j];
             if(px <130 && px>120){
                 right_obj++;
             }
@@ -1666,6 +1656,7 @@ int detect_hwan(){
     // printf("countblack is %d \n",countblack);
     // printf("countwhite is %d \n",countwhite);
     // printf("black center is %d and blackseries is on %d \n",blackloc,blackseries);	
+
     sprintf(originname, "imgsaved/origin.png");
     sprintf(resultname, "imgsaved/result.png");
     
@@ -1687,7 +1678,9 @@ int detect_hwan(){
    
 }
 
-void changhwan(){
+void find_center_in_3way(){
+	#define MODE1 // go straight and detect white
+	#define MODE2 // detect white while turning left
 
 	char fileName[40];
 	char fileName1[40];         // TY add 6.27
@@ -1736,60 +1729,59 @@ void changhwan(){
 		left_white_count=0;
 		right_white_count = 0;
 
+#ifdef MODE1 
 		if(center_of_3way == false){ // 차량이 아직 흰석 중앙에 위치 하지 않음. 더 조향해야함
-		
 			if(middle_of_3way == false){ // middle of 3_way == false , 중앙보다 덜 갔을때 계속 조향
 	//			printf("\n middle_of_3way == ///false/// \n");
 				printf("new_white_count = %d",new_white_count);
 				printf("center of 3way is %s // middle_of_3way is %s \n",center_of_3way ? "true" : "false", middle_of_3way ? "true" : "false");
 
 
-				for(i = 50;i<200;i++){
+				for(i=50; i<200;i++){// y location from 50 to 200 (0<y<240)
+					for(j=160; j<320; j++){ // x location from 150 to 320 (0<x <320)
+						if(imgResult->imageData[i*imgResult->widthStep+j] == 255){ //if white 
+							new_white_count ++;	//white pixel in right
+						}
+						else if(imgResult->imageData[i*imgResult->widthStep+j]==0){
+						} //black default
+					}
+				}
+						
+/*	when cannot be detected with binary image(when I have to use white, gray, black)
+			for(i = 50;i<200;i++){
 					for(j=160; j<320; j++){
-						if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100){
+						if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100) {
 							imgResult->imageData[i*320+j] = 255;
 							new_white_count ++;	//white pixel in right
 						}
 						else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
 						else imgResult->imageData[i*320+j] = 127;
 					}
-				}
+				}*/
 
 				if(new_white_count>1200){ 
 					middle_of_3way=true;
 					SteeringServoControl_Write(2000);
 					DesireSpeed_Write(80);
 				
-				printf("new_white_count = %d",new_white_count);
-				printf("center of 3way is %s // middle_of_3way is %s \n",center_of_3way ? "true" : "false", middle_of_3way ? "true" : "false");
-
+					printf("new_white_count = %d",new_white_count);
+					printf("center of 3way is %s // middle_of_3way is %s \n",center_of_3way ? "true" : "false", middle_of_3way ? "true" : "false");
 				}
 
 				else {
 					SteeringServoControl_Write(2000);
 					DesireSpeed_Write(80);
-					
 				}
 			}
-			else { //middle of 3way == true
+			else if(middle_of_3way == true){ //middle of 3way == true
 				printf("\n //middle//_of_3way == ///true/// \n");
 
 				for(i = 50;i<200;i++){
 					for(j = 0;j<160;j++){
-						if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100){
-							imgResult->imageData[i*320+j] = 255;//white pixel in left
-							left_white_count ++;
-						}
-						else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
-						else imgResult->imageData[i*320+j] = 127;
+						if(imgResult->imageData[i*imgResult->widthStep+j] == 255) left_white_count ++; //white pixel in left
 					}
 					for(j=160; j<320; j++){
-						if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100){
-							imgResult->imageData[i*320+j] = 255;
-							right_white_count ++;	//white pixel in right
-						}
-						else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
-						else imgResult->imageData[i*320+j] = 127;
+						if(imgResult->imageData[i*imgResult->widthStep+j]==255) right_white_count ++;	//white pixel in right
 					}
 				}
 				if ((left_white_count>800 && right_white_count>800)||(left_white_count<300 && right_white_count<300)){
@@ -1798,15 +1790,14 @@ void changhwan(){
 			}	
 		}
 
-		else { //center of 3way == true 이면
+		else if(center_of_3way == true){ //center of 3way == true 이면
 				// 흰샌 점선이 차량 중앙을 지나 오른쪽에 치우쳤을때 중앙 기준 흰색 픽셀이 좌우 비슷해질때까지 조향
 				printf("\n /////////find center algorithm///////// \n");
 				SteeringServoControl_Write(1200);           	
-				while( cc <10)
-					{
-						DesireSpeed_Write(70);
-						cc++;
-					}
+				while( cc <10){
+					DesireSpeed_Write(70);
+					cc++;
+				}
             
 			//	Find_Center_dr2(imgResult);
 				// data = DistanceSensor(channel);
@@ -1815,13 +1806,14 @@ void changhwan(){
 
             	// if(data>561) detect_object++;
             	// if(detect_object>1){
-
+//// move back===========================================
             		DesireSpeed_Write(0);
             		SteeringServoControl_Write(1500);
             	 	DesireSpeed_Write(-70);
             	 	sleep(1);
+//==================================================
   	           		DesireSpeed_Write(0);
-  	           		int ndetection = detect_hwan();
+  	           		int ndetection = detect_obstacle();
   	           		if(ndetection < 0) {
   	           			
             		SteeringServoControl_Write(1200);
@@ -2116,7 +2108,7 @@ void ControlThread(void *unused){
 
 
 					printf("3way detected\n\n");
-					changhwan();
+					find_center_in_3way();
 			//		detect_hwan();
 					/*
 							3차선 구간
