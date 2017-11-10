@@ -1545,21 +1545,13 @@ int detect_obstacle2(IplImage* imgResult){
     }Small;
 
     Small smaller1,smaller2,smallest;
-
-    int countwhite = 0;
-    int countblack =0;
     
-    int blackseries = 0;
-    int originname[40];
-    int resultname[40];
-
-    int blackloc=0;
-    char obsloc;
+	int resultname[40];
+    char str_info[50];
 
     unsigned char status;
-    short tw_speed;
     unsigned char gain;
-    int position, position_now;
+  
     int channel;
     int data=0;
     char sensor;
@@ -1571,10 +1563,10 @@ int detect_obstacle2(IplImage* imgResult){
     
     CvPoint startROI, endROI, scanbound,onethird,twothird;
  
-    startROI.x=	0;	startROI.y=	50;
+    startROI.x=	0;	startROI.y=	120;
     //(136,120)  (252,149) // startROI
 
-	onethird.x= 106; onethird.y=50;	
+	onethird.x= 106; onethird.y=120;	
 	
 	twothird.x= 213; twothird.y=200;
 
@@ -1608,23 +1600,23 @@ int detect_obstacle2(IplImage* imgResult){
 //==========find smallest========
     if (left_obj <= center_obj) {
     	smaller1.value = left_obj;
-    	smaller1.name = 'l';
+    	smaller1.name = 'L';
     }
     else {
     	smaller1.value = center_obj;
-    	smaller1.name = 'c';
+    	smaller1.name = 'C';
     }
     
     if (center_obj <= right_obj){
     	smaller2.value = center_obj;
-    	smaller2.name = 'c';
+    	smaller2.name = 'C';
     }
     else {
     	smaller2.value = right_obj;
-    	smaller2.name = 'r';
+    	smaller2.name = 'R';
     }
       
-    if (smaller1 <= smaller2) {
+    if (smaller1.value <= smaller2.value) {
     	smallest.name = smaller1.name;
     	smallest.value = smaller1.value;
     }
@@ -1635,30 +1627,33 @@ int detect_obstacle2(IplImage* imgResult){
 
     printf(" name :  %c / value : %d\n", smallest.name,smallest.value);
 
-    if(smallest.name == 'l'){
-    	printf("\n smallest is LEFT \n");
-    	return 1;
-    }
-    else if(smallest.name == 'r'){
-    	printf("\n smallest is RIGHT \n");
-    	return 3;
-    }
-    else if(smallest.name == 'c'){
-   		printf("\n smallest is Center \n");
-   		return 2;
-   	}
-
-   	else printf("Something is wrong with Smallest value \n");
-//================================================================
-
     cvRectangle(imgResult, onethird, twothird, CV_RGB(255,255,255), 1, 8, 0);
     cvRectangle(imgResult, startROI, endROI, CV_RGB(255,255,255), 1, 8, 0); // ROI boundary
   
-    sprintf(originname,	"imgsaved/origin.png");
     sprintf(resultname,	"imgsaved/result.png");
+  	//sprintf(str_info, "[Image %d] left_obj : %d, center : %d, right : %d\n", i, left_obj,center_obj,right_obj);
+
+	//writeonImage(imgResult, str_info);
     
-    cvSaveImage(originname, imgOrigin, 0);     
     cvSaveImage(resultname, imgResult, 0);
+
+    if(smallest.name == 'L'){
+    	printf("\n SMALLEST is LEFT \n");
+    	return 1;
+    }
+    else if(smallest.name == 'R'){
+    	printf("\n SMALLEST is RIGHT \n");
+    	return 3;
+    }
+    else if(smallest.name == 'C'){
+   		printf("\n SMALLEST is Center \n");
+   		return 2;
+   	}
+
+   	else {
+   		printf("Something is wrong with Smallest value \n");
+   		return 4;
+   	}  
 }
 
 /*
@@ -1906,13 +1901,14 @@ void find_center_in_3way(){
 
 		pthread_mutex_unlock(&mutex);
 
+		printf("Find_center in 3way\n\n");
 		Find_Center(imgResult);
 
 		white_on_right=0;
 		left_white_count=0;
 		right_white_count = 0;
 
-		#ifdef MODE2
+	/*	#ifdef MODE2
 		if(ready_to_take_pic == false){
 
 			if(center_of_3way == false){ // 차량이 아직 흰점선 중앙에 위치 하지 않음. 더 조향해야함
@@ -1965,24 +1961,29 @@ void find_center_in_3way(){
 				}
 			}
 		}
-		#endif
+		#endif*/
 
 		data = DistanceSensor(channel);
 		printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
-		usleep(100000);
+	//	usleep(100000);
 
-    	if(data>561) detect_object++;
-    	if(detect_object>1){
+    	if(data>2000) detect_object++;
+    	if(detect_object>2){
+    		printf("detect_object is %d\n",detect_object);
   
 // move back===========================================
-    		DesireSpeed_Write(0);
+ /*   		DesireSpeed_Write(0);
     		SteeringServoControl_Write(1500);
     	 	DesireSpeed_Write(-70);
-    	 	sleep(1);
+    	 	sleep(1);*/
 //==================================================== take pic
+    		DesireSpeed_Write(0);
+    		sleep(1);
 
-	 		CameraYServoControl_Write(1600); 	//camera heading up
+    		CameraYServoControl_Write(1600); 	//camera heading up
+		    Alarm_Write(ON);
 		    sleep(1);
+		    Alarm_Write(OFF);
 
 			pthread_mutex_lock(&mutex);
 			pthread_cond_wait(&cond, &mutex);
@@ -1997,7 +1998,7 @@ void find_center_in_3way(){
 
 			desti_lane = detect_obstacle2(imgResult);
 
-			printf(" desti_lane is %d (1 = left, 2=straight , 3 = right \n",desti_lane);
+			printf("\n\n DESTINY lane is %d (1 = left, 2=straight , 3 = right \n\n",desti_lane);
 
 			sprintf(fileName,	 "imgsaved/imgResult_%d.png",	num);          // TY add 6.27
 			sprintf(fileName1,	 "imgsaved/imgOrigin_%d.png",	num);          // TY add 6.27
@@ -2227,7 +2228,8 @@ void ControlThread(void *unused){
 		else if (white_count > 400) {//TODO : Threashold
 			///////////////////////////////////
 			printf("whiteLine : %d\n", white_count);
-			switch(white_line_process(imgOrigin)){//1:stopline2:3way 3:none
+			//white_line_process(imgOrigin)
+			switch(2){//1:stopline2:3way 3:none
 				case 1:{	
 					printf("stopline detected\n\n");
 					DesireSpeed_Write(0);
@@ -2255,12 +2257,11 @@ void ControlThread(void *unused){
 				case 2:{ //3way 진입
 
 
-					printf("3way detected\n\n");
+					printf(" \n===== 3way detected====\n\n");
 					find_center_in_3way();
-			//		detect_hwan();
-					/*
-							3차선 구간
-										*/
+					printf("===== 3way finished====\n");
+					return;
+
 				}
 				default:
 				{printf("nothing new\n");
