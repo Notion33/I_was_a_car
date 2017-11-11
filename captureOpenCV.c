@@ -63,6 +63,9 @@
 #define LEFTRIGHTLINE 120
 //////////////////////////////////////////////
 
+#define MODE1 // go straight and detect white
+//#define MODE2 // detect white while turning left
+
 
 
 int angle = 1500;
@@ -769,71 +772,83 @@ void drawonImage(IplImage* imgResult, int angle) {
 
 int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way, return 3:nothing
 
-	int i,j,k; //for loop
-    static int num = 0;
+   int i,j,k; //for loop
     int cnt = 0;//number of white line for stop
-    bool FindBlack1 = false;
+    
     bool FindWhiteBlock = false;
+    bool FindBlack1 = false;
     bool FindBlack2 = false;
-//for image save///////////////////////////////////////////////////////////////////////////////////
-    char fileName[40];
-	IplImage* imgResult1;            // TY add 6.27
-	imgResult1 = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
-	cvZero(imgResult1);          // TY add 6.27
-	for(i = 0;i<240;i++)
-		for(j = 0;j<320;j++){
-			if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100)imgResult1->imageData[i*320+j] = 255;
-			else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164);
-			else imgResult1->imageData[i*320+j] = 127;
-		}
-	sprintf(fileName, "captureImage/imgResultnew%d.png", num);          // TY add 6.27
-	num++;
-    cvSaveImage(fileName, imgResult1, 0);           // TY add 6.27	
-////////////////////////////////////////////////////////////////////////
+    bool FindWhiteLine = false;
+
+   #ifdef IMGSAVE
+   char fileName[40];
+   IplImage* imgResult1;            // TY add 6.27
+   imgResult1 = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+   cvZero(imgResult1);
+   static int num = 0;
+   for(i = 0;i<240;i++)
+      for(j = 0;j<320;j++){
+         if(imgOrigin->imageData[(i*320+j)*3]>WHITEY && imgOrigin->imageData[(i*320+j)*3+1]>WHITEU)imgResult1->imageData[i*320+j] = 255;
+         else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164);
+         else imgResult1->imageData[i*320+j] = 127;
+      }
+   sprintf(fileName, "captureImage/imgResultforWLP%d.png", num);          // TY add 6.27
+   num++;
+    cvSaveImage(fileName, imgResult1, 0);
+    #endif           // TY add 6.27   
+
     for(i = 80;i<140;i++){//detect whether it is stopline
         for(j = 0;j<120;j++){
-            if((imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100)){//whitepixel
+            if((imgOrigin->imageData[(i*320+j)*3]>WHITEY && imgOrigin->imageData[(i*320+j)*3+1]>WHITEU)){//whitepixel
                 for(k=0; k<200; k++){ //check successive 200 white pixels
-                        if(!(imgOrigin->imageData[(i*320+j+k)*3]>200 && imgOrigin->imageData[(i*320+j+k)*3+1]>100))break;
-                        if(k==199)cnt++;
+                        if(!(imgOrigin->imageData[(i*320+j+k)*3]>WHITEY && imgOrigin->imageData[(i*320+j+k)*3+1]>WHITEU))break;
+                        if(k==199)FindWhiteLine = true;
                     }
                     j = j + k;
+                    if(FindWhiteLine)break;
             }
         }
+        if(FindWhiteLine){cnt++;printf("\n%d",i);}
+        else cnt = 0;
         if(cnt==3)return 1;//if whiteline ==3
+        FindWhiteLine = false;
     }
     cnt = 0;
-    for(i = 100;i<200;i++){//detect whether it is 3way
-        for(j = 0;j<300;j++){//find whiteblock
-	        if(!FindBlack1&&(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164)){//firstblocknotdetected&&blackpixel
-	            for(k=0; k<20; k++){ //check successive 5 white pixels
-	                    if(!(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164))break;
-	                    if(k==19)FindBlack1 = true;
-	                }
-	            j = j + k;
-	        }
-	        if(!FindWhiteBlock&&FindBlack1&&imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100){//white
+    for(i = 30;i<100;i++){//detect whether it is 3way//진입 긴구간 없다는 가정하에 i 130~200, j 0 ~ 60 
+        for(j = 200;j<280;j++){//find whiteblock
+           if(!FindBlack1&&(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164)){//firstblocknotdetected&&blackpixel
+               for(k=0; k<30; k++){ //check successive 5 white pixels
+                       if(!(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164))break;
+                       if(k==29)FindBlack1 = true;
+                   }
+               j = j + k;
+           }
+           else if(FindBlack1&&!FindWhiteBlock&&imgOrigin->imageData[(i*320+j)*3]>WHITEY && imgOrigin->imageData[(i*320+j)*3+1]>WHITEU){//white
                 for(k=0; k<10; k++){ 
-                        if(!(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100))break;
-                        if(k==9)FindWhiteBlock = true;
-	                }
-	            j = j+k;
-	        }
-	        if(!FindBlack2&&FindWhiteBlock&&imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164){//find third black block
-	            for(k=0; k<20; k++){ //check successive 5 white pixels
-	                if(!(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164))break;
-	                if(k==19)FindBlack2 = true;
-	                }
-	            j = j+k;
-	        }
-	    }
-	    if(FindBlack1&&FindWhiteBlock&&FindBlack2)cnt++;
-	    else cnt = 0;
-	    FindBlack1 = false;
-	    FindWhiteBlock = false;
-	    FindBlack2 = false;
-	    if(cnt>20)return 2;
-	}	
+                        if(!(imgOrigin->imageData[(i*320+j)*3]>WHITEY && imgOrigin->imageData[(i*320+j)*3+1]>WHITEU))break;
+                        if(k==9){
+                           FindWhiteBlock = true;
+                           break;
+                        }
+                   }
+               j = j+k;
+           }
+           else if(FindWhiteBlock&&!FindBlack2&&imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164){//find third black block
+               for(k=0; k<20; k++){ //check successive 5 white pixels
+                   if(!(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164))break;
+                   if(k==19)FindBlack2 = true;
+                   }
+               j = j+k;
+           }
+       }
+       if(FindBlack2)cnt++;
+       else cnt = 0;
+       FindWhiteBlock = false;
+       FindBlack2 = false;
+       FindBlack2 = false;
+       if(cnt>20)return 2;
+   }   
+   return 0;
 }
 
 void emergencyStopRed(){
@@ -1625,12 +1640,12 @@ int detect_obstacle2(IplImage* imgResult){
     	smallest.value = smaller2.value;
     }
 
-    printf(" name :  %c / value : %d\n", smallest.name,smallest.value);
+    printf(" smallest.name :  %c / smallest.value : %d\n", smallest.name,smallest.value);
 
     cvRectangle(imgResult, onethird, twothird, CV_RGB(255,255,255), 1, 8, 0);
     cvRectangle(imgResult, startROI, endROI, CV_RGB(255,255,255), 1, 8, 0); // ROI boundary
   
-    sprintf(resultname,	"imgsaved/result.png");
+    sprintf(resultname,	"imgsaved/after_obs_result.png");
   	//sprintf(str_info, "[Image %d] left_obj : %d, center : %d, right : %d\n", i, left_obj,center_obj,right_obj);
 
 	//writeonImage(imgResult, str_info);
@@ -1678,79 +1693,9 @@ int detect_obstacle2(IplImage* imgResult){
         }
         if (blackseries == 15) break;
     }
-    scanbound.x = k;
-    scanbound.y = j;*/
-  //  cvLine(Binaryimg, scanbound, endpoint, CV_RGB(255,255,0), 1, 8, 0);    //scan boundary
-   
-    // printf("countblack is %d \n",countblack);
-    // printf("countwhite is %d \n",countwhite);
-    // printf("black center is %d and blackseries is on %d \n",blackloc,blackseries);	
 
 
-/*int detect_obstacle(){
-	int width = 280, height = 80;
-    int mThreshold = width*height*0.4;
-	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
-	NvU64 ptime1, ptime2;
-	struct timespec;
-
-    int i, j, k;
-    
-    int left_obj=0;
-    int right_obj=0;
-    int center_obj=0;
-
-    int countwhite = 0;
-    int countblack =0;
-    
-    int blackseries = 0;
-    int originname[40];
-    int resultname[40];
-
-    int blackloc=0;
-    char obsloc;
-
-    unsigned char status;
-    short tw_speed;
-    unsigned char gain;
-    int position, position_now;
-    int channel;
-    int data=0;
-    char sensor;
-    int tol;
-    char byte = 0x80;
-    int flag =0;
-    int escape=0; 
-    CarControlInit();
-    
-    CvPoint startpoint, endpoint, scanbound,centstart,twothird;
-   
-    IplImage* imgOrigin;
-	IplImage* imgResult; 
-
-    imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
-	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
-
-	cvZero(imgResult);          // TY add 6.27
-
-	CameraYServoControl_Write(1600); 	//camera up
-    sleep(1);
-
-		/////////////////////////////
-	pthread_mutex_lock(&mutex);
-	pthread_cond_wait(&cond, &mutex);
-
-	GetTime(&pt1);
-	ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
-
-	Frame2Ipl(imgOrigin, imgResult, color);
-
-	pthread_mutex_unlock(&mutex);
-	////////////////////////////////
-
-//=========== algorithm
-
-	centstart.x=106;
+/*	centstart.x=106;
 	centstart.y=122;	
 	
 	centend.x=213;
@@ -1806,43 +1751,14 @@ int detect_obstacle2(IplImage* imgResult){
         }
         if (blackseries == 15) break;
     }
-    scanbound.x = k;
-    scanbound.y = j;*/
- /*   cvRectangle(imgResult, centstart, centend, CV_RGB(255,255,255), 1, 8, 0);
-    cvRectangle(imgResult, startpoint, endpoint, CV_RGB(255,255,255), 1, 8, 0); // ROI boundary
-  //  cvLine(Binaryimg, scanbound, endpoint, CV_RGB(255,255,0), 1, 8, 0);    //scan boundary
-   
-    // printf("countblack is %d \n",countblack);
-    // printf("countwhite is %d \n",countwhite);
-    // printf("black center is %d and blackseries is on %d \n",blackloc,blackseries);	
-
-    sprintf(originname, "imgsaved/origin.png");
-    sprintf(resultname, "imgsaved/result.png");
-    
-    cvSaveImage(originname, imgOrigin, 0);     
-    cvSaveImage(resultname, imgResult, 0);    
-
-    printf("\n left_obj = %d, center_obj= %d, right_obj= %d \n",left_obj,center_obj,right_obj);
-  
-    if(left_obj>right_obj){
-    	printf("\n left_obj>right_obj \n");
-    	return 1;
-    }
-
-    if(left_obj<right_obj){
-	   	printf("\n left_obj<right_obj \n");
-
-    	return -1;
-    } 
-   
-}*/
+   */
 
 void find_center_in_3way(){
-	#define MODE1 // go straight and detect white
-//	#define MODE2 // detect white while turning left
-
+	
 	char fileName[40];
-	char fileName1[40];         // TY add 6.27
+	char fileName1[40];
+	char fileName2[40];
+	char fileName3[40];         // TY add 6.27
 
 	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
 	NvU64 ptime1, ptime2;
@@ -1868,12 +1784,19 @@ void find_center_in_3way(){
 
 	IplImage* imgOrigin;
 	IplImage* imgResult;            // TY add 6.27
+	IplImage* imgResult2;            // TY add 6.27
+	IplImage* imgResult3;            // TY add 6.27
+
 
 	// cvCreateImage
 	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
 	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+	imgResult2 = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+	imgResult3 = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
 
 	cvZero(imgResult);          // TY add 6.27
+	cvZero(imgResult2); 
+	cvZero(imgResult3); 
 
 	/*	when cannot be detected with binary image(when I have to use white, gray, black)
 				for(i = 50;i<200;i++){
@@ -1891,7 +1814,7 @@ void find_center_in_3way(){
 
 	while (1)
 	{
-		pthread_mutex_lock(&mutex);
+	/*	pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond, &mutex);
 
 		GetTime(&pt1);
@@ -1902,15 +1825,15 @@ void find_center_in_3way(){
 		pthread_mutex_unlock(&mutex);
 
 		printf("Find_center in 3way\n\n");
-		Find_Center(imgResult);
+		Find_Center(imgResult);*/
+//============================================================
 
 		white_on_right=0;
 		left_white_count=0;
 		right_white_count = 0;
 
-	/*	#ifdef MODE2
+		#ifdef MODE2
 		if(ready_to_take_pic == false){
-
 			if(center_of_3way == false){ // 차량이 아직 흰점선 중앙에 위치 하지 않음. 더 조향해야함
 				if(middle_of_3way == false){ // 중앙보다 덜 갔을때 계속 조향
 					printf(" In loop of //middle_of_3way == false/// \n");
@@ -1961,16 +1884,16 @@ void find_center_in_3way(){
 				}
 			}
 		}
-		#endif*/
+		#endif
 
-		data = DistanceSensor(channel);
+/*		data = DistanceSensor(channel);
 		printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
 	//	usleep(100000);
 
     	if(data>2000) detect_object++;
     	if(detect_object>2){
     		printf("detect_object is %d\n",detect_object);
-  
+  */
 // move back===========================================
  /*   		DesireSpeed_Write(0);
     		SteeringServoControl_Write(1500);
@@ -1979,38 +1902,50 @@ void find_center_in_3way(){
 //==================================================== take pic
     		DesireSpeed_Write(0);
     		sleep(1);
-
-    		CameraYServoControl_Write(1600); 	//camera heading up
-		    Alarm_Write(ON);
-		    sleep(1);
+    		Alarm_Write(ON);
+		    usleep(300000);
+		    Alarm_Write(OFF);
+		    usleep(300000);
+       		Alarm_Write(ON);
+		    usleep(300000);
 		    Alarm_Write(OFF);
 
+   		 	CameraYServoControl_Write(1600); 	//camera heading up
+   		 	sleep(1);
 			pthread_mutex_lock(&mutex);
 			pthread_cond_wait(&cond, &mutex);
 
 			GetTime(&pt1);
 			ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
-			Frame2Ipl(imgOrigin, imgResult, color);
-
 			pthread_mutex_unlock(&mutex);
 //====================================================
+			Frame2Ipl(imgOrigin, imgResult, color);
+			Frame2Ipl(imgOrigin, imgResult2, color);
+			Frame2Ipl(imgOrigin, imgResult3, color);
 
-			desti_lane = detect_obstacle2(imgResult);
+//			desti_lane = detect_obstacle2(imgResult);
 
-			printf("\n\n DESTINY lane is %d (1 = left, 2=straight , 3 = right \n\n",desti_lane);
+//			printf("\n\n DESTINY lane is %d (1 = left, 2=straight , 3 = right \n\n",desti_lane);
 
-			sprintf(fileName,	 "imgsaved/imgResult_%d.png",	num);          // TY add 6.27
-			sprintf(fileName1,	 "imgsaved/imgOrigin_%d.png",	num);          // TY add 6.27
+			sprintf(fileName,	 "imgsaved/filename_%d.png",	num);          // TY add 6.27
+			sprintf(fileName1,	 "imgsaved/filename1_%d.png",	num);          // TY add 6.27
+			sprintf(fileName2,	 "imgsaved/filename2_%d.png",	num);          // TY add 6.27
+			sprintf(fileName3,	 "imgsaved/filename3_%d.png",	num);          // TY add 6.27
+
 			num++;
 	   		
-	   		cvSaveImage(fileName,	imgResult, 0); 
-	   		cvSaveImage(fileName1,	imgOrigin, 0); 
+	   		cvSaveImage(fileName,	imgOrigin, 0); 
+	   		cvSaveImage(fileName1,	imgResult, 0);
+	   		cvSaveImage(fileName1,	imgResult2, 0); 
+
+	   		cvSaveImage(fileName1,	imgResult3, 0); 
+ 
 
 	   		break;	   	
 	   }
 	}
-}
+
 
 int filteredIR(int num) // 필터링한 적외선 센서값
 {
@@ -2228,8 +2163,8 @@ void ControlThread(void *unused){
 		else if (white_count > 400) {//TODO : Threashold
 			///////////////////////////////////
 			printf("whiteLine : %d\n", white_count);
-			//white_line_process(imgOrigin)
-			switch(2){//1:stopline2:3way 3:none
+			//
+			switch(white_line_process(imgOrigin)){//1:stopline2:3way 3:none
 				case 1:{	
 					printf("stopline detected\n\n");
 					DesireSpeed_Write(0);
@@ -2255,9 +2190,17 @@ void ControlThread(void *unused){
 					}
 				}
 				case 2:{ //3way 진입
-
-
-					printf(" \n===== 3way detected====\n\n");
+					DesireSpeed_Write(0);
+					printf(" \n===== 3way detected====\n");
+					printf(" \n------------------------\n");
+					Alarm_Write(ON);
+					sleep(1);
+					Alarm_Write(OFF);
+					sleep(1);
+					Alarm_Write(ON);
+					sleep(1);
+					Alarm_Write(OFF);
+				
 					find_center_in_3way();
 					printf("===== 3way finished====\n");
 					return;
@@ -2289,10 +2232,11 @@ void ControlThread(void *unused){
 		// 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
 		
 
+	 
 
-#ifdef IMGSAVE
-		sprintf(fileName, "captureImage/imgOrigin%d.png", i);
-		sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
+//#ifdef IMGSAVE
+		sprintf(fileName, "imgsaved/imgOrigin%d.png", i);
+		sprintf(fileName1, "imgsaved/imgResult%d.png", i);          // TY add 6.27
 		//sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
 		//sprintf(fileName2, "captureImage/imgCenter%d.png", i);            // TY add 6.27
 
@@ -2302,7 +2246,7 @@ void ControlThread(void *unused){
 		//cvSaveImage(fileName_color, imgColor, 0);       // NYC add 8.25
 		//cvSaveImage(fileName2, imgCenter, 0);         // TY add 6.27
 
-		//  디버그 이미지 생성
+/*		//  디버그 이미지 생성
 		char str_info[50];
 		sprintf(str_info, "[Image %d]  Angle : %d, Speed : %d", i, angle, speed);
 		writeonImage(imgResult, str_info);
@@ -2311,7 +2255,7 @@ void ControlThread(void *unused){
 		cvSaveImage(fileName1, imgResult, 0);
 
 #endif
-
+*/
 		//TY설명 내용
 		//imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
 		//imgCenter는 아직 구현 안되어있으며 필요시 아래의 코드 주석처리 해제시 사용가능
