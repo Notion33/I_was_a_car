@@ -912,7 +912,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
   
       if(abs(control_angle)>100)    //위쪽차선에서 과하게 꺾을경우, 방지 ; 코너에서 인코스로 들어오는걸 방지
         control_angle = 0;
-
     }
 
 
@@ -935,20 +934,11 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     #endif
 
     #ifdef ROI
-        for(i=0;i<imgResult->widthStep;i++){
-            imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
-            }
-        for(i=0;i<imgResult->widthStep;i++){
-            imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
-			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
-			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
-			}
+        for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
+        for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
+		for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
+		for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
     #endif
-
 }
 
 
