@@ -564,8 +564,10 @@ static int Frame2Ipl_color(IplImage* img, IplImage* imgResult, IplImage* imgColo
             break;
 
         default:    //노란차선
-            y_max = 255; u_max = 115; v_max = 255;
-            y_min = 180; u_min = 0; v_min = 0;
+            y_max = 255; u_max = 89; v_max = 143;
+            y_min = 96; u_min = 43; v_min = 0;
+            //y_max = 255; u_max = 115; v_max = 255;
+            //y_min = 180; u_min = 0; v_min = 0;
             break;
     }
 
