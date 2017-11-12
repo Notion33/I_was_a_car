@@ -1666,6 +1666,7 @@ int third_right_detect = FALSE;
 
 int parking_space = 0;
 int sensor = 0;
+int encoder_speed = 50;
 
 int filteredIR(int num) // 필터링한 적외선 센서값
 {
@@ -1695,41 +1696,37 @@ void vertical_parking_left() // ?섏쭅 二쇱감
 	SteeringServoControl_Write(2000);
 	while(EncoderCounter_Read() >= -8500)
 	{
-		DesireSpeed_Write(-120);
+		DesireSpeed_Write(-encoder_speed);
 	}   
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1496);
-	while(1)
+	//PSD 센서 이용
+	SteeringServoControl_Write(1470);
+	while(filteredIR(4) >= 600)
 	{
-		sensor = filteredIR(4);
-		printf("sensor = %d \n", sensor);
-		if(sensor >= 600)
-		{
-			DesireSpeed_Write(0);
-			break;
-		}
-	} 
+		DesireSpeed_Write(-50);
+	}
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1496);
 	while(EncoderCounter_Read() <= 3000)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} // ?꾩쭊
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(2000);
 	while(EncoderCounter_Read() <= 8500)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} // 90???뚯쟾
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1496);
 	while(EncoderCounter_Read() <= 3000)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} // ?꾩쭊
 
 	init_parking();
@@ -1741,20 +1738,16 @@ void vertical_parking_right() // ?섏쭅 二쇱감
 	SteeringServoControl_Write(1000);
 	while(EncoderCounter_Read() >= -8000)
 	{
-		DesireSpeed_Write(-120);
+		DesireSpeed_Write(-encoder_speed);
 	} // 90???뚯쟾  
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1496);
-	while(1)
+	//PSD 센서 이용
+	SteeringServoControl_Write(1470);
+	while(filteredIR(4) >= 600)
 	{
-		sensor = filteredIR(4);
-		printf("sensor = %d \n", sensor);
-		if(sensor >= 600)
-		{
-			DesireSpeed_Write(0);
-			break;
-		}
+		DesireSpeed_Write(-50);
 	}
 
 	DesireSpeed_Write(0);
@@ -1769,21 +1762,21 @@ void vertical_parking_right() // ?섏쭅 二쇱감
 	SteeringServoControl_Write(1496);
 	while(EncoderCounter_Read() <= 2000)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} // ?꾩쭊
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1000);
 	while(EncoderCounter_Read() <= 9000)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} // 90???뚯쟾
 
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1496);
 	while(EncoderCounter_Read() <= 3000)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} 
 
 	init_parking();
@@ -1797,34 +1790,30 @@ void parallel_parking_right()
 	SteeringServoControl_Write(1470);
 	while(EncoderCounter_Read() <= 500)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} 
 
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1000);
 	while(EncoderCounter_Read() >= -5000)
 	{
-		DesireSpeed_Write(-120);
+		DesireSpeed_Write(-encoder_speed);
 	}   
 
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1470);
-	while(1)
+	//PSD 센서 이용
+	SteeringServoControl_Write(1470);
+	while(filteredIR(4) >= 600)
 	{
-		sensor = filteredIR(4);
-		printf("sensor = %d \n", sensor);
-		if(sensor >= 600)
-		{
-			DesireSpeed_Write(0);
-			break;
-		}
+		DesireSpeed_Write(-50);
 	}
 
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(2000);
 	while(EncoderCounter_Read() >= -6000)
 	{
-		DesireSpeed_Write(-120);
+		DesireSpeed_Write(-encoder_speed);
 	}
 
 	DesireSpeed_Write(0);
@@ -1842,21 +1831,21 @@ void parallel_parking_right()
 	SteeringServoControl_Write(2000);
 	while(EncoderCounter_Read() <= 6000)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	}
 
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1470);
 	while(EncoderCounter_Read() <= 2500)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	}
 
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1000);
 	while(EncoderCounter_Read() <= 5000)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} 
 
 	init_parking();
@@ -1869,34 +1858,30 @@ void parallel_parking_left()
 	SteeringServoControl_Write(1470);
 	while(EncoderCounter_Read() <= 500)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} 
 	
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(2000);	
 	while(EncoderCounter_Read() >= -5000)
 	{
-		DesireSpeed_Write(-120);
+		DesireSpeed_Write(-encoder_speed);
 	}   
 	
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1470);	
-	while(1)
+	//PSD 센서 이용
+	SteeringServoControl_Write(1470);
+	while(filteredIR(4) >= 600)
 	{
-		sensor = filteredIR(4);
-		printf("sensor = %d \n", sensor);
-		if(sensor >= 600)
-		{
-			DesireSpeed_Write(0);
-			break;
-		}
+		DesireSpeed_Write(-50);
 	}  
 	
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1000);	
 	while(EncoderCounter_Read() >= -6000)
 	{
-		DesireSpeed_Write(-120);
+		DesireSpeed_Write(-encoder_speed);
 	}
 	
 	DesireSpeed_Write(0);
@@ -1914,21 +1899,21 @@ void parallel_parking_left()
 	SteeringServoControl_Write(1000);
 	while(EncoderCounter_Read() <= 6000)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	}
 	
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1470);	
 	while(EncoderCounter_Read() <= 2500)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	}
 	
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(2000);
 	while(EncoderCounter_Read() <= 5000)
 	{
-		DesireSpeed_Write(120);
+		DesireSpeed_Write(encoder_speed);
 	} 
 
 	init_parking();
@@ -1992,6 +1977,11 @@ void check_parking()
 			EncoderCounter_Write(0);
 		}
 
+		if(first_left_detect == TRUE && second_left_detect == FALSE && difference_left >= 300)
+		{
+			first_left_detect = FALSE;
+		}
+
 		if(first_right_detect == TRUE && second_right_detect == FALSE && difference_right <= -300)
 		{
 			printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_right);
@@ -2007,6 +1997,11 @@ void check_parking()
 			second_right_detect = TRUE;
 			PositionControlOnOff_Write(UNCONTROL);
 			EncoderCounter_Write(0);
+		}
+
+		if(first_left_detect == TRUE && second_left_detect == FALSE && difference_right >= 300)
+		{
+			first_left_detect = FALSE;
 		}
 
 		if(second_left_detect == TRUE && third_left_detect == FALSE && difference_left >= 200)
