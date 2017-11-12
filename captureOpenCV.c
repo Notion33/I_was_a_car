@@ -68,7 +68,7 @@
 /////////////////////////////로터리에 필요한 #define 입니다
 #define CHANNEL1 1
 #define CHANNEL4 4
-#define WHITEY 200//white_line_process용도
+#define WHITEY 230//white_line_process용도
 #define WHITEU 130 //nyc's hold 130 : 오전 11시경 시험 잘됨 //해진 후에는 100이 잘됨
 
 #define OUT_LINE_Y 232//로터리 탈출시 out line 범위
