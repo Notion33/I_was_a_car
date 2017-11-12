@@ -516,7 +516,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				}
 				break;
 
-			case 5:   //  흰*노랑 mix
+			case 6:   //  흰*노랑 mix
 				if (y > 150 && u >135 && u<180 && v>112 && v<133) {
 					// 흰색으로 -> 실제 흰색&노랑
 					imgResult->imageData[bin_num] = (char)255;
@@ -528,7 +528,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				break;
 
 			default:  //  기본 : 노란 차선검출
-				if (u > -39 && u < 120 && v>45 && v < 245) {
+				if (y > 96 && u > 43 && u < 89 && v < 143) {
 					// 흰색으로
 					imgResult->imageData[bin_num] = (char)255;
 				}
@@ -1770,7 +1770,7 @@ int find_center_in_3way(){
 
 			pthread_mutex_unlock(&mutex);
 //====================================================
-			Frame2Ipl(imgOrigin, imgResult, 5);
+			Frame2Ipl(imgOrigin, imgResult, 6);
 			Frame2Ipl(imgOrigin, imgResult2, color);
 			Frame2Ipl(imgOrigin, imgResult3, color);
 
@@ -1795,14 +1795,13 @@ int find_center_in_3way(){
 
 int filteredIR(int num) // 필터링한 적외선 센서값
 {
-	int sensorValue = 0;
 	int i;
-	for(i=0; i<25; i++)
-	{
-	sensorValue += DistanceSensor(num);
-	}
-	sensorValue /= 25;
-	return sensorValue;
+    int sensorValue = 0;
+    for(i=0; i<25; i++){
+        sensorValue += DistanceSensor(num);
+    }
+    sensorValue /= 25;
+    return sensorValue;
 }
 
 
@@ -1981,7 +1980,7 @@ void ControlThread(void *unused){
 		GetTime(&pt1);
 		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
-		Frame2Ipl(imgOrigin, imgResult, color);
+		Frame2Ipl(imgOrigin, imgResult, 4);
 
 		pthread_mutex_unlock(&mutex);
 
@@ -2006,7 +2005,7 @@ void ControlThread(void *unused){
 			//돌발정지 모듈
 			//////////////////////////////
 		//	}
-		else if (white_count > 400) {//TODO : Threashold
+		else if (white_count > 40000000) {//TODO : Threashold
 			///////////////////////////////////
 			printf("whiteLine : %d\n", white_count);
 			//
@@ -2043,6 +2042,14 @@ void ControlThread(void *unused){
 					Alarm_Write(ON);
 					sleep(2);
 					Alarm_Write(OFF);
+		
+
+					while(filteredIR(4) <1500){
+						int tempval = filteredIR(4);
+						printf("\ntemp val = %d\n",tempval);
+
+					}
+
 
 					int destiny = find_center_in_3way();
 
