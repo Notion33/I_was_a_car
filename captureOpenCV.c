@@ -2486,7 +2486,7 @@ void ControlThread(void *unused){
 			else {
 				printf("Error!! 0000000\n");
 				// 주차영역인지 확인
-				check_parking();
+				//check_parking();
 				printf("\n\nFind_Center!!\n\n");
 				Find_Center(imgResult);
 			}		
