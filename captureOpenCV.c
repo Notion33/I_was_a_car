@@ -59,6 +59,12 @@
 
 #define whitepx 255
 
+/////////////////////////////주차에 필요한 #define 입니다
+#define TRUE 1
+#define FALSE 0
+#define LEFT 5
+#define RIGHT 3
+
 /////////////////////////////로터리에 필요한 #define 입니다
 #define CHANNEL1 1
 #define CHANNEL4 4
@@ -977,10 +983,7 @@ int white_line_process(IplImage* imgOrigin) {//return 1: stopline, return 2:3way
 	bool FindBlack1 = false;
 	bool FindBlack2 = false;
 	bool FindWhiteLine = false;
-	//////////////////
-	speed = 50;
-	return 1;
-	///////////////////
+	
 #ifdef IMGSAVE
 	char fileName[40];
 	IplImage* imgResult1;            // TY add 6.27
@@ -1666,6 +1669,7 @@ int sensor = 0;
 
 int filteredIR(int num) // 필터링한 적외선 센서값
 {
+	int i;
     int sensorValue = 0;
     for(i=0; i<25; i++){
         sensorValue += DistanceSensor(num);
@@ -2020,15 +2024,19 @@ void check_parking()
 			printf("\n\nTHIRD_LEFT_DETECT\n\n\n");
 			third_left_detect = TRUE;
 			printf("\n\n PARKING SPACE : %d", parking_space);
+			//beep
+			Alarm_Write(ON);
+			usleep(50000);
+			Alarm_Write(OFF);
 			if(parking_space > 7000)
 			{
 				parallel_parking_left();
-				break;
+				//break;
 			}
 			else
 			{
 				vertical_parking_left();
-				break;
+				//break;
 			}
 		}
 
@@ -2047,15 +2055,19 @@ void check_parking()
 			printf("\n\nTHIRD_RIGHT_DETECT\n\n\n");
 			third_right_detect = TRUE;
 			printf("\n\nPARKING SPACE : %d", parking_space);
+			//beep
+			Alarm_Write(ON);
+			usleep(50000);
+			Alarm_Write(OFF);
 			if(parking_space > 7000)
 			{
 				parallel_parking_right();
-				break;
+				//break;
 			}
 			else
 			{
 				vertical_parking_right();
-				break;
+				//break;
 			}
 		}	
 }
@@ -2417,12 +2429,12 @@ void ControlThread(void *unused){
 //////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
 //
 		//긴급선회모듈
-		int line = isLine();
+		//int line = isLine();
 		/*
 			긴급 탈출은 적외선 값을 읽어서 독자 쓰레드를 파야 할지도 모른다고 코멘트 주셨습니다.
 			주차는 독자 로직으로 해야할것 같다고 동재선배님이 코멘트 주셨습니다.
 		*/
-		if(line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);
+		//if(line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);
 		//else if (red_count > 280*10*0.4){//TODO : Threashold
 		//	printf("red_count!\n\n");
 			/*
@@ -2432,7 +2444,8 @@ void ControlThread(void *unused){
 			//돌발정지 모듈
 			//////////////////////////////
 		//	}
-		else if (flag > 0) {
+		//else 
+		if (flag > 0) {
 			flag = flag_module(flag, imgResult);
 		}
 
