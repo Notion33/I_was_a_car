@@ -40,7 +40,7 @@
 #define SPEED_CONTROL     // To servo control(steering & camera position)
 #define IMGSAVE1
 
-#define IMGSAVE
+//#define IMGSAVE
 //#define LIGHT_BEEP
 //#define debug
 ////////////////////////////////////////////////////////////////////////////
@@ -2479,8 +2479,17 @@ void ControlThread(void *unused){
 				flag = 2;
 				printf("3way detected\n\n");
 			}
-			else if (module_process == 1)
+			else if (module_process == 1){
 				stop_check = 1;
+				printf("white line detected\n\n");	
+			}
+			else {
+				printf("Error!! 0000000\n");
+				// 주차영역인지 확인
+				check_parking();
+				printf("\n\nFind_Center!!\n\n");
+				Find_Center(imgResult);
+			}		
 		}
 
 		//평상시 Find_Center 작동
@@ -2495,7 +2504,7 @@ void ControlThread(void *unused){
 		SteeringServoControl_Write(angle);
 		//===================================
 		//  LOG 파일 작성
-        writeLog(i);
+        //writeLog(i);
         //===================================
 		// 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
 		
