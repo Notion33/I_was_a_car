@@ -56,6 +56,10 @@
 #define RESIZE_HEIGHT 240
 
 #define whitepx 255
+
+#define WHITEY 200//white_line_process용도
+#define WHITEU 130 //nyc's hold 130 : 오전 11시경 시험 잘됨 //해진 후에는 100이 잘됨
+
 /////////////////////////////로터리에 필요한 #define 입니다
 #define CHANNEL1 1
 #define CHANNEL4 4
@@ -512,6 +516,16 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				}
 				break;
 
+			case 5:   //  흰*노랑 mix
+				if (y > 150 && u >135 && u<180 && v>112 && v<133) {
+					// 흰색으로 -> 실제 흰색&노랑
+					imgResult->imageData[bin_num] = (char)255;
+				}
+				else {
+					// 검정색으로
+					imgResult->imageData[bin_num] = (char)0;
+				}
+				break;
 
 			default:  //  기본 : 노란 차선검출
 				if (u > -39 && u < 120 && v>45 && v < 245) {
@@ -1300,88 +1314,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 }
 
-void Find_Center_dr2(IplImage* imgResult)      //TY add 6.27
-{
-      float angle = 0;
-      int i, j, k; //for loop
-      int speed = 0;
-      int width = 320;//data of the input image
-      int height = 240;
-      
-      int x = 0;//for cycle
-      int y = 0;
-      
-      int cutdown = 30;//length of y pixel which display bumper
-      int distance = 280; // approximately 10cm = 140px from leftside of the camera
-      int weight = 500/distance;
-      
-      int centerpixel = 0;
-      
-      int leftpixel = 0;//linepixel
-      int rightpixel = 0;
-      
-      int  finl = 0;//whether line of leftside detected
-      int finr = 0;
-      
-      int centerofpixel = 0;//centerlinepixel
-      
 
-      for (y = height-1-cutdown; y >=0; y-=2){//cut down bumper pixel 
-         if(finl||finr)break;
-         for (x = width / 2 -1; x>=4; x--){//left side
-            if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
-               for(i=0; i<5; i++){ //check successive 5 white pixels
-                  if(imgResult->imageData[y * width + x - i] != whitepx)break;
-                  if(i==4){
-                     leftpixel = x;
-                     finl = 1;
-                  }      
-               }
-               x = x - i;
-               if(finl==1)break;
-            }
-         }
-         
-         for (x = width/2; x<width - 4; x++){
-            if (imgResult->imageData[y * width + x] == whitepx){//Search pixels
-               for(i=0; i<5; i++){ //check successive 5 white pixels
-                  if(imgResult->imageData[y * width + x + i] != whitepx)break;
-                  if(i==4){
-                     rightpixel = x;
-                     finr = 1;
-                  }         
-               }
-               x = x + i;
-               if(finl==1)break;
-            }
-         }
-      }
-   
-
-      if(!(finl||finr)) //?? Ž?? x???? 
-         angle = 1500;
-      
-      printf("Left_line = %d\n", leftpixel);
-      printf("Right_line = %d\n", rightpixel);
-      printf("Centerofpixle = %d\n",centerofpixel);
-      centerpixel = finl&&finr? (rightpixel+leftpixel)/2:(finl==0?rightpixel-distance:leftpixel+distance);
-      
-      if(centerpixel-160<10&&centerpixel-160>-10)angle = 1500;
-      else
-      angle = 1500 - weight*(centerpixel-160);
-      
-      SteeringServoControl_Write(angle);//motor control 
-
-      #ifdef SPEED_CONTROL
-        if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
-           speed = 80;//max==90
-        else
-           speed = 100;//max==130
-
-
-      DesireSpeed_Write(speed);
-       #endif
-}
 void befwhitelinedriving(){//정지선을 보고 정지선에 도달하기 전까지 주행
 	int speed = 60;//#define으로 빼야함 
 	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
@@ -1540,8 +1473,8 @@ void trafficlight(){
 	return 0;
 }
 
-int detect_obstacle2(IplImage* imgResult){
 
+int detect_obstacle2(IplImage* imgResult){ //resultimage 입력받아서, 처리만
 	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
 	NvU64 ptime1, ptime2;
 	struct timespec;
@@ -1554,12 +1487,12 @@ int detect_obstacle2(IplImage* imgResult){
 
     int desti_lane = 0; 
 
-    typedef struct small{
+    typedef struct small{ // 최대 최소 찾기위한 구조
     	int value;
     	char name;
     }Small;
 
-    Small smaller1,smaller2,smallest;
+    Small smaller1,smaller2,smallest; 
     
 	int resultname[40];
     char str_info[50];
@@ -1646,23 +1579,20 @@ int detect_obstacle2(IplImage* imgResult){
     cvRectangle(imgResult, startROI, endROI, CV_RGB(255,255,255), 1, 8, 0); // ROI boundary
   
     sprintf(resultname,	"imgsaved/after_obs_result.png");
-  	//sprintf(str_info, "[Image %d] left_obj : %d, center : %d, right : %d\n", i, left_obj,center_obj,right_obj);
-
-	//writeonImage(imgResult, str_info);
     
     cvSaveImage(resultname, imgResult, 0);
 
     if(smallest.name == 'L'){
     	printf("\n SMALLEST is LEFT \n");
-    	return 1;
+    	return -1;
     }
     else if(smallest.name == 'R'){
     	printf("\n SMALLEST is RIGHT \n");
-    	return 3;
+    	return 1;
     }
     else if(smallest.name == 'C'){
    		printf("\n SMALLEST is Center \n");
-   		return 2;
+   		return 4;
    	}
 
    	else {
@@ -1671,94 +1601,13 @@ int detect_obstacle2(IplImage* imgResult){
    	}  
 }
 
-/*
-    for (j = endpoint.y; j > startpoint.y; j--) {
-        for (i = endpoint.x; i > startpoint.x; i--) {
-            int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
-           
-            if (px == blackpx) {
-             //   countblack++;//검정색 만나면 스타트! 연속해서 15px 있는지 확인
-                for (k = i; k > i- 15; k--) {
-                    int px2 = Binaryimg->imageData[k + j*Binaryimg->widthStep];
-                    if (px2 == blackpx) blackseries++;
-                    else break;
-                }
-                if (blackseries == 15) {
-                    blackloc = i - 7;   
-                    break;
-                }
-                else blackseries = 0;
-            }
-            
-        }
-        if (blackseries == 15) break;
-    }
 
-
-/*	centstart.x=106;
-	centstart.y=122;	
+int find_center_in_3way(){
 	
-	centend.x=213;
-	centend.y=160;
-
-    startpoint.x = 1; //(136,120)  (252,149) // start ROI
-    startpoint.y = 122;
- 
-    endpoint.x = 318; // end ROI
-    endpoint.y = 160;
-    
-    for(i = 50;i<200;i++){
-        for(j=0; j<106; j++){
-            int px = imgResult->imageData[i*imgResult->widthStep+j];
-            if(px <130 && px>120){
-                left_obj++;
-            }
-        }
-
-        for(j=106; j<213; j++){
-            int px = imgResult->imageData[i*imgResult->widthStep+j];
-            if(px <130 && px>120){
-                center_obj++;
-            }
-        }
-        for(j=213; j<320; j++){
-            int px = imgResult->imageData[i*imgResult->widthStep+j];
-            if(px <130 && px>120){
-                right_obj++;
-            }
-        }
-    }
-
-/*
-    for (j = endpoint.y; j > startpoint.y; j--) {
-        for (i = endpoint.x; i > startpoint.x; i--) {
-            int px = Binaryimg->imageData[i + j*Binaryimg->widthStep];
-           
-            if (px == blackpx) {
-             //   countblack++;//검정색 만나면 스타트! 연속해서 15px 있는지 확인
-                for (k = i; k > i- 15; k--) {
-                    int px2 = Binaryimg->imageData[k + j*Binaryimg->widthStep];
-                    if (px2 == blackpx) blackseries++;
-                    else break;
-                }
-                if (blackseries == 15) {
-                    blackloc = i - 7;   
-                    break;
-                }
-                else blackseries = 0;
-            }
-            
-        }
-        if (blackseries == 15) break;
-    }
-   */
-
-void find_center_in_3way(){
-	
-	char fileName[40];
-	char fileName1[40];
-	char fileName2[40];
-	char fileName3[40];         // TY add 6.27
+	char orgName[40];
+	char resName[40];
+	char res2Name[40];
+	char res3Name[40];
 
 	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
 	NvU64 ptime1, ptime2;
@@ -1799,17 +1648,17 @@ void find_center_in_3way(){
 	cvZero(imgResult3); 
 
 	/*	when cannot be detected with binary image(when I have to use white, gray, black)
-				for(i = 50;i<200;i++){
-						for(j=160; j<320; j++){
-							if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100) {
-								imgResult->imageData[i*320+j] = 255;
-								new_white_count ++;	//white pixel in right
-							}
-							else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
-							else imgResult->imageData[i*320+j] = 127;
-						}
+		for(i = 50;i<200;i++){
+				for(j=160; j<320; j++){
+					if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100) {
+						imgResult->imageData[i*320+j] = 255;
+						new_white_count ++;	//white pixel in right
+					}
+					else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
+					else imgResult->imageData[i*320+j] = 127;
+				}
 
-					}*/
+			}*/
 
 
 	while (1)
@@ -1828,11 +1677,11 @@ void find_center_in_3way(){
 		Find_Center(imgResult);*/
 //============================================================
 
+		#ifdef MODE2
 		white_on_right=0;
 		left_white_count=0;
 		right_white_count = 0;
 
-		#ifdef MODE2
 		if(ready_to_take_pic == false){
 			if(center_of_3way == false){ // 차량이 아직 흰점선 중앙에 위치 하지 않음. 더 조향해야함
 				if(middle_of_3way == false){ // 중앙보다 덜 갔을때 계속 조향
@@ -1912,6 +1761,7 @@ void find_center_in_3way(){
 
    		 	CameraYServoControl_Write(1600); 	//camera heading up
    		 	sleep(1);
+
 			pthread_mutex_lock(&mutex);
 			pthread_cond_wait(&cond, &mutex);
 
@@ -1920,30 +1770,26 @@ void find_center_in_3way(){
 
 			pthread_mutex_unlock(&mutex);
 //====================================================
-			Frame2Ipl(imgOrigin, imgResult, color);
+			Frame2Ipl(imgOrigin, imgResult, 5);
 			Frame2Ipl(imgOrigin, imgResult2, color);
 			Frame2Ipl(imgOrigin, imgResult3, color);
 
-//			desti_lane = detect_obstacle2(imgResult);
+			desti_lane = detect_obstacle2(imgResult);
 
-//			printf("\n\n DESTINY lane is %d (1 = left, 2=straight , 3 = right \n\n",desti_lane);
-
-			sprintf(fileName,	 "imgsaved/filename_%d.png",	num);          // TY add 6.27
-			sprintf(fileName1,	 "imgsaved/filename1_%d.png",	num);          // TY add 6.27
-			sprintf(fileName2,	 "imgsaved/filename2_%d.png",	num);          // TY add 6.27
-			sprintf(fileName3,	 "imgsaved/filename3_%d.png",	num);          // TY add 6.27
+			sprintf(orgName,	 "imgsaved/orgName_%d.png",	num);          // TY add 6.27
+			sprintf(resName,	 "imgsaved/resName_%d.png",	num);          // TY add 6.27
+			sprintf(res2Name,	 "imgsaved/res2Name_%d.png",	num);          // TY add 6.27
+			sprintf(res3Name,	 "imgsaved/res3Name_%d.png",	num);          // TY add 6.27
 
 			num++;
 	   		
-	   		cvSaveImage(fileName,	imgOrigin, 0); 
-	   		cvSaveImage(fileName1,	imgResult, 0);
-	   		cvSaveImage(fileName1,	imgResult2, 0); 
-
-	   		cvSaveImage(fileName1,	imgResult3, 0); 
- 
-
+	   		cvSaveImage(orgName,	imgOrigin, 0); 
+	   		cvSaveImage(resName,	imgResult, 0);
+	   		cvSaveImage(res2Name,	imgResult2, 0); 
+	   		cvSaveImage(res3Name,	imgResult3, 0); 
 	   		break;	   	
 	   }
+	   return desti_lane;
 	}
 
 
@@ -2193,15 +2039,14 @@ void ControlThread(void *unused){
 					DesireSpeed_Write(0);
 					printf(" \n===== 3way detected====\n");
 					printf(" \n------------------------\n");
+
 					Alarm_Write(ON);
-					sleep(1);
+					sleep(2);
 					Alarm_Write(OFF);
-					sleep(1);
-					Alarm_Write(ON);
-					sleep(1);
-					Alarm_Write(OFF);
-				
-					find_center_in_3way();
+
+					int destiny = find_center_in_3way();
+
+					printf("Destiny = %d\n ",destiny);
 					printf("===== 3way finished====\n");
 					return;
 
