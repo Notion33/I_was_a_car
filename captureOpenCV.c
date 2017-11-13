@@ -75,27 +75,22 @@
 #define OUT_LINE_U 116
 #define OUT_LINE_V 108
 
-#define INRANGEMAXY 100// rotary 출발여부 판단부 roi 이 범위안에 들어오면 긍정적
-#define INRANGEMINY 0
-#define INRANGEMAXX 200
-#define INRANGEMINX 0
-
-#define OUTRANGEMAXY 240 //rotary 출발여부 판단부 roi 이 범위 안에 들어오면 위험
-#define OUTRANGEMINY 120
+#define OUTRANGEMAXY 200 //rotary 출발여부 판단부 roi 이 범위 안에 들어오면 위험
+#define OUTRANGEMINY 80
 #define OUTRANGEMAXX 320
-#define OUTRANGEMINX 100
+#define OUTRANGEMINX 0
 
-#define SHADOWYMAX 59
+#define SHADOWYMAX 32
 #define SHADOWYMIN 19
 #define SHADOWUMAX 255
-#define SHADOWUMIN 84
+#define SHADOWUMIN 0
 #define SHADOWVMAX 255
-#define SHADOWVMIN 39
+#define SHADOWVMIN 0
 
 #define SHADOW_RANGE_MIN_X 0//그림자 ROI
-#define SHADOW_RANGE_MAX_X 250
-#define SHADOW_RANGE_MIN_Y 40
-#define SHADOW_RANGE_MAX_Y 200//////////////////////////////////////////////
+#define SHADOW_RANGE_MAX_X 90
+#define SHADOW_RANGE_MIN_Y 100
+#define SHADOW_RANGE_MAX_Y 220
 
 int angle = 1500;
 int speed = 100;
@@ -952,7 +947,7 @@ int isLine(){
 //////white_count에 대한 모듈들/////////////////////////////////
 ////////////////////////////////////////////////////////////////
 /////////////////white_count - 3way,정지선 구분 알고리즘
-int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way, return 0:nothing
+int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way, return 3:nothing
 
 	int i,j,k; //for loop
     int cnt = 0;//number of white line for stop
@@ -984,7 +979,7 @@ int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way,
     cvSaveImage(fileName, imgResult1, 0);
     #endif           // TY add 6.27	
 
-    for(i = 80;i<140;i++){//detect whether it is stopline
+    for(i = 80;i<210;i++){//detect whether it is stopline
         for(j = 0;j<120;j++){
             if((imgOrigin->imageData[(i*320+j)*3]>WHITEY && imgOrigin->imageData[(i*320+j)*3+1]>WHITEU)){//whitepixel
                 for(k=0; k<200; k++){ //check successive 200 white pixels
@@ -1416,7 +1411,6 @@ int endMission(IplImage* imgResult) {
 	printf("angle = %d\n", angle);
 	return 3;
 }
-
 int rotary(){
     int data = 0;//sensor data
     int databack = 0;
@@ -1465,7 +1459,7 @@ int rotary(){
 	CameraXServoControl_Write(angle);
 	angle = 1700;
     CameraYServoControl_Write(angle);//range 1800(down)~1200(up)    
-    sleep(1);
+    sleep(2);
     while(true) {   
         pixInRange = 0;
         pixOutRange = 0;
@@ -1490,13 +1484,13 @@ int rotary(){
 			cvSaveImage(fileName2,imgResult1,0);
 		#endif
 	    if(!Departure){
-	        pixInRange = 0;
+	        // pixInRange = 0;
 	        pixOutRange = 0;
 
-	        for(i = INRANGEMINY;i<INRANGEMAXY;i++)
-	        	for(j = INRANGEMINX;j<INRANGEMAXX;j++)
-	        		if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] >= SHADOWYMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] <= SHADOWYMAX && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1] >= SHADOWUMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1] <= SHADOWUMAX && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2] >= SHADOWVMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]<=SHADOWVMAX)pixInRange++;
-	        pixInRange = (double)(pixInRange/((INRANGEMAXX - INRANGEMINX) * (INRANGEMAXY - INRANGEMINY)));
+	        // for(i = INRANGEMINY;i<INRANGEMAXY;i++)
+	        // 	for(j = INRANGEMINX;j<INRANGEMAXX;j++)
+	        // 		if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] >= SHADOWYMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] <= SHADOWYMAX && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1] >= SHADOWUMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+1] <= SHADOWUMAX && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2] >= SHADOWVMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3+2]<=SHADOWVMAX)pixInRange++;
+	        // pixInRange = (double)(pixInRange/((INRANGEMAXX - INRANGEMINX) * (INRANGEMAXY - INRANGEMINY)));
 
 	        for(i = OUTRANGEMINY;i<OUTRANGEMAXY;i++)
 	        	for(j = OUTRANGEMINX;j<OUTRANGEMAXX;j++)
@@ -1509,12 +1503,16 @@ int rotary(){
 	        printf("pixOutRange : %10lf\n",pixOutRange);
 	        #endif
 
-	        if((pixInRange>0.15)&&pixOutRange<0.1){
+	        if(pixOutRange<0.003){
 	            Departure = true;
+	            // Alarm_Write(ON);
+	            // usleep(500);
+	            // Alarm_Write(OFF);
 	            angle = 1500;
 	            CameraXServoControl_Write(angle);                       // Range : 600(Right)~1500(default)~2400(Left)
 				angle = 1800;
 				CameraYServoControl_Write(angle);//range 1800(down)~1200(up)
+				usleep(100);
 			}
 		}	
 		else{//출발 신호 받음 : Departure = True
@@ -1524,7 +1522,7 @@ int rotary(){
 			cnt = 0;
 		    maxcnt = 0;
 			if(!CourseOut){//courseout이 True이고 화면에 장애물 픽셀 안잡히면 탈출(courseout은 우측화면에 흰픽셀 잡힌뒤 사라지면 true)
-				for(i = 120;i<220;i++){
+				for(i = 40;i<220;i++){
 	        		for(j = 200;j<310;j++){//find whiteblock
 		        		if((imgOrigin->imageData[(i*320+j)*3]>OUT_LINE_Y && imgOrigin->imageData[(i*320+j)*3+1]>OUT_LINE_U && imgOrigin->imageData[(i*320+j)*3+2]>OUT_LINE_V)){//firstblocknotdetected&&blackpixel
 		            		for(k=0; k<5; k++){ //check successive 5 white pixels
@@ -1538,20 +1536,23 @@ int rotary(){
 		            	cnt++;
 		            	whiteblock = false;
 		            }
-		            else if(!IsDetected){//isdetected는 흰색선이다
-		            	if(cnt>maxcnt)maxcnt = cnt;//탈출 신호로 인식하는 우측 흰색 선
-		            	if(maxcnt>10){
+		            else{
+		            	if(cnt>maxcnt)maxcnt = cnt;
+		            	cnt = 0;
+		            }
+		            if(!IsDetected){//isdetected는 흰색선이다
+		            	//탈출 신호로 인식하는 우측 흰색 선
+		            	if(maxcnt>12){
 		            		IsDetected = true;
 		            		#ifdef IMGSAVE
 		            		sprintf(fileName1, "captureImage/error_signal.png");
 		            		cvSaveImage(fileName1, imgOrigin, 0);
 		            		#endif
 		            	}
-		            	cnt = 0;	
 		            }		            	
 		        }			            		            
 		    }		        
-		    if(IsDetected&&maxcnt<6)CourseOut = true;
+		    if(IsDetected&&maxcnt<8)CourseOut = true;
 		    pixshadow = 0; 
 		   
 		    for(i = SHADOW_RANGE_MIN_Y;i<SHADOW_RANGE_MAX_Y;i++)
@@ -1561,18 +1562,18 @@ int rotary(){
 		    
 		    data = 0;
 		    databack = 0;
-			for(i = 0;i<40;i++){
+			for(i = 0;i<20;i++){
 				data = data + DistanceSensor(CHANNEL1);
 				usleep(10);
 				}
-			data = data/40;
+			data = data/20;
 			
-			for(i = 0;i<40;i++){
+			for(i = 0;i<20;i++){
 				databack = databack + DistanceSensor(CHANNEL4);
 				usleep(10);
 				}
-			databack = databack/40;
-			if(databack>1000)return 0;
+			databack = databack/20;
+			//if(databack>1000)return 0;
 
 			#ifdef debug
 		    printf("pixshadow : %lf\n",pixshadow);		    
@@ -1580,7 +1581,7 @@ int rotary(){
 			#endif
 
 	        if(data>1000){speed = 0;printf("sensor condition!\n\n");}
-			else if(CourseOut)return 0;
+			else if(CourseOut&&(pixshadow<0.05))return 0;			
 			else {
 				Find_Center(imgResult);			 
 				speed = 60;
