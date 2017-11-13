@@ -42,6 +42,7 @@
 #define straight_speed 200
 #define curve_speed 200
 
+
 //#define IMGSAVE
 //#define LIGHT_BEEP
 //#define debug
@@ -411,7 +412,8 @@ static int DumpFrame(FILE *fout, NvMediaVideoSurface *surf)
 
 static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 {
-	//color : 1. 빨간색 2. 노란색 3. 초록색 4.흰*노 mix  defalut. 노란차선검출
+	//color : 1. 빨간색 2. 노란색 3. 초록색 4.흰*노 mix 5.검은색  defalut. 노란차선검출
+
 	NvMediaVideoSurfaceMap surfMap;
 	unsigned int resWidth, resHeight;
 	unsigned char y, u, v;
@@ -538,13 +540,15 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 					imgResult->imageData[bin_num] = (char)0;
 				}
 				break;
-			//case 5: //rotary 주행용
-			//	if(y>229){
-			//		imgResult->imageData[bin_num] = (char)255;
-			//	}
-			//	else{
-			//		imgResult->imageData[bin_num] = (char)0;
-			//	}
+
+			case 5: //검은색
+				if (y > 35 && y < 50 && u>125) {
+					imgResult->imageData[bin_num] = (char)255;
+				}
+				else {
+					imgResult->imageData[bin_num] = (char)0;
+				}
+				break;
 
 			default:  //  기본 : 노란 차선검출
 				if (y > 96 && u > 43 && u < 89 && v < 143) {
@@ -853,7 +857,6 @@ void writeLineSensorLog(){
     printf("\n");
     //printf("LineSensor_Read() = %d \n", sensor);
     //fprintf(f, "%d\n", sensor);
-
 }
 //  End of Logfile module
 //===================================
@@ -883,6 +886,7 @@ int isLine(){
 		angle = 2000;
 		dir = 1;
 	} else if( c[5]==1 && c[6]==0 || c[7]==0 ){
+
 		angle = 1000;
 		dir = 2;
 	}
@@ -1028,6 +1032,8 @@ int detectStop(IplImage* imgResult) {
 	int x, y;
 	static int stop_camera = 0;
 
+	printf("detectStop!!\n");
+
 	/*	if (Stop_line() == 1) {
 	speed = 0;
 	printf("stop!!!!!!\n");
@@ -1085,23 +1091,24 @@ int detect_signal(IplImage* imgResult) {//return 1 : 신호등  return 2 회전�
 
 	printf("detect_signal\n");
 	pass++;
-		//	canny_img = cvCreateImage(cvGetSize(imgResult), IPL_DEPTH_8U, 1);
-		//	cvCanny(imgResult, canny_img, 50, 300, 3);
 
-		storage = cvCreateMemStorage(0);
-		seqCircle = cvHoughCircles(imgResult, storage, CV_HOUGH_GRADIENT, 1, 10, 200, 9, 7, 30);
-		//seqCircle = cvHoughCircles(canny_img, storage, CV_HOUGH_GRADIENT, 1, 10, 200, 15, 3, 30);
-		//(이미지,검출된 원의 메모리,CV_HOUGH_GRADIENT,해상도,원의중심사이의 최소거리,canny임계값,원판단허프변환,최소,최대반지름)
-		printf("seqLines->total = %d\n", seqCircle->total);
+	//	canny_img = cvCreateImage(cvGetSize(imgResult), IPL_DEPTH_8U, 1);
+	//	cvCanny(imgResult, canny_img, 50, 300, 3);
 
-		for (x = 0; x < seqCircle->total; x++) {
+	storage = cvCreateMemStorage(0);
+	seqCircle = cvHoughCircles(imgResult, storage, CV_HOUGH_GRADIENT, 1, 10, 200, 9, 7, 30);
+	//(이미지,검출된 원의 메모리,CV_HOUGH_GRADIENT,해상도,원의중심사이의 최소거리,canny임계값,원판단허프변환,최소,최대반지름)
+	printf("seqLines->total = %d\n", seqCircle->total);
 
-			circle = (float*)cvGetSeqElem(seqCircle, x);
-			printf("x =%d, y= %d, r =%d\n", cvRound(circle[0]), cvRound(circle[1]), cvRound(circle[2]));
-			cvCircle(imgResult, cvPoint(cvRound(circle[0]), cvRound(circle[1])), cvRound(circle[2]), CV_RGB(0, 100, 0), 1, 8, 0);
-			//원을 그릴 이미지,원의중심좌표,원의 반지름좌표,원의반지름길이,원의 색깔,원의경계선두께,원의경계선 종류,shift)
-		}
-		
+	for (x = 0; x < seqCircle->total; x++) {
+
+		circle = (float*)cvGetSeqElem(seqCircle, x);
+		printf("x =%d, y= %d, r =%d\n", cvRound(circle[0]), cvRound(circle[1]), cvRound(circle[2]));
+		cvCircle(imgResult, cvPoint(cvRound(circle[0]), cvRound(circle[1])), cvRound(circle[2]), CV_RGB(0, 100, 0), 1, 8, 0);
+		//원을 그릴 이미지,원의중심좌표,원의 반지름좌표,원의반지름길이,원의 색깔,원의경계선두께,원의경계선 종류,shift)
+	}
+
+
 #ifdef IMGSAVE1
 	sprintf(fileName1, "captureImage/signal_detectResult%d.png", num);
 	//sprintf(fileName2, "captureImage/signal_detectCanny%d.png", num);
@@ -1109,9 +1116,11 @@ int detect_signal(IplImage* imgResult) {//return 1 : 신호등  return 2 회전�
 	cvSaveImage(fileName1, imgResult, 0);
 	//cvSaveImage(fileName2, canny_img, 0);
 #endif
-	if (pass > 5) {
+	if (pass > 2) {
+
 		if (seqCircle->total > 0) {
 			printf("traffic light!!!!!!!!!!!!!1\n");
+			//color = 1;//check black
 			return 1;
 		}
 		else {
@@ -1136,8 +1145,8 @@ int detect_signal(IplImage* imgResult) {//return 1 : 신호등  return 2 회전�
 
 //신호등 알고리즘
 int Traffic_Light(IplImage* imgResult) {//TODO cvHoughCircle matadata test  //TODO : imgResult roi잡기
-	//int x, y;
-	//int white_count = 0;
+	int x, y;
+	//int white_count = 0;	
 	//int start_x = 0, end_x = 320;
 	//int start_y = 0, end_y = 240;
 	int i;
@@ -1146,10 +1155,11 @@ int Traffic_Light(IplImage* imgResult) {//TODO cvHoughCircle matadata test  //TO
 	CvSeq* seqCircle;
 	float* circle;
 	int cx, cy, radius;
-	static int red = 0, yellow = 0;
-	int green = 0;
+	static int red_x = 0, yellow_x = 0, red_y =0, yellow_y=0;
+	//int green = 0;
 	//float err = 0.1;
-	int side = 0, leftgreen = 0, rightgreen = 0;
+	int side = 0, side_y = 0, leftgreen = 0, rightgreen = 0;
+	int leftgreen_cnt = 0, rightgreen_cnt = 0;
 	static int num = 0;
 
 	char fileName1[40];
@@ -1160,60 +1170,97 @@ int Traffic_Light(IplImage* imgResult) {//TODO cvHoughCircle matadata test  //TO
 	//cvCanny(imgResult, canny_img, 50, 200, 3);
 	printf("color = %d\n", color);
 
-	storage = cvCreateMemStorage(0);
-	seqCircle = cvHoughCircles(imgResult, storage, CV_HOUGH_GRADIENT, 1, 10, 200, 9, 3, 20);
-	//(이미지,검출된 원의 메모리,CV_HOUGH_GRADIENT,해상도,원의중심사이의 최소거리,canny임계값,원판단허프변환,최소,최대반지름)
-	printf("seqCircle->total = %d\n", seqCircle->total);
+	if(color == 1 || color ==2){
+		storage = cvCreateMemStorage(0);
+		seqCircle = cvHoughCircles(imgResult, storage, CV_HOUGH_GRADIENT, 1, 10, 200, 9, 7, 30);
+		//(이미지,검출된 원의 메모리,CV_HOUGH_GRADIENT,해상도,원의중심사이의 최소거리,canny임계값,원판단허프변환,최소,최대반지름)
+		printf("seqCircle->total = %d\n", seqCircle->total);
 
-	for (i = 0; i < seqCircle->total; i++) {
-		circle = cvGetSeqElem(seqCircle, i);
-		cx = cvRound(circle[0]);
-		cy = cvRound(circle[1]);
-		radius = cvRound(circle[2]);
+		for (i = 0; i < seqCircle->total; i++) {
+			circle = (float*)cvGetSeqElem(seqCircle, i);
+			cx = cvRound(circle[0]);
+			cy = cvRound(circle[1]);
+			radius = cvRound(circle[2]);
 
-		printf("cx =%d  cy =%d  radius =%d\n", cx, cy, radius);
-		cvCircle(imgResult, cvPoint(cvRound(circle[0]), cvRound(circle[1])), cvRound(circle[2]), CV_RGB(0, 100, 0), 1, 8, 0);
-
-#ifdef IMGSAVE1
-		sprintf(fileName1, "captureImage/imgResultcany%d.png", num);
-		//sprintf(fileName2, "captureImage/imgCannylight%d.png", num);
-		num++;
-		cvSaveImage(fileName1, imgResult, 0);
-		//cvSaveImage(fileName2, canny_img, 0);
-#endif
-		if (color == 1)
-			red += cvRound(circle[0]);
-		else if (color == 2)
-			yellow += cvRound(circle[0]);
-		else if (color == 3)
-			green += cvRound(circle[0]);
-	}
-	if (seqCircle->total > 0) {
-		if (color == 1) {
-			red /= seqCircle->total;
-			printf("red = %d\n", red);
+			if (color == 1){
+				red_x += cx;
+				red_y += cy;
+			}	
+			else if (color == 2) {
+				yellow_x += cx;
+				yellow_y += cy;
+			}
+			printf("cx =%d  cy =%d  radius =%d\n", cx, cy, radius);
+			cvCircle(imgResult, cvPoint(cvRound(circle[0]), cvRound(circle[1])), cvRound(circle[2]), CV_RGB(0, 100, 0), 1, 8, 0);
 		}
-		else if (color == 2) {
-			yellow /= seqCircle->total;
-			printf("yellow = %d\n", yellow);
-		}
-		else if (color == 3) {
-			green /= seqCircle->total;
-			side = yellow - red;
-			leftgreen = yellow + side;
-			rightgreen = yellow + side * 2;
 
-			printf("red : %d  yellow : %d\n", red, yellow);
-			printf("green : %d  left : %d   right :%d\n", green, leftgreen, rightgreen);
-			if (green <= leftgreen + 15 && green >= leftgreen - 20)
-				return 1;//left
-			else if (green <= rightgreen + 20 && green >= rightgreen - 15)
-				return 2;//right
+		if (seqCircle->total > 0) {
+			if (color == 1) {
+				red_x /= seqCircle->total;
+				red_y /= seqCircle->total;
+				printf("red_x = %d, red_y = %d\n", red_x, red_y);
+			}
+			else if (color == 2) {
+				yellow_x /= seqCircle->total;
+				yellow_y /= seqCircle->total;
+				printf("yellow_x = %d, yellow_y = %d\n", yellow_x, yellow_y);
+			}
 		}
 	}
-	if (seqCircle->total > 0 && color<3) {
+
+	else if (color == 3) {
+		side = yellow_x - red_x;
+		side_y = (yellow_y + yellow_y) / 2;
+		leftgreen = yellow_x + side;
+		rightgreen = yellow_x + side * 2;
+
+		printf("side_y = %d\n", side_y);
+		printf("red_x : %d  yellow_x : %d\n", red_x, yellow_x);
+		printf("left : %d   right :%d\n", leftgreen, rightgreen);
+
+		if(leftgreen>0&&rightgreen>0&&side_y){
+			for (x = leftgreen - 15; x <= leftgreen + 15; x++) {
+				for (y = side_y - 10; y <= side_y + 10; y++) {
+					if (imgResult->imageData[y*(imgResult->widthStep) + x] == 255) {
+						leftgreen_cnt++;
+					}
+				}
+			}
+
+			for (x = rightgreen - 15; x <= rightgreen + 15; x++) {
+				for (y = side_y - 10; y <= side_y + 10; y++) {
+					if (imgResult->imageData[y*(imgResult->widthStep) + x] == 255) {
+						rightgreen_cnt++;
+					}
+				}
+			}
+		}
+		
+
+		if (leftgreen_cnt >= 100) {
+			return 1;
+		}
+		else if (rightgreen_cnt >= 100) {
+			return 2;
+		}
+		/*if (green <= leftgreen + 15 && green >= leftgreen - 20)
+			return 1;//left
+		else if (green <= rightgreen + 20 && green >= rightgreen - 15)
+			return 2;//right
+		*/
+	}
+
+	if (seqCircle->total > 0 && color < 3) {
 		color++;
 	}
+
+#ifdef IMGSAVE1
+	sprintf(fileName1, "captureImage/imgResultcany%d.png", num);
+	//sprintf(fileName2, "captureImage/imgCannylight%d.png", num);
+	num++;
+	cvSaveImage(fileName1, imgResult, 0);
+	//cvSaveImage(fileName2, canny_img, 0);
+#endif
 
 	/*for (x = start_x; x < end_x; x++) {
 	for (y = start_y; y < end_y; y++) {
@@ -1298,17 +1345,17 @@ int AfterTraffic(int traffic, IplImage* imgResult) {
 
 int endMission(IplImage* imgResult) {
 	int x, y;
-	int left_w=0, right_w=0;
-	int left_cnt = 0 , right_cnt = 0;
+	int left_w = 0, right_w = 0;
+	int left_cnt = 0, right_cnt = 0;
 	int white_cnt = 0, black_cnt = 0;
 	float weight = 5, weight_bi = 1;
 	static int stop = 0;
 
 	printf("end Mission\n");
 	speed = 50;
-	for (y = 150; y < imgResult->height-40; y++) {
+	for (y = 150; y < imgResult->height - 40; y++) {
 		for (x = 0; x < 160; x++) {
-			if (imgResult->imageData[y*(imgResult->widthStep) +(320-x)] == 255) {
+			if (imgResult->imageData[y*(imgResult->widthStep) + (320 - x)] == 255) {
 				right_w += 320 - x;
 				right_cnt++;
 			}
@@ -1334,7 +1381,6 @@ int endMission(IplImage* imgResult) {
 		printf("left_w = %d\n", left_w);
 		angle = 1500 - (160 - left_w)*weight_bi;
 	}
-	
 	else if (right_cnt >= 10 && left_cnt >= 10) {
 		if ((160 - left_w) > (right_w - 160))
 			angle = 1500 + ((160 - left_w) - (right_w - 160)) *weight;
@@ -1345,7 +1391,7 @@ int endMission(IplImage* imgResult) {
 		angle = 1500;
 
 	for (x = 0; x < imgResult->width; x++) {
-		for (y = 150; y < imgResult->height-40; y++) {
+		for (y = 150; y < imgResult->height - 40; y++) {
 			//result_img->imageData[y*(result_img->widthStep) + x] = 255;
 			if (stop < 5 && imgResult->imageData[y*(imgResult->widthStep) + x] == 255) {
 				white_cnt++;
@@ -1554,6 +1600,7 @@ int rotary(){
 		}  		
 	}
 }
+
 //3way 알고리즘
 ///함수를 넣어주세요!!
 
@@ -1593,7 +1640,6 @@ int flag_module(int flag, IplImage* imgResult) {//TODO : 구간 나가면 return
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////white count에 대한 모듈들//////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // Parking Merge
@@ -2315,13 +2361,10 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 				imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
 			}
     #endif
-
 }
 
 
-
 void ControlThread(void *unused){
-	
 	int i = 0;
 	int line = 0;
 	int is_rotary_traffic = 0;
@@ -2379,10 +2422,8 @@ void ControlThread(void *unused){
 			긴급 탈출은 적외선 값을 읽어서 독자 쓰레드를 파야 할지도 모른다고 코멘트 주셨습니다.
 			주차는 독자 로직으로 해야할것 같다고 동재선배님이 코멘트 주셨습니다.
 		*/
-		//if(line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);
-		
+		//if(line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);		
 		//else
-
 		if (flag > 0) {
 			flag = flag_module(flag, imgResult);
 		}
@@ -2406,11 +2447,11 @@ void ControlThread(void *unused){
 				printf("detect stopline\n\n");
 			}
 
-			if (stop_line_detected>0 && color == 0) {
+			if (stop_line_detected > 0 && color == 0) {
 				color = 1;
+				//color = 5;//check black
 				DesireSpeed_Write(0);
 				CameraYServoControl_Write(1600);
-				
 			}
 		}
 
@@ -2448,7 +2489,6 @@ void ControlThread(void *unused){
 			printf("red_count!\n\n");
 			speed = 0;
 		} 
-
 		DesireSpeed_Write(speed);
 		SteeringServoControl_Write(angle);
 		//===================================
@@ -2456,7 +2496,6 @@ void ControlThread(void *unused){
         //writeLog(i);
         //===================================
 		// 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
-		
 
 
 #ifdef IMGSAVE
