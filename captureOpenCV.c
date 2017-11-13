@@ -550,6 +550,27 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				}
 				break;
 
+			case 6:   //  장애물 창환
+				if (y > 150 && u >135 && u<180 && v>112 && v<133) {
+					// 흰색으로 -> 실제 흰색&노랑
+					imgResult->imageData[bin_num] = (char)255;
+				}
+				else {
+					// 검정색으로
+					imgResult->imageData[bin_num] = (char)0;
+				}
+				break;
+			
+			case 7: //그림자
+				if (y > 19 && y< 32 ) {
+					// 흰색으로 -> 실제 흰색&노랑
+					imgResult->imageData[bin_num] = (char)255;
+				}
+				else {
+					// 검정색으로
+					imgResult->imageData[bin_num] = (char)0;
+				}
+				break;
 			default:  //  기본 : 노란 차선검출
 				if (y > 96 && u > 43 && u < 89 && v < 143) {
 					// 흰색으로
@@ -1602,12 +1623,350 @@ int rotary(){
 }
 
 //3way 알고리즘
-///함수를 넣어주세요!!
+int detect_obstacle2(IplImage* imgResult) { //resultimage 입력받아서, 처리만
+	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
+	NvU64 ptime1, ptime2;
+	struct timespec;
+
+	int i, j, k;
+
+	int left_obj = 0;
+	int right_obj = 0;
+	int center_obj = 0;
+
+	int desti_lane = 0;
+
+	typedef struct small { // 최대 최소 찾기위한 구조
+		int value;
+		char name;
+	}Small;
+
+	Small smaller1, smaller2, smallest;
+
+	int resultname[40];
+	char str_info[50];
+
+	unsigned char status;
+	unsigned char gain;
+
+	int channel;
+	int data = 0;
+	char sensor;
+	int tol;
+	char byte = 0x80;
+	int flag = 0;
+	int escape = 0;
+	CarControlInit();
+
+	CvPoint startROI, endROI, scanbound, onethird, twothird;
+
+	startROI.x = 0;	startROI.y = 120;
+	//(136,120)  (252,149) // startROI
+
+	onethird.x = 106; onethird.y = 120;
+
+	twothird.x = 213; twothird.y = 200;
+
+	endROI.x = 320; endROI.y = 200;
+	// end ROI 
+
+	for (i = startROI.y; i<endROI.y; i++) {
+		for (j = startROI.x; j< onethird.x; j++) {
+			int px = imgResult->imageData[i*imgResult->widthStep + j];
+			if (px == 255) {
+				left_obj++;
+			}
+		}
+
+		for (j = onethird.x; j<twothird.x; j++) {
+			int px = imgResult->imageData[i*imgResult->widthStep + j];
+			if (px == 255) { //px <130 && px>120
+				center_obj++;
+			}
+		}
+		for (j = twothird.x; j< endROI.x; j++) {
+			int px = imgResult->imageData[i*imgResult->widthStep + j];
+			if (px == 255) {
+				right_obj++;
+			}
+		}
+	}
+
+	printf("\n left_obj = %d, center_obj= %d, right_obj= %d \n", left_obj, center_obj, right_obj);
+
+	//==========find smallest========
+	if (left_obj <= center_obj) {
+		smaller1.value = left_obj;
+		smaller1.name = 'L';
+	}
+	else {
+		smaller1.value = center_obj;
+		smaller1.name = 'C';
+	}
+
+	if (center_obj <= right_obj) {
+		smaller2.value = center_obj;
+		smaller2.name = 'C';
+	}
+	else {
+		smaller2.value = right_obj;
+		smaller2.name = 'R';
+	}
+
+	if (smaller1.value <= smaller2.value) {
+		smallest.name = smaller1.name;
+		smallest.value = smaller1.value;
+	}
+	else {
+		smallest.name = smaller2.name;
+		smallest.value = smaller2.value;
+	}
+
+	printf(" smallest.name :  %c / smallest.value : %d\n", smallest.name, smallest.value);
+
+	cvRectangle(imgResult, onethird, twothird, CV_RGB(255, 255, 255), 1, 8, 0);
+	cvRectangle(imgResult, startROI, endROI, CV_RGB(255, 255, 255), 1, 8, 0); // ROI boundary
+
+	sprintf(resultname, "imgsaved/after_obs_result.png");
+
+	cvSaveImage(resultname, imgResult, 0);
+
+	if (smallest.name == 'L') {
+		printf("\n SMALLEST is LEFT \n");
+		return -1;
+	}
+	else if (smallest.name == 'R') {
+		printf("\n SMALLEST is RIGHT \n");
+		return 1;
+	}
+	else if (smallest.name == 'C') {
+		printf("\n SMALLEST is Center \n");
+		return 4;
+	}
+
+	else {
+		printf("Something is wrong with Smallest value \n");
+		return 4;
+	}
+}
+
+
+int find_center_in_3way() {
+
+	char orgName[40];
+	char result_wy[40];
+	char result_obs[40];
+	char result_y[40];
+
+	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
+	NvU64 ptime1, ptime2;
+	struct timespec;
+
+	int num = 0;
+	int i = 0;
+	int j = 0;
+	int data = 0;
+	int channel = 1;
+	int cc = 0;
+
+	int white_on_right = 0;
+	int	left_white_count = 0;
+	int right_white_count = 0;
+
+	bool center_of_3way = false;
+	bool middle_of_3way = false;
+	bool ready_to_take_pic = false;
+
+	int desti_lane = 0;
+	int detect_object = 0;
+
+	IplImage* imgOrigin;
+	IplImage* imgResWY;            // TY add 6.27
+	IplImage* imgResOBS;            // TY add 6.27
+	IplImage* imgResY;            // TY add 6.27
+
+
+								  // cvCreateImage
+	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
+	imgResWY = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+	imgResOBS = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+	imgResY = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+
+	cvZero(imgResWY);          // TY add 6.27
+	cvZero(imgResOBS);
+	cvZero(imgResY);
+
+	/*	when cannot be detected with binary image(when I have to use white, gray, black)
+	for(i = 50;i<200;i++){
+	for(j=160; j<320; j++){
+	if(imgOrigin->imageData[(i*320+j)*3]>200 && imgOrigin->imageData[(i*320+j)*3+1]>100) {
+	imgResult->imageData[i*320+j] = 255;
+	new_white_count ++;	//white pixel in right
+	}
+	else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164); //black default
+	else imgResult->imageData[i*320+j] = 127;
+	}
+
+	}*/
+
+	while (1)
+	{
+		pthread_mutex_lock(&mutex);
+		pthread_cond_wait(&cond, &mutex);
+
+		GetTime(&pt1);
+		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+
+		Frame2Ipl(imgOrigin, imgResWY, 4); //wymix
+
+		pthread_mutex_unlock(&mutex);
+
+		//printf("Find_center in 3way\n\n");
+		Find_Center(imgResWY);
+
+		DesireSpeed_Write(70);
+		SteeringServoControl_Write(angle);
+
+		sprintf(result_wy, "imgsaved/wymix_%d.png", num);          // TY add 6.27
+		cvSaveImage(result_wy, imgResWY, 0);
+		num++;
+
+
+		//============================================================
+
+#ifdef MODE2
+		white_on_right = 0;
+		left_white_count = 0;
+		right_white_count = 0;
+
+		if (ready_to_take_pic == false) {
+			if (center_of_3way == false) { // 차량이 아직 흰점선 중앙에 위치 하지 않음. 더 조향해야함
+				if (middle_of_3way == false) { // 중앙보다 덜 갔을때 계속 조향
+					printf(" In loop of //middle_of_3way == false/// \n");
+					printf(" white_on_right = %d", white_on_right);
+
+					for (i = 50; i<200; i++) {// y location from 50 to 200 (0<y<240)
+						for (j = 160; j<320; j++) { // x location from 150 to 320 (0<x <320)
+							if (imgResult->imageData[i*imgResult->widthStep + j] == 255) { //if white 
+								white_on_right++;	//white pixel in right
+							}
+						}
+					}
+
+					if (white_on_right>1200) {
+						middle_of_3way = true;
+						SteeringServoControl_Write(2000);
+						DesireSpeed_Write(80); // turn left
+
+						printf(" Turn the middle_of_3way = true /// \n");
+						printf(" white_on_right = %d\n", white_on_right);
+					}
+				}
+
+				else if (middle_of_3way == true) {  //middle of 3way == true
+					printf("\n //middle//_of_3way == ///true/// \n");
+
+					for (i = 50; i<200; i++) {
+						for (j = 0; j<160; j++) {
+							if (imgResult->imageData[i*imgResult->widthStep + j] == 255) left_white_count++; //white pixel in left
+						}
+						for (j = 160; j<320; j++) {
+							if (imgResult->imageData[i*imgResult->widthStep + j] == 255) right_white_count++;	//white pixel in right
+						}
+					}
+					if ((left_white_count>800 && right_white_count>800) || (left_white_count<300 && right_white_count<300)) {
+						center_of_3way = true;
+					}
+				}
+			}
+
+			else if (center_of_3way == true) { //center of 3way == true 이면
+											   // 흰샌 점선이 차량 중앙을 지나 오른쪽에 치우쳤을때 중앙 기준 흰색 픽셀이 좌우 비슷해질때까지 조향
+				printf("\n ====The car is on the center of 3way==== \n");
+				SteeringServoControl_Write(1200);
+				while (cc <10) {
+					DesireSpeed_Write(70);
+					cc++;
+				}
+			}
+		}
+#endif
+
+		/*		data = DistanceSensor(channel);
+		printf("channel = %d, distance = 0x%04X(%d) \n", channel, data, data);
+		//	usleep(100000);
+
+		if(data>2000) detect_object++;
+		if(detect_object>2){
+		printf("detect_object is %d\n",detect_object);
+		*/
+		// move back===========================================
+		/*   		DesireSpeed_Write(0);
+		SteeringServoControl_Write(1500);
+		DesireSpeed_Write(-70);
+		sleep(1);*/
+		//==================================================== take pic
+
+		int tempval = filteredIR(1);
+
+		printf("\n ===Distance = %d=====", tempval);
+
+		if (filteredIR(1) >700) {
+			DesireSpeed_Write(0);
+			sleep(1);
+			Alarm_Write(ON);
+			usleep(300000);
+			Alarm_Write(OFF);
+			usleep(300000);
+			Alarm_Write(ON);
+			usleep(300000);
+			Alarm_Write(OFF);
+
+
+			DesireSpeed_Write(-30);
+			usleep(100);
+			DesireSpeed_Write(-70);
+			sleep(1);
+
+			DesireSpeed_Write(0);
+			sleep(1);
+
+
+			CameraYServoControl_Write(1600); 	//camera heading up
+			sleep(1);
+
+			pthread_mutex_lock(&mutex);
+			pthread_cond_wait(&cond, &mutex);
+
+			GetTime(&pt1);
+			ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+
+			pthread_mutex_unlock(&mutex);
+			//====================================================
+			Frame2Ipl(imgOrigin, imgResOBS, 7);
+
+			desti_lane = detect_obstacle2(imgResOBS);
+
+			sprintf(orgName, "imgsaved/orgName.png", num);          // TY add 6.27
+			sprintf(result_obs, "imgsaved/result_obs.png", num);          // TY add 6.27
+
+			num++;
+
+			cvSaveImage(orgName, imgOrigin, 0);
+			cvSaveImage(result_obs, imgResOBS, 0);
+			break;
+		}
+	}
+	return desti_lane;
+}
+
 
 //flag에 따른 모듈 변화(1 = 회전교차로 2 = 3way 3 = 신호등)
 //TODO flag 유지 or 함수가 끝났으면 flag = 0 으로 바꿔주기
 int flag_module(int flag, IplImage* imgResult) {//TODO : 구간 나가면 return 돌려주기
 	static int traffic = 0;
+	static int 3way_flag = 0;
+	static int destiny;
 	//rotary
 	if (flag == 1) {
 		printf("rotary module\n\n");
@@ -1616,10 +1975,27 @@ int flag_module(int flag, IplImage* imgResult) {//TODO : 구간 나가면 return
 	}
 	//3차선
 	else if (flag == 2) {
-		printf("3way module\n\n");
-		/*
-		3차선 구간
-		*/
+		printf(" \n===== 3way detected====\n");
+		printf(" \n------------------------\n");
+
+		if (3way_flag == 0) {
+			Alarm_Write(ON);
+			DesireSpeed_Write(0);
+			sleep(2);
+			Alarm_Write(OFF);
+
+			destiny = find_center_in_3way();
+			printf("Destiny = %d\n ", destiny);
+			3way_flag =1;
+		}
+		else if (3way_flag == 1) {
+			//민성 알고리즘
+			return 2;
+		}
+		else {
+			printf("===== 3way finished====\n");
+			return 0;
+		}
 		return 2;
 	}
 	//신호등
@@ -2461,7 +2837,6 @@ void ControlThread(void *unused){
 			//3차선
 			if (module_process == 2) {
 				flag = 2;
-				printf("3way detected\n\n");
 			}
 			else if (module_process == 1){
 				stop_check = 1;
