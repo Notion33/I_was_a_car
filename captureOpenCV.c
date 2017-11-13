@@ -39,6 +39,8 @@
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL     // To servo control(steering & camera position)
 #define IMGSAVE1
+#define straight_speed 200
+#define curve_speed 200
 
 //#define IMGSAVE
 //#define LIGHT_BEEP
@@ -2053,8 +2055,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     int line_tolerance = 70;
     int low_line_width = 20;
     int high_line_width = 10;
-    int curve_speed = 100;       //default : 60
-    int straight_speed = 120;    //default : 언덕 통과하려면 350
 
     int line_gap = 5;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
     int tolerance = 25; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
