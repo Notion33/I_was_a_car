@@ -40,7 +40,7 @@
 #define SPEED_CONTROL     // To servo control(steering & camera position)
 #define IMGSAVE1
 
-//#define IMGSAVE
+#define IMGSAVE
 //#define LIGHT_BEEP
 //#define debug
 ////////////////////////////////////////////////////////////////////////////
@@ -142,6 +142,8 @@ int table_208[256];
 int table_516[256];
 
 int DistanceValue[6][25];
+bool isOverLine = false;
+bool emergencyReturnFlag = true;
 
 typedef struct
 {
@@ -883,22 +885,6 @@ void writeLog(int frameNum){
     writeLineSensorLog();
     //줄내리기
     fprintf(f, "\n");
-}
-
-int DistanceSort(num)
-{
-	if(filteredIR(num)>2700)
-	{
-		return 1;
-	}
-	if(filteredIR(num)<=2700 && filteredIR(num)>=1300)
-	{
-		return 2;
-	}
-	if(filteredIR(num)<1300)
-	{
-		return 3;
-	}
 }
 
 void writeDistanceLog(){
@@ -1686,13 +1672,29 @@ int parking_space = 0;
 int sensor = 0;
 int encoder_speed = 50;
 
+int DistanceSort(int num)
+{
+	if(filteredIR(num)>2700)
+	{
+		return 1;
+	}
+	if(filteredIR(num)<=2700 && filteredIR(num)>=1300)
+	{
+		return 2;
+	}
+	if(filteredIR(num)<1300)
+	{
+		return 3;
+	}
+}
+
 int filteredIR(int num) // 필터링한 적외선 센서값
 {
 	int i;
     int sensorValue = 0;
-	for(i=0; i<25; j++)
+	for(i=0; i<25; i++)
 	{
-		sensorValue += DistanceValue[num-1][j];
+		sensorValue += DistanceValue[num-1][i];
 	}
     sensorValue /= 25;
     return sensorValue;
@@ -1939,7 +1941,7 @@ void parallel_parking_left()
 }
 
 void check_parking()
-{
+{ 
 		channel_leftNow = filteredIR(LEFT);
 		channel_rightNow = filteredIR(RIGHT);
 		difference_left = channel_leftNow - channel_leftPrev;
@@ -2387,22 +2389,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 }
 
-void LineThread(void *unused)
-{
 
-}
-
-void DistanceThread(void *unused)
-{
-	for(i=0 i<6; i++)
-	{
-		for(j=0; j<25; j++)
-		{
-			DistanceValue[i][j] = DistanceSensor(i+1);
-			printf("DistanceValue[%d][%d] : %d", i+1, j+1, DistanceValue[i][j]);
-		}
-	}
-}
 
 void ControlThread(void *unused){
 	
@@ -2430,11 +2417,13 @@ void ControlThread(void *unused){
 
 	cvZero(imgResult);          // TY add 6.27
 
-/*	CarLight_Write(ALL_OFF);
-	angle = 1500;                       // Range : 600(Right)~1500(default)~2400(Left)
-    CameraXServoControl_Write(angle);
-    angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
-    CameraYServoControl_Write(angle);*/
+	/*
+		CarLight_Write(ALL_OFF);
+		angle = 1500;                       // Range : 600(Right)~1500(default)~2400(Left)
+    	CameraXServoControl_Write(angle);
+    	angle = 1800;                       // Range : 1200(Up)~1500(default)~1800(Down)
+		CameraYServoControl_Write(angle);
+	*/
 
 	channel_leftPrev = filteredIR(LEFT);
 	channel_rightPrev = filteredIR(RIGHT);
@@ -2454,16 +2443,16 @@ void ControlThread(void *unused){
 
 		// TODO : control steering angle based on captured image ---------------
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
-//
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////TY.만약 IMGSAVE(26번째줄)가 정의되어있으면 imgOrigin.png , imgResult.png 파일을 captureImage폴더로 저장.
+		//
 		//긴급선회모듈
-		//int line = isLine();
+		// int line = isLine();
 		/*
 			긴급 탈출은 적외선 값을 읽어서 독자 쓰레드를 파야 할지도 모른다고 코멘트 주셨습니다.
 			주차는 독자 로직으로 해야할것 같다고 동재선배님이 코멘트 주셨습니다.
 		*/
-		//if(line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);
+		// if(line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);
 		//else if (red_count > 280*10*0.4){//TODO : Threashold
 		//	printf("red_count!\n\n");
 			/*
@@ -2474,6 +2463,7 @@ void ControlThread(void *unused){
 			//////////////////////////////
 		//	}
 		//else 
+		/*
 		if (flag > 0) {
 			flag = flag_module(flag, imgResult);
 		}
@@ -2513,17 +2503,8 @@ void ControlThread(void *unused){
 				flag = 2;
 				printf("3way detected\n\n");
 			}
-			else if (module_process == 1){
+			else if (module_process == 1)
 				stop_check = 1;
-				printf("white line detected\n\n");	
-			}
-			else {
-				printf("Error!! 0000000\n");
-				// 주차영역인지 확인
-				check_parking();
-				printf("\n\nFind_Center!!\n\n");
-				Find_Center(imgResult);
-			}		
 		}
 
 		//평상시 Find_Center 작동
@@ -2533,18 +2514,19 @@ void ControlThread(void *unused){
 			printf("\n\nFind_Center!!\n\n");
 			Find_Center(imgResult);
 		}
-
+		*/
+		
 		DesireSpeed_Write(speed);
 		SteeringServoControl_Write(angle);
 		//===================================
 		//  LOG 파일 작성
-        //writeLog(i);
+        writeLog(i);
         //===================================
 		// 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
 		
 
 
-#ifdef IMGSAVE
+	#ifdef IMGSAVE
 		sprintf(fileName, "captureImage/imgOrigin%d.png", i);
 		sprintf(fileName1, "captureImage/imgResult%d.png", i);          // TY add 6.27
 		//sprintf(fileName_color, "captureImage/imgColor%d.png", i);          // NYC add 8.25
@@ -2563,9 +2545,7 @@ void ControlThread(void *unused){
 		drawonImage(imgResult, angle);
 		sprintf(fileName1, "DebugImage/imgDebug%d.png", i);
 		cvSaveImage(fileName1, imgResult, 0);
-
-
-#endif
+	#endif
 
 		//TY설명 내용
 		//imgCenter는 차선검출 및 조향처리 결과를 확인하기위해 이미지로 출력할 경우 사용할 예정.
@@ -2584,6 +2564,71 @@ void ControlThread(void *unused){
 		i++;
 	}
 }
+
+void LineThread(void *unused) 
+{
+	while(1)
+	{
+		int dir = 0;
+		int sensor = LineSensor_Read();        // black:1, white:0
+		int s = 0;
+		int c[8];
+		int i=0;
+		int angle = 0;
+
+		for(i=0; i<8; i++)
+		{
+			s = sensor & 0x80;	//0x80
+			if(s) c[i]=1;
+			else c[i]=0;
+			sensor = sensor << 1;
+		}
+
+		if( c[4] == 0 ){
+			//선을 중앙으로 밟음. 중앙선 무시
+			dir = 0;
+		} else if( c[1]==0 || c[2]==0 && c[3]==1 ){
+			angle = 2000;
+			dir = 1;
+			isOverLine = true;
+		} else if( c[5]==1 && c[6]==0 || c[7]==0 ){
+			angle = 1000;
+			dir = 2;
+			isOverLine = true;
+		}
+
+		if(emergencyReturnFlag)
+		{
+			if(dir == 1 || dir == 2)
+			{
+				angle = 1500 + 500 * (3 - 2 * dir);	
+				DesireSpeed_Write(100);
+				SteeringServoControl_Write(angle);
+			}
+		}
+		/*
+		if(isOverLine) printf("true\n");
+		else printf("false\n");
+		*/
+	}
+}
+
+void DistanceThread(void *unused) 
+{
+	int i, j;
+	while(1)
+	{
+		for(i=0; i<6; i++)
+		{
+			for(j=0; j<25; j++)
+			{
+				DistanceValue[i][j] = DistanceSensor(i+1);
+				printf("DistanceValue[%d][%d] : %d", i+1, j+1, DistanceValue[i][j]);
+			}
+		}
+	}	
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -2623,7 +2668,7 @@ int main(int argc, char *argv[])
 	NvMediaBool deviceEnabled = NVMEDIA_FALSE;
 	unsigned int displayId;
 
-	pthread_t cntThread, lnThread, distanceThread;
+	pthread_t cntThread, lineThread, distanceThread;
 
 	signal(SIGINT, SignalHandler);
 
@@ -2852,7 +2897,7 @@ int main(int argc, char *argv[])
 
 	printf("8. Control Thread\n");
 	pthread_create(&cntThread, NULL, &ControlThread, NULL);
-	pthread_create(&lnThread, NULL, &LineThread, NULL);
+	pthread_create(&lineThread, NULL, &LineThread, NULL);
 	pthread_create(&distanceThread, NULL, &DistanceThread, NULL);
 
 	printf("9. Wait for completion \n");
