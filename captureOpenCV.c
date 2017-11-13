@@ -141,6 +141,8 @@ int table_100[256];
 int table_208[256];
 int table_516[256];
 
+int DistanceValue[6][25];
+
 typedef struct
 {
 	I2cId i2cDevice;
@@ -881,6 +883,22 @@ void writeLog(int frameNum){
     writeLineSensorLog();
     //줄내리기
     fprintf(f, "\n");
+}
+
+int DistanceSort(num)
+{
+	if(filteredIR(num)>2700)
+	{
+		return 1;
+	}
+	if(filteredIR(num)<=2700 && filteredIR(num)>=1300)
+	{
+		return 2;
+	}
+	if(filteredIR(num)<1300)
+	{
+		return 3;
+	}
 }
 
 void writeDistanceLog(){
@@ -1672,9 +1690,10 @@ int filteredIR(int num) // 필터링한 적외선 센서값
 {
 	int i;
     int sensorValue = 0;
-    for(i=0; i<25; i++){
-        sensorValue += DistanceSensor(num);
-    }
+	for(i=0; i<25; j++)
+	{
+		sensorValue += DistanceValue[num-1][j];
+	}
     sensorValue /= 25;
     return sensorValue;
 }
@@ -2368,7 +2387,22 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
 }
 
+void LineThread(void *unused)
+{
 
+}
+
+void DistanceThread(void *unused)
+{
+	for(i=0 i<6; i++)
+	{
+		for(j=0; j<25; j++)
+		{
+			DistanceValue[i][j] = DistanceSensor(i+1);
+			printf("DistanceValue[%d][%d] : %d", i+1, j+1, DistanceValue[i][j]);
+		}
+	}
+}
 
 void ControlThread(void *unused){
 	
@@ -2589,7 +2623,7 @@ int main(int argc, char *argv[])
 	NvMediaBool deviceEnabled = NVMEDIA_FALSE;
 	unsigned int displayId;
 
-	pthread_t cntThread;
+	pthread_t cntThread, lnThread, distanceThread;
 
 	signal(SIGINT, SignalHandler);
 
@@ -2818,6 +2852,8 @@ int main(int argc, char *argv[])
 
 	printf("8. Control Thread\n");
 	pthread_create(&cntThread, NULL, &ControlThread, NULL);
+	pthread_create(&lnThread, NULL, &LineThread, NULL);
+	pthread_create(&distanceThread, NULL, &DistanceThread, NULL);
 
 	printf("9. Wait for completion \n");
 	// Wait for completion
