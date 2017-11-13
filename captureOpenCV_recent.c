@@ -985,85 +985,85 @@ int isLine(){
 //////white_count에 대한 모듈들/////////////////////////////////
 ////////////////////////////////////////////////////////////////
 /////////////////white_count - 3way,정지선 구분 알고리즘
-int white_line_process(IplImage* imgOrigin) {//return 1: stopline, return 2:3way, return 3:nothing
+int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way, return 3:nothing
 
-	int i, j, k; //for loop
-	int cnt = 0;//number of white line for stop
+   int i,j,k; //for loop
+    int cnt = 0;//number of white line for stop
+    
+    bool FindWhiteBlock = false;
+    bool FindBlack1 = false;
+    bool FindBlack2 = false;
+    bool FindWhiteLine = false;
 
-	bool FindWhiteBlock = false;
-	bool FindBlack1 = false;
-	bool FindBlack2 = false;
-	bool FindWhiteLine = false;
-	
-#ifdef IMGSAVE
-	char fileName[40];
-	IplImage* imgResult1;            // TY add 6.27
-	imgResult1 = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
-	cvZero(imgResult1);
-	static int num = 0;
-	for (i = 0; i<240; i++)
-		for (j = 0; j<320; j++) {
-			if (imgOrigin->imageData[(i * 320 + j) * 3]>WHITEY && imgOrigin->imageData[(i * 320 + j) * 3 + 1]>WHITEU)imgResult1->imageData[i * 320 + j] = 255;
-			else if (imgOrigin->imageData[(i * 320 + j) * 3]>22 && imgOrigin->imageData[(i * 320 + j) * 3]<164);
-			else imgResult1->imageData[i * 320 + j] = 127;
-		}
-	sprintf(fileName, "captureImage/imgResultforWLP%d.png", num);          // TY add 6.27
-	num++;
-	cvSaveImage(fileName, imgResult1, 0);
-#endif           // TY add 6.27	
+   #ifdef IMGSAVE
+   char fileName[40];
+   IplImage* imgResult1;            // TY add 6.27
+   imgResult1 = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+   cvZero(imgResult1);
+   static int num = 0;
+   for(i = 0;i<240;i++)
+      for(j = 0;j<320;j++){
+         if(imgOrigin->imageData[(i*320+j)*3]>WHITEY && imgOrigin->imageData[(i*320+j)*3+1]>WHITEU)imgResult1->imageData[i*320+j] = 255;
+         else if(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164);
+         else imgResult1->imageData[i*320+j] = 127;
+      }
+   sprintf(fileName, "captureImage/imgResultforWLP%d.png", num);          // TY add 6.27
+   num++;
+    cvSaveImage(fileName, imgResult1, 0);
+    #endif           // TY add 6.27   
 
-	for (i = 80; i<140; i++) {//detect whether it is stopline
-		for (j = 0; j<120; j++) {
-			if ((imgOrigin->imageData[(i * 320 + j) * 3]>WHITEY && imgOrigin->imageData[(i * 320 + j) * 3 + 1]>WHITEU)) {//whitepixel
-				for (k = 0; k<200; k++) { //check successive 200 white pixels
-					if (!(imgOrigin->imageData[(i * 320 + j + k) * 3]>WHITEY && imgOrigin->imageData[(i * 320 + j + k) * 3 + 1]>WHITEU))break;
-					if (k == 199)FindWhiteLine = true;
-				}
-				j = j + k;
-				if (FindWhiteLine)break;
-			}
-		}
-		if (FindWhiteLine) { cnt++; printf("\n%d", i); }
-		else cnt = 0;
-		if (cnt == 3)return 1;//if whiteline ==3
-		FindWhiteLine = false;
-	}
-	cnt = 0;
-	for (i = 30; i<100; i++) {//detect whether it is 3way//진입 긴구간 없다는 가정하에 i 130~200, j 0 ~ 60 
-		for (j = 200; j<260; j++) {//find whiteblock
-			if (!FindBlack1 && (imgOrigin->imageData[(i * 320 + j) * 3]>22 && imgOrigin->imageData[(i * 320 + j) * 3]<164)) {//firstblocknotdetected&&blackpixel
-				for (k = 0; k<30; k++) { //check successive 5 white pixels
-					if (!(imgOrigin->imageData[(i * 320 + j) * 3]>22 && imgOrigin->imageData[(i * 320 + j) * 3]<164))break;
-					if (k == 29)FindBlack1 = true;
-				}
-				j = j + k;
-			}
-			else if (FindBlack1 && !FindWhiteBlock&&imgOrigin->imageData[(i * 320 + j) * 3]>WHITEY && imgOrigin->imageData[(i * 320 + j) * 3 + 1]>WHITEU) {//white
-				for (k = 0; k<10; k++) {
-					if (!(imgOrigin->imageData[(i * 320 + j) * 3]>WHITEY && imgOrigin->imageData[(i * 320 + j) * 3 + 1]>WHITEU))break;
-					if (k == 9) {
-						FindWhiteBlock = true;
-						break;
-					}
-				}
-				j = j + k;
-			}
-			else if (FindWhiteBlock && !FindBlack2&&imgOrigin->imageData[(i * 320 + j) * 3]>22 && imgOrigin->imageData[(i * 320 + j) * 3]<164) {//find third black block
-				for (k = 0; k<20; k++) { //check successive 5 white pixels
-					if (!(imgOrigin->imageData[(i * 320 + j) * 3]>22 && imgOrigin->imageData[(i * 320 + j) * 3]<164))break;
-					if (k == 19)FindBlack2 = true;
-				}
-				j = j + k;
-			}
-		}
-		if (FindBlack2)cnt++;
-		else cnt = 0;
-		FindWhiteBlock = false;
-		FindBlack2 = false;
-		FindBlack2 = false;
-		if (cnt>20)return 2;
-	}
-	return 0;
+    for(i = 80;i<140;i++){//detect whether it is stopline
+        for(j = 0;j<120;j++){
+            if((imgOrigin->imageData[(i*320+j)*3]>WHITEY && imgOrigin->imageData[(i*320+j)*3+1]>WHITEU)){//whitepixel
+                for(k=0; k<200; k++){ //check successive 200 white pixels
+                        if(!(imgOrigin->imageData[(i*320+j+k)*3]>WHITEY && imgOrigin->imageData[(i*320+j+k)*3+1]>WHITEU))break;
+                        if(k==199)FindWhiteLine = true;
+                    }
+                    j = j + k;
+                    if(FindWhiteLine)break;
+            }
+        }
+        if(FindWhiteLine){cnt++;printf("\n%d",i);}
+        else cnt = 0;
+        if(cnt==3)return 1;//if whiteline ==3
+        FindWhiteLine = false;
+    }
+    cnt = 0;
+    for(i = 20;i<150;i++){//detect whether it is 3way//진입 긴구간 없다는 가정하에 i 130~200, j 0 ~ 60 
+        for(j = 0;j<240;j++){//find whiteblock
+           if(!FindBlack1&&(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164)){//firstblocknotdetected&&blackpixel
+               for(k=0; k<30; k++){ //check successive 5 white pixels
+                       if(!(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164))break;
+                       if(k==29)FindBlack1 = true;
+                   }
+               j = j + k;
+           }
+           else if(FindBlack1&&!FindWhiteBlock&&imgOrigin->imageData[(i*320+j)*3]>WHITEY && imgOrigin->imageData[(i*320+j)*3+1]>WHITEU){//white
+                for(k=0; k<10; k++){ 
+                        if(!(imgOrigin->imageData[(i*320+j)*3]>WHITEY && imgOrigin->imageData[(i*320+j)*3+1]>WHITEU))break;
+                        if(k==9){
+                           FindWhiteBlock = true;
+                           break;
+                        }
+                   }
+               j = j+k;
+           }
+           else if(FindWhiteBlock&&!FindBlack2&&imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164){//find third black block
+               for(k=0; k<20; k++){ //check successive 5 white pixels
+                   if(!(imgOrigin->imageData[(i*320+j)*3]>22 && imgOrigin->imageData[(i*320+j)*3]<164))break;
+                   if(k==19)FindBlack2 = true;
+                   }
+               j = j+k;
+           }
+       }
+       if(FindBlack2)cnt++;
+       else cnt = 0;
+       FindWhiteBlock = false;
+       FindBlack2 = false;
+       FindBlack2 = false;
+       if(cnt>20)return 2;
+   }   
+   return 0;
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -2565,21 +2565,33 @@ int find_center_in_3way(){
 
 			}*/
 
-
 	while (1)
 	{
-	/*	pthread_mutex_lock(&mutex);
+		int tempval = filteredIR(4);
+
+		printf("\ntemp val = %d\n",tempval);
+
+		pthread_mutex_lock(&mutex);
 		pthread_cond_wait(&cond, &mutex);
 
 		GetTime(&pt1);
 		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
-		Frame2Ipl(imgOrigin, imgResult, color);
+		Frame2Ipl(imgOrigin, imgResult2, 4);
 
 		pthread_mutex_unlock(&mutex);
 
 		printf("Find_center in 3way\n\n");
-		Find_Center(imgResult);*/
+		Find_Center(imgResult2);
+
+		DesireSpeed_Write(70);
+		SteeringServoControl_Write(angle);
+
+		sprintf(res2Name,	 "imgsaved/res2Name_%d.png",	num);          // TY add 6.27
+		cvSaveImage(res2Name,	imgResult2, 0); 
+		num++;
+	   
+		
 //============================================================
 
 		#ifdef MODE2
@@ -2654,6 +2666,7 @@ int find_center_in_3way(){
     	 	DesireSpeed_Write(-70);
     	 	sleep(1);*/
 //==================================================== take pic
+    		if(filteredIR(1) >900){
     		DesireSpeed_Write(0);
     		sleep(1);
     		Alarm_Write(ON);
@@ -2676,23 +2689,21 @@ int find_center_in_3way(){
 			pthread_mutex_unlock(&mutex);
 //====================================================
 			Frame2Ipl(imgOrigin, imgResult, 6);
-			Frame2Ipl(imgOrigin, imgResult2, color);
 			Frame2Ipl(imgOrigin, imgResult3, color);
 
 			desti_lane = detect_obstacle2(imgResult);
 
 			sprintf(orgName,	 "imgsaved/orgName_%d.png",	num);          // TY add 6.27
 			sprintf(resName,	 "imgsaved/resName_%d.png",	num);          // TY add 6.27
-			sprintf(res2Name,	 "imgsaved/res2Name_%d.png",	num);          // TY add 6.27
 			sprintf(res3Name,	 "imgsaved/res3Name_%d.png",	num);          // TY add 6.27
 
 			num++;
 	   		
 	   		cvSaveImage(orgName,	imgOrigin, 0); 
 	   		cvSaveImage(resName,	imgResult, 0);
-	   		cvSaveImage(res2Name,	imgResult2, 0); 
 	   		cvSaveImage(res3Name,	imgResult3, 0); 
-	   		break;	   	
+	   		break;	
+	   		}   	
 	   }
 	   return desti_lane;
 	}
@@ -2805,20 +2816,13 @@ void ControlThread(void *unused){
 			if (module_process == 2) {
 				flag = 2;
 		
-				DesireSpeed_Write(0);
 				printf(" \n===== 3way detected====\n");
 				printf(" \n------------------------\n");
 
 				Alarm_Write(ON);
+				DesireSpeed_Write(0);
 				sleep(2);
 				Alarm_Write(OFF);
-		
-				while(filteredIR(4) <1500){
-					int tempval = filteredIR(4);
-					printf("\ntemp val = %d\n",tempval);
-
-				}
-
 
 				int destiny = find_center_in_3way();
 
