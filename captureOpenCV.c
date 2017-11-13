@@ -515,7 +515,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				white_count++;
 			}
 
-			if (v > 140) { //빨간색
+			if (v > 140 && j<50) { //빨간색
 				red_count++;
 			}
 
@@ -827,47 +827,6 @@ void drawonImage(IplImage* imgResult, int angle) {
 	cvLine(imgResult, point1, point2, CV_RGB(255, 255, 0), 2, 8, 0);
 }
 #endif
-
-
-void emergencyStopRed(){
-    // int x = 20, y= 0;
-    int width = 280, height = 10;
-    int mThreshold = width*height*0.1;
-
-    //적색 px판단
-    // int i, j;
-    // int count = 0;
-    // for(j=y; j<y+height; j++){
-    //     for(i=x; i<x+width; i++){
-    //         int px = imgColor->imageData[i + j*imgColor->widthStep];
-    //         if(px == whitepx){
-    //             //TODO
-    //             count++;
-    //         }
-    //     }
-    // }
-    printf("threshold : %d\n", mThreshold);
-    if(red_count > mThreshold){
-        //급정지! 대기
-        //speed = 0;
-        printf("\nStop! Red stop / countpx : %d / %d \n\n",red_count, mThreshold);
-        //DesireSpeed_Write(0);   //정지
-        speed = 0;
-
-        //curFlag = FLAG_STOP_EMERGENCYRED;
-        //isStop = 1;
-    }
-	// else if(count < mThreshold && curFlag == FLAG_STOP_EMERGENCYRED){
-	//
-    //     // TODO 3초 대기
-    //     curFlag = FLAG_STRAIGHT;
-    // }
-    // else if(count < width*height*0.05 && isStop == 1){
-    //     printf("\n\n GOGOGOGOGOGOGOGO! \n\n");
-    //     //출발
-    //     //아예 이 함수 플래그 죽이기
-    // }
-}
 
 //===================================
 //  Log file module / NYC
@@ -2430,16 +2389,9 @@ void ControlThread(void *unused){
 			주차는 독자 로직으로 해야할것 같다고 동재선배님이 코멘트 주셨습니다.
 		*/
 		//if(line == 1 || line == 2) angle = 1500 + 500 * (3 - 2 * line);
-		//else if (red_count > 280*10*0.4){//TODO : Threashold
-		//	printf("red_count!\n\n");
-			/*
-				TODO: 추후에 논의 후 로직 복붙
-			*/
-			//emergencyStopRed();//동재 선배님께서 함수화 시키지 말고 그냥 복붙하는게 나을 거라고 코멘트 주셨습니다.
-			//돌발정지 모듈
-			//////////////////////////////
-		//	}
-		//else 
+		
+		//else
+
 		if (flag > 0) {
 			flag = flag_module(flag, imgResult);
 		}
@@ -2495,10 +2447,16 @@ void ControlThread(void *unused){
 		//평상시 Find_Center 작동
 		else {
 			// 주차영역인지 확인
-			check_parking();
+			//check_parking();
 			printf("\n\nFind_Center!!\n\n");
 			Find_Center(imgResult);
 		}
+
+		//급정지면 무조건 정지!
+		if(red_count>280*10*0.4){
+			printf("red_count!\n\n");
+			speed = 0;
+		} 
 
 		DesireSpeed_Write(speed);
 		SteeringServoControl_Write(angle);
