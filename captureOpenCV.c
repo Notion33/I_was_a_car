@@ -1806,14 +1806,14 @@ void vertical_parking_right() // ?섏쭅 二쇱감
 void parallel_parking_right()
 {
 	/////////////////////////////////// 들어가기 ////////////////////////////////////////////
-
+	/*
 	EncoderCounter_Write(0);
 	SteeringServoControl_Write(1470);
 	while(EncoderCounter_Read() <= 500)
 	{
 		DesireSpeed_Write(encoder_speed);
 	} 
-
+	*/
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(1000);
 	while(EncoderCounter_Read() >= -5000)
@@ -1875,13 +1875,14 @@ void parallel_parking_right()
 void parallel_parking_left()
 {
 	/////////////////////////////////// 들어가기 ////////////////////////////////////////////
+	/*
 	EncoderCounter_Write(0);	
 	SteeringServoControl_Write(1470);
 	while(EncoderCounter_Read() <= 500)
 	{
 		DesireSpeed_Write(encoder_speed);
 	} 
-	
+	*/
 	EncoderCounter_Write(0);  
 	SteeringServoControl_Write(2000);	
 	while(EncoderCounter_Read() >= -5000)
@@ -2463,7 +2464,7 @@ void ControlThread(void *unused){
 			//////////////////////////////
 		//	}
 		//else 
-		/*
+		
 		if (flag > 0) {
 			flag = flag_module(flag, imgResult);
 		}
@@ -2514,7 +2515,7 @@ void ControlThread(void *unused){
 			printf("\n\nFind_Center!!\n\n");
 			Find_Center(imgResult);
 		}
-		*/
+		
 		
 		DesireSpeed_Write(speed);
 		SteeringServoControl_Write(angle);
@@ -2623,7 +2624,7 @@ void DistanceThread(void *unused)
 			for(j=0; j<25; j++)
 			{
 				DistanceValue[i][j] = DistanceSensor(i+1);
-				printf("DistanceValue[%d][%d] : %d", i+1, j+1, DistanceValue[i][j]);
+				printf("DistanceValue[%d][%d] : %d\n", i+1, j+1, DistanceValue[i][j]);
 			}
 		}
 	}	
