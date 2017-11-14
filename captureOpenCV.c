@@ -496,13 +496,13 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				white_count++;
 			}
 
-			if (v > 140 && j<50) { //빨간색
+			if (v > 165 && j<50) { //빨간색
 				red_count++;
 			}
 
 			switch (color) {
 			case 1:   //  빨간색
-				if (v > 140) {
+				if (v > 165) {
 					// 흰색으로
 					imgResult->imageData[bin_num] = (char)255;
 				}
