@@ -695,18 +695,20 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     float low_line_weight = 320; // control angle weight
     float high_line_weight = 80;
     float control_angle = 0;
-	int angle_threshold = 350;
 
     int left[240] = {0};
     int right[240] = {imgResult->width-1};
     float left_slope[2] = {0.0};
     float right_slope[2] = {0.0};
 
+	static bool max_turn_ready_left = false ;
+	static bool max_turn_ready_right = false ;
+
     bool continue_turn_left = false;
     bool continue_turn_right = false;
 
     for(i = y_start_line ; i>y_end_line ; i=i-line_gap){
-		if (turn_right_max == true)
+		if (turn_right_max == true || max_turn_ready_right == true)
 			j = imgResult->width - 1;
 		else
 			j = (imgResult->width) / 2;
@@ -726,7 +728,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                     }
                 }
 		}
-		if (turn_left_max == true)
+		if (turn_left_max == true || max_turn_ready_left == true)
 			j = 0 ; 
 		else
 			j = (imgResult->width) / 2 ;
@@ -832,12 +834,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
             printf("Control_Angle_low : %f \n\n",control_angle);
         }
 
-	if (abs(control_angle) > angle_threshold){
-		if (left_slope > right_slope)
-			continue_turn_left = true;
-		else
-			continue_turn_right = true;
-	} 
     turn_left_max = continue_turn_left;             //현재 프레임에서 최대조향이라고 판단할 경우, 최대조향 전역변수 set.
     turn_right_max = continue_turn_right;
 	
@@ -918,11 +914,15 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
       printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
       printf("Control_Angle_high : %f \n\n",control_angle);
   
-      if(abs(control_angle)>100)    //위쪽차선에서 과하게 꺾을경우, 방지 ; 코너에서 인코스로 들어오는걸 방지
+      if(abs(control_angle)>100){    //위쪽차선에서 과하게 꺾을경우, 방지 ; 코너에서 인코스로 들어오는걸 방지
         control_angle = 0;
+		if (left_slope > right_slope) max_turn_ready_left = true;
+		else max_turn_ready_right = true;
+	  }
+	} 
+
     }
-
-
+	printf("//------------------------------------------------------------\n");
     if (turn_left_max == true)                      //차량 조향각도 판별
         angle = 2000;
     else if (turn_right_max == true)
