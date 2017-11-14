@@ -2569,7 +2569,7 @@ int filteredIR(int num) // 필터링한 적외선 센서값
 	{
 		for(i=0; i<15; i++)
 		{
-			sensorValue += DistanceValue[1][i]
+			sensorValue += DistanceValue[1][i];
 		}
 	}
 	/*
@@ -3479,7 +3479,7 @@ void LineThread(void *unused)
 
 void DistanceThread(void *unused) 
 {
-	int i;
+	int i, j;
 	while(1)
 	{
 		for(i=0; i<25; i++)
