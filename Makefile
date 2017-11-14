@@ -32,6 +32,7 @@ default : $(TARGETS)
 
 $(TARGETS): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	make clean
 
 clobber clean :
 	rm -rf $(TARGETS) $(OBJS)
