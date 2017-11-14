@@ -39,8 +39,8 @@
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL     // To servo control(steering & camera position)
 #define IMGSAVE1
-#define straight_speed 200
-#define curve_speed 200
+#define straight_speed 100
+#define curve_speed 160
 
 
 #define IMGSAVE
@@ -2487,14 +2487,14 @@ void ControlThread(void *unused){
 				flag = 2;
 				printf("3way detected\n\n");
 			}
-			else if (module_process == 1)
+			else if (module_process == 1){
 				stop_check = 1;
 				printf("white line detected\n\n");	
 			}
 			else {
 				printf("Error!! 0000000\n");
 				// 주차영역인지 확인
-				//check_parking();
+				check_parking();
 				printf("\n\nFind_Center!!\n\n");
 				Find_Center(imgResult);
 			}		
@@ -2503,7 +2503,7 @@ void ControlThread(void *unused){
 		//평상시 Find_Center 작동
 		else {
 			// 주차영역인지 확인
-			//check_parking();
+			check_parking();
 			printf("\n\nFind_Center!!\n\n");
 			Find_Center(imgResult);
 		}
