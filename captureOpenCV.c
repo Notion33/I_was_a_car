@@ -3432,7 +3432,8 @@ void LineThread(void *unused)
 
 void DistanceThread(void *unused) 
 {
-	int i,j;
+	int i, j;
+
 	while(1)
 	{
 		for(i=0; i<25; i++)
