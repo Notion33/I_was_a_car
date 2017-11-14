@@ -38,7 +38,10 @@
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL
 #define LIGHT_BEEP
-//#define IMGSAVE
+
+#define curve_speed 130;
+#define straight_speed = 220;
+#define IMGSAVE
 //#define ROI
 
 ////////////////////////////////////////////////////////////////////////////
@@ -684,9 +687,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     int line_tolerance = 70;
     int low_line_width = 20;
     int high_line_width = 10;
-    int speed = 0;
-    int curve_speed = 100;       //default : 60
-    int straight_speed = 130;    //default : 90
 
     int line_gap = 5;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
     int tolerance = 25; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
@@ -719,7 +719,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                           continue;
                         break;
                     }
-                    if(k = low_line_width - 1){
+                    if(k == low_line_width - 1){
                       valid_left_amount++;
                       break;
                     }
@@ -739,18 +739,18 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                           continue;
                         break;
                     }
-                    if(k = low_line_width - 1){
+                    if(k == low_line_width - 1){
                       valid_right_amount++;
                       break;
                     }
                 }
         }
         if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
-            if(valid_left_amount >= valid_right_amount && turn_left_max == false){
+            if(valid_left_amount > valid_right_amount && turn_left_max == false){
             	printf("continue_turn_right set!\n");
                 continue_turn_right = true;
             }
-            else if(valid_right_amount >= valid_left_amount && turn_right_max == false){
+            else if(valid_right_amount > valid_left_amount && turn_right_max == false){
             	printf("continue_turn_left set!\n");
                 continue_turn_left = true;
             }
@@ -758,6 +758,13 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
             break;
         }
     }
+
+    printf("\nleft line = ");
+            for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
+            printf("    valid left line = %d\n",valid_left_amount);
+            printf("right line = ");
+            for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
+            printf("    valid right line = %d\n",valid_right_amount);
 
     if (continue_turn_left == false && continue_turn_right == false){          //turn max flag가 false인 경우 1. 직선 2. 과다곡선
         printf("continue_turn_flag_off__1__\n");
@@ -807,13 +814,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                     break;
                 }
             }
-
-            printf("\nleft line = ");
-            for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
-            printf("    valid left line = %d\n",valid_left_amount);
-            printf("right line = ");
-            for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
-            printf("    valid right line = %d\n",valid_right_amount);
 
             if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
                 left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
@@ -1083,10 +1083,10 @@ int main(int argc, char *argv[])
         SpeedControlOnOff_Write(CONTROL);
         //speed controller gain set            // PID range : 1~50 default : 20
         //P-gain
-        gain = 20;
+        gain = 50;
         SpeedPIDProportional_Write(gain);
         //I-gain
-        gain = 20;
+        gain = 50;
         SpeedPIDIntegral_Write(gain);
         //D-gain
         gain = 20;
@@ -1098,7 +1098,7 @@ int main(int argc, char *argv[])
 
     #ifdef LIGHT_BEEP
         //0. light and beep Control --------------------------------------------------
-        CarLight_Write(FRONT_ON);
+        CarLight_Write(ALL_OFF);
         usleep(1000000);
     #endif
 
