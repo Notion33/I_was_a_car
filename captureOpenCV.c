@@ -44,7 +44,7 @@
 
 
 #define IMGSAVE
-//#define LIGHT_BEEP
+#define LIGHT_BEEP
 //#define debug
 ////////////////////////////////////////////////////////////////////////////
 
@@ -110,6 +110,9 @@ static NvMediaVideoSurface *capSurf = NULL;
 
 pthread_cond_t      cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t     mutex = PTHREAD_MUTEX_INITIALIZER;
+int cThreadTime = 0;
+int lThreadTime = 0;
+int dThreadTime = 0;
 
 int table_298[256];
 int table_409[256];
@@ -120,6 +123,7 @@ int table_516[256];
 int DistanceValue[6][25];
 bool isOverLine = false;
 bool emergencyReturnFlag = true;
+bool distanceFlag = true;
 
 typedef struct
 {
@@ -496,7 +500,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				white_count++;
 			}
 
-			if (v > 140 && j<50) { //빨간색
+			if (v > 165 && j<50) { //빨간색
 				red_count++;
 			}
 
@@ -3372,8 +3376,16 @@ void ControlThread(void *unused){
 
 void LineThread(void *unused) 
 {
+	lThreadTime = 0;
+	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
+	NvU64 ptime1, ptime2;
+	struct timespec;
+
 	while(1)
 	{
+		GetTime(&pt1);
+		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+
 		int dir = 0;
 		int sensor = LineSensor_Read();        // black:1, white:0
 		int s = 0;
@@ -3415,22 +3427,41 @@ void LineThread(void *unused)
 		if(isOverLine) printf("true\n");
 		else printf("false\n");
 		*/
+		GetTime(&pt2);
+		ptime2 = (NvU64)pt2.tv_sec * 1000000000LL + (NvU64)pt2.tv_nsec;
+		//printf("--------------------------------operation time=%llu.%09llu[s]\n", (ptime2 - ptime1) / 1000000000LL, (ptime2 - ptime1) % 1000000000LL);
+		lThreadTime += (ptime2 - ptime1) / 1000000000LL;
 	}
 }
 
 void DistanceThread(void *unused) 
 {
+	dThreadTime = 0;
+	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
+	NvU64 ptime1, ptime2;
+	struct timespec;
+
 	int i, j;
 	while(1)
 	{
-		for(i=0; i<6; i++)
-		{
-			for(j=0; j<25; j++)
+		GetTime(&pt1);
+		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
+
+		if(distanceFlag){
+			for(i=0; i<6; i++)
 			{
-				DistanceValue[i][j] = DistanceSensor(i+1);
-				printf("DistanceValue[%d][%d] : %d\n", i+1, j+1, DistanceValue[i][j]);
+				for(j=0; j<25; j++)
+				{
+					DistanceValue[i][j] = DistanceSensor(i+1);
+					printf("DistanceValue[%d][%d] : %d\n", i+1, j+1, DistanceValue[i][j]);
+				}
 			}
 		}
+		
+		GetTime(&pt2);
+		ptime2 = (NvU64)pt2.tv_sec * 1000000000LL + (NvU64)pt2.tv_nsec;
+		//printf("--------------------------------operation time=%llu.%09llu[s]\n", (ptime2 - ptime1) / 1000000000LL, (ptime2 - ptime1) % 1000000000LL);
+		dThreadTime += (ptime2 - ptime1) / 1000000000LL;
 	}	
 }
 
@@ -3519,7 +3550,7 @@ int main(int argc, char *argv[])
 
 #ifdef LIGHT_BEEP
 	//0. light and beep Control --------------------------------------------------
-	CarLight_Write(ALL_OFF);
+	CarLight_Write(FRONT_ON);
 	usleep(1000000);
 #endif
 
@@ -3703,7 +3734,7 @@ int main(int argc, char *argv[])
 	printf("8. Control Thread\n");
 	pthread_create(&cntThread, NULL, &ControlThread, NULL);
 	pthread_create(&lineThread, NULL, &LineThread, NULL);
-	pthread_create(&distanceThread, NULL, &DistanceThread, NULL);
+	//pthread_create(&distanceThread, NULL, &DistanceThread, NULL);
 
 	printf("9. Wait for completion \n");
 	// Wait for completion
