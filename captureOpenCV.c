@@ -40,7 +40,7 @@
 #define SPEED_CONTROL     // To servo control(steering & camera position)
 #define IMGSAVE1
 #define straight_speed 200
-#define curve_speed 200
+#define curve_speed 130
 
 
 #define IMGSAVE
@@ -2487,7 +2487,7 @@ void ControlThread(void *unused){
 				flag = 2;
 				printf("3way detected\n\n");
 			}
-			else if (module_process == 1)
+			else if (module_process == 1){
 				stop_check = 1;
 				printf("white line detected\n\n");	
 			}
