@@ -117,7 +117,8 @@ int table_100[256];
 int table_208[256];
 int table_516[256];
 
-int DistanceValue[6][25];
+int DistanceValue[2][15];
+
 bool isOverLine = false;
 bool emergencyReturnFlag = true;
 
@@ -2498,12 +2499,31 @@ int DistanceSort(int num)
 int filteredIR(int num) // 필터링한 적외선 센서값
 {
 	int i;
-    int sensorValue = 0;
-	for(i=0; i<25; i++)
+	int sensorValue = 0;
+	if(num == 5) // 왼쪽 후방 센서 
 	{
-		sensorValue += DistanceValue[num-1][i];
+		for(i=0; i<15; i++)
+		{
+			sensorValue += DistanceValue[0][i];
+		}
 	}
-    sensorValue /= 25;
+	if(num == 3) // 오른쪽 후방 센서
+	{
+		for(i=0; i<15; i++)
+		{
+			sensorValue += DistanceValue[1][i]
+		}
+	}
+	/*
+	if(num == 4)
+	{
+		for(i=0; i<15; i++)
+		{
+			sensorValue += DistanceValue[2][i]
+		}
+	}
+	*/
+    sensorValue /= 15;
     return sensorValue;
 }
 
@@ -2531,7 +2551,7 @@ void vertical_parking_left() // ?섏쭅 二쇱감
 	SteeringServoControl_Write(1496);
 	//PSD 센서 이용
 	SteeringServoControl_Write(1470);
-	while(filteredIR(4) >= 600)
+	while(filteredIR(4) <= 3000)
 	{
 		DesireSpeed_Write(-50);
 	}
@@ -2573,7 +2593,7 @@ void vertical_parking_right() // ?섏쭅 二쇱감
 	SteeringServoControl_Write(1496);
 	//PSD 센서 이용
 	SteeringServoControl_Write(1470);
-	while(filteredIR(4) >= 600)
+	while(filteredIR(4) <= 3000)
 	{
 		DesireSpeed_Write(-50);
 	}
@@ -2632,7 +2652,7 @@ void parallel_parking_right()
 	SteeringServoControl_Write(1470);
 	//PSD 센서 이용
 	SteeringServoControl_Write(1470);
-	while(filteredIR(4) >= 600)
+	while(filteredIR(4) <= 3000)
 	{
 		DesireSpeed_Write(-50);
 	}
@@ -2701,7 +2721,7 @@ void parallel_parking_left()
 	SteeringServoControl_Write(1470);	
 	//PSD 센서 이용
 	SteeringServoControl_Write(1470);
-	while(filteredIR(4) >= 600)
+	while(filteredIR(4) <= 3000)
 	{
 		DesireSpeed_Write(-50);
 	}  
@@ -3396,16 +3416,14 @@ void LineThread(void *unused)
 
 void DistanceThread(void *unused) 
 {
-	int i, j;
+	int i;
 	while(1)
 	{
-		for(i=0; i<6; i++)
+		for(i=0; i<25; i++)
 		{
-			for(j=0; j<25; j++)
-			{
-				DistanceValue[i][j] = DistanceSensor(i+1);
-				printf("DistanceValue[%d][%d] : %d\n", i+1, j+1, DistanceValue[i][j]);
-			}
+			DistanceValue[0][i] = DistanceSensor(5); // 왼쪽 PSD 센서
+			DistanceValue[1][i] = DistanceSensor(3); // 오른쪽 PSD 센서
+			// DistanceValue[2][i] = DistanceSensor(4); // 후방 PSD 센서
 		}
 	}	
 }
