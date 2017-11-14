@@ -42,7 +42,6 @@
 #define straight_speed 150
 #define curve_speed 130
 
-
 //#define IMGSAVE
 //#define LIGHT_BEEP
 //#define debug
@@ -117,7 +116,8 @@ int table_100[256];
 int table_208[256];
 int table_516[256];
 
-int DistanceValue[6][25];
+int DistanceValue[2][15];
+
 bool isOverLine = false;
 bool emergencyReturnFlag = true;
 
@@ -496,13 +496,13 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				white_count++;
 			}
 
-			if (v > 140 && j<50) { //빨간색
+			if (v > 165 && j<50) { //빨간색
 				red_count++;
 			}
 
 			switch (color) {
 			case 1:   //  빨간색
-				if (v > 140) {
+				if (v > 165) {
 					// 흰색으로
 					imgResult->imageData[bin_num] = (char)255;
 				}
@@ -2557,12 +2557,31 @@ int DistanceSort(int num)
 int filteredIR(int num) // 필터링한 적외선 센서값
 {
 	int i;
-    int sensorValue = 0;
-	for(i=0; i<25; i++)
+	int sensorValue = 0;
+	if(num == 5) // 왼쪽 후방 센서 
 	{
-		sensorValue += DistanceValue[num-1][i];
+		for(i=0; i<15; i++)
+		{
+			sensorValue += DistanceValue[0][i];
+		}
 	}
-    sensorValue /= 25;
+	if(num == 3) // 오른쪽 후방 센서
+	{
+		for(i=0; i<15; i++)
+		{
+			sensorValue += DistanceValue[1][i]
+		}
+	}
+	/*
+	if(num == 4)
+	{
+		for(i=0; i<15; i++)
+		{
+			sensorValue += DistanceValue[2][i]
+		}
+	}
+	*/
+    sensorValue /= 15;
     return sensorValue;
 }
 
@@ -2590,7 +2609,7 @@ void vertical_parking_left() // ?섏쭅 二쇱감
 	SteeringServoControl_Write(1496);
 	//PSD 센서 이용
 	SteeringServoControl_Write(1470);
-	while(filteredIR(4) >= 600)
+	while(filteredIR(4) <= 3000)
 	{
 		DesireSpeed_Write(-50);
 	}
@@ -2632,7 +2651,7 @@ void vertical_parking_right() // ?섏쭅 二쇱감
 	SteeringServoControl_Write(1496);
 	//PSD 센서 이용
 	SteeringServoControl_Write(1470);
-	while(filteredIR(4) >= 600)
+	while(filteredIR(4) <= 3000)
 	{
 		DesireSpeed_Write(-50);
 	}
@@ -2691,7 +2710,7 @@ void parallel_parking_right()
 	SteeringServoControl_Write(1470);
 	//PSD 센서 이용
 	SteeringServoControl_Write(1470);
-	while(filteredIR(4) >= 600)
+	while(filteredIR(4) <= 3000)
 	{
 		DesireSpeed_Write(-50);
 	}
@@ -2760,7 +2779,7 @@ void parallel_parking_left()
 	SteeringServoControl_Write(1470);	
 	//PSD 센서 이용
 	SteeringServoControl_Write(1470);
-	while(filteredIR(4) >= 600)
+	while(filteredIR(4) <= 3000)
 	{
 		DesireSpeed_Write(-50);
 	}  
@@ -3023,7 +3042,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                           continue;
                         break;
                     }
-                    if(k = low_line_width - 1){
+                    if(k == low_line_width - 1){
                       valid_left_amount++;
                       break;
                     }
@@ -3043,18 +3062,18 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                           continue;
                         break;
                     }
-                    if(k = low_line_width - 1){
+                    if(k == low_line_width - 1){
                       valid_right_amount++;
                       break;
                     }
                 }
         }
         if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
-            if(valid_left_amount >= valid_right_amount && turn_left_max == false){
+            if(valid_left_amount > valid_right_amount && turn_left_max == false){
             	printf("continue_turn_right set!\n");
                 continue_turn_right = true;
             }
-            else if(valid_right_amount >= valid_left_amount && turn_right_max == false){
+            else if(valid_right_amount > valid_left_amount && turn_right_max == false){
             	printf("continue_turn_left set!\n");
                 continue_turn_left = true;
             }
@@ -3119,16 +3138,10 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
             for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
             printf("    valid right line = %d\n",valid_right_amount);
 
-            if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
-                left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
-            }
+            if(valid_left_amount > 1) left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap); //좌측 차선 기울기 계산
             else left_slope[0] = 0;
-
-            if(valid_right_amount > 1){                                          //우측 차선 기울기 계산
-                right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
-            }
+            if(valid_right_amount > 1) right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap); //우측 차선 기울기 계산
             else right_slope[0] = 0;
-            
             control_angle = (left_slope[0] + right_slope[0])*low_line_weight;        //차량 조향 기울기 계산
 
             printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
@@ -3173,8 +3186,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                       }
                   }
           }
-        //   if(left[y_high_start_line-i]>((imgResult->width/2)-high_tolerance)||right[y_high_start_line-i]<((imgResult->width/2)+high_tolerance))     //검출된 차선이 화면중앙부근에 있는경우, 아랫쪽차선까지 올수있도록 무시
-        //       break;
         }
 
         for(i=0;i<=valid_high_left_amount;i++){                        //좌측 차선 검출
@@ -3199,16 +3210,10 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
       for(i=0;i<valid_high_right_amount;i++)printf("%d ",right[i*line_gap]);
       printf("    valid high right line = %d\n",valid_high_right_amount);
 
-      if(valid_high_left_amount > 1){                                          //좌측 차선 기울기 계산
-          left_slope[0] = (float)(left[0] - left[(valid_high_left_amount-1)*line_gap])/(float)(valid_high_left_amount*line_gap);
-      }
+      if(valid_high_left_amount > 1) left_slope[0] = (float)(left[0] - left[(valid_high_left_amount-1)*line_gap])/(float)(valid_high_left_amount*line_gap); //우측 차선 기울기 계산
       else left_slope[0] = 0;
-
-      if(valid_high_right_amount > 1){                                          //우측 차선 기울기 계산
-          right_slope[0] = (float)(right[0] - right[(valid_high_right_amount-1)*line_gap])/(float)(valid_high_right_amount*line_gap);
-      }
+      if(valid_high_right_amount > 1)	right_slope[0] = (float)(right[0] - right[(valid_high_right_amount-1)*line_gap])/(float)(valid_high_right_amount*line_gap); //우측 차선 기울기 계산
       else right_slope[0] = 0;
-      
       control_angle = (left_slope[0] + right_slope[0])*high_line_weight;        //차량 조향 기울기 계산
 
       printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
@@ -3216,19 +3221,15 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
   
       if(abs(control_angle)>100)    //위쪽차선에서 과하게 꺾을경우, 방지 ; 코너에서 인코스로 들어오는걸 방지
         control_angle = 0;
-
     }
 
-
-    if (turn_left_max == true)                      //차량 조향각도 판별
-        angle = 2000;
-    else if (turn_right_max == true)
-        angle = 1000;
+	// 최종 조향각도 확정
+    if (turn_left_max == true) angle = 2000;
+    else if (turn_right_max == true) angle = 1000;
     else{
         angle = 1500 + control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
 		angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
     }
-    //SteeringServoControl_Write(angle);
 
     #ifdef SPEED_CONTROL
         if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
@@ -3240,15 +3241,9 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     #ifdef ROI
         for(i=0;i<imgResult->widthStep;i++){
             imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
-            }
-        for(i=0;i<imgResult->widthStep;i++){
             imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
-			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
-			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
+			imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
+			imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
 			}
     #endif
 }
@@ -3366,7 +3361,7 @@ void ControlThread(void *unused){
 			else {
 				printf("Error!! 0000000\n");
 				// 주차영역인지 확인
-				//check_parking();
+				check_parking();
 				printf("\n\nFind_Center!!\n\n");
 				Find_Center(imgResult);
 			}		
@@ -3375,7 +3370,7 @@ void ControlThread(void *unused){
 		//평상시 Find_Center 작동
 		else {
 			// 주차영역인지 확인
-			//check_parking();
+			check_parking();
 			printf("\n\nFind_Center!!\n\n");
 			Find_Center(imgResult);
 		}
@@ -3484,10 +3479,10 @@ void LineThread(void *unused)
 
 void DistanceThread(void *unused) 
 {
-	int i, j;
+	int i;
 	while(1)
 	{
-		for(i=0; i<6; i++)
+		for(i=0; i<25; i++)
 		{
 			for(j=0; j<25; j++)
 			{
@@ -3568,10 +3563,10 @@ int main(int argc, char *argv[])
 	SpeedControlOnOff_Write(CONTROL);
 	//speed controller gain set            // PID range : 1~50 default : 20
 	//P-gain
-	gain = 20;
+	gain = 50;
 	SpeedPIDProportional_Write(gain);
 	//I-gain
-	gain = 20;
+	gain = 40;
 	SpeedPIDIntegral_Write(gain);
 	//D-gain
 	gain = 20;
