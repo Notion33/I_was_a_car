@@ -695,6 +695,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     float low_line_weight = 320; // control angle weight
     float high_line_weight = 80;
     float control_angle = 0;
+	int angle_threshold = 350;
 
     int left[240] = {0};
     int right[240] = {imgResult->width-1};
@@ -831,8 +832,15 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
             printf("Control_Angle_low : %f \n\n",control_angle);
         }
 
+	if (abs(control_angle) > angle_threshold){
+		if (left_slope > right_slope)
+			continue_turn_left = true;
+		else
+			continue_turn_right = true;
+	} 
     turn_left_max = continue_turn_left;             //현재 프레임에서 최대조향이라고 판단할 경우, 최대조향 전역변수 set.
     turn_right_max = continue_turn_right;
+	
 
     if(turn_left_max == false && turn_right_max == false && control_angle == 0.0 ){   //아랫쪽차선 검출시도후, 직진주행 하는 경우,
         printf("Does not detected low_lain\n");
