@@ -1443,6 +1443,7 @@ int endMission(IplImage* imgResult) {
 	printf("angle = %d\n", angle);
 	return 3;
 }
+
 int rotary() {
 	int data = 0;//sensor data
 	int databack = 0;
@@ -1545,6 +1546,7 @@ int rotary() {
 			cnt = 0;
 			maxcnt = 0;
 			if (!CourseOut) {//courseout이 True이고 화면에 장애물 픽셀 안잡히면 탈출(courseout은 우측화면에 흰픽셀 잡힌뒤 사라지면 true)
+				printf("not yet course out\n");
 				for (i = 40; i<220; i++) {
 					for (j = 200; j<310; j++) {//find whiteblock
 						if ((imgOrigin->imageData[(i * 320 + j) * 3]>OUT_LINE_Y && imgOrigin->imageData[(i * 320 + j) * 3 + 1]>OUT_LINE_U && imgOrigin->imageData[(i * 320 + j) * 3 + 2]>OUT_LINE_V)) {//firstblocknotdetected&&blackpixel
@@ -1575,7 +1577,9 @@ int rotary() {
 					}
 				}
 			}
-			if (IsDetected/*&&maxcnt<8*/)CourseOut = true;
+			if (IsDetected/*&&maxcnt<8*/)
+				CourseOut = true;
+			
 			pixshadow = 0;
 
 			for (i = SHADOW_RANGE_MIN_Y; i<SHADOW_RANGE_MAX_Y; i++)
@@ -1613,6 +1617,7 @@ int rotary() {
 				printf("pixshadow = %lf\n", pixshadow);
 				if (speed<0)speed = 0;
 			}
+			SteeringServoControl_Write(angle);
 			DesireSpeed_Write(speed);
 		}
 	}
@@ -1865,9 +1870,9 @@ int find_center_in_3way() {
 					//   PositionControlOnOff_Write(UNCONTROL); 
 					EncoderCounter_Write(0); // 인코더 초기화
 					usleep(10000);
-					DesireSpeed_Write(-30);
+					DesireSpeed_Write(-50);
 
-					enc_cal = (-20)* tempval;
+					enc_cal = (-15)* tempval;
 					printf("enc_cal = %d\n ", enc_cal);
 
 					while (enc_val > enc_cal) {
@@ -1895,10 +1900,10 @@ int find_center_in_3way() {
 					// sleep(1);
 
 					DesireSpeed_Write(0);
-					sleep(2);
+					usleep(1000);
 
 					CameraYServoControl_Write(1600);    //camera heading up
-					sleep(1);
+					usleep(10000);
 
 					pthread_mutex_lock(&mutex);
 					pthread_cond_wait(&cond, &mutex);
@@ -1983,14 +1988,10 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 	}
 
 
-
-
-
-
-	CarControlInit();
-	SpeedControlOnOff_Write(CONTROL);
-	PositionControlOnOff_Write(UNCONTROL);
-	//DesireSpeed_Write(tw_straight_speed);
+	//CarControlInit();
+	//SpeedControlOnOff_Write(CONTROL);
+	//PositionControlOnOff_Write(UNCONTROL);
+	DesireSpeed_Write(tw_straight_speed);
 
 	gain = 20;
 	PositionProportionPoint_Write(gain);
@@ -2124,6 +2125,7 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 						flag_sensor++;
 						flag_tw++;
 						Alarm_Write(ON);
+						usleep(100000);
 					}
 			}
 				else if (flag_sensor == 0)
@@ -2132,6 +2134,7 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 					if (tempval>1036 && tempval<1717) //12cm ~ 25cm 거리 센서 측정
 						flag_sensor++;
 					Alarm_Write(ON);
+					usleep(100000);
 				}
 		}
 			else if (t == -1) {
@@ -2149,6 +2152,7 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 						flag_sensor++;
 						flag_tw++;
 						Alarm_Write(ON);
+						usleep(100000);
 					}
 				}
 				else if (flag_sensor == 0)
@@ -2157,6 +2161,7 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 					if (tempval>896 && tempval<1897) //12cm ~ 25cm 거리 센서 측정
 						flag_sensor++;
 					Alarm_Write(ON);
+					usleep(100000);
 				}
 			}
 	}
@@ -2175,7 +2180,7 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 	else if (flag_tw == 11)
 	{
 		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500 + t * 430;//왼쪽 조향  1900, 오른쪽 조향 1100; 위와 똑같은 이론
+		tw_angle = 1500 + t * 450;//왼쪽 조향  1900, 오른쪽 조향 1100; 위와 똑같은 이론
 		angle = tw_angle;
 		speed = tw_curve_speed;
 
@@ -2204,7 +2209,7 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 
 	else if (flag_tw == 14)
 	{
-		if (position_now > 30 * weight_tw1)
+		if (position_now > 35 * weight_tw1)
 			flag_tw++; // flag 1 증가
 
 #ifdef DEBUG_TW
@@ -2215,7 +2220,7 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 	else if (flag_tw == 15)
 	{
 		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500 - t * 430;//오른쪽 조향 1100, 왼쪽 조향 1900; 이것은 t값에 따라 바뀜!! 아래 설명 생략
+		tw_angle = 1500 - t * 450;//오른쪽 조향 1100, 왼쪽 조향 1900; 이것은 t값에 따라 바뀜!! 아래 설명 생략
 		angle = tw_angle;
 		speed = tw_curve_speed;
 
@@ -2246,7 +2251,7 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 	{
 		if (position_now > 30 * weight_tw1)
 			flag_tw++; // flag 1 증가
-		speed = 0;
+		//speed = 0;
 #ifdef DEBUG_TW
 		printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
 #endif
@@ -2517,7 +2522,7 @@ int filteredIR(int num) // 필터링한 적외선 센서값
 	{
 		for(i=0; i<15; i++)
 		{
-			sensorValue += DistanceValue[1][i]
+			sensorValue += DistanceValue[1][i];
 		}
 	}
 	/*
@@ -3427,7 +3432,7 @@ void LineThread(void *unused)
 
 void DistanceThread(void *unused) 
 {
-	int i;
+	int i,j;
 	while(1)
 	{
 		for(i=0; i<25; i++)
