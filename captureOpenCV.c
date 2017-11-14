@@ -38,7 +38,7 @@
 
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL     // To servo control(steering & camera position)
-#define IMGSAVE1
+//#define IMGSAVE1
 #define straight_speed 230
 #define curve_speed 130
 
@@ -2991,11 +2991,11 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                 }
         }
         if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
-            if(valid_left_amount >= valid_right_amount && turn_left_max == false){
+            if(valid_left_amount > valid_right_amount && turn_left_max == false){
             	printf("continue_turn_right set!\n");
                 continue_turn_right = true;
             }
-            else if(valid_right_amount >= valid_left_amount && turn_right_max == false){
+            else if(valid_right_amount > valid_left_amount && turn_right_max == false){
             	printf("continue_turn_left set!\n");
                 continue_turn_left = true;
             }
@@ -3060,16 +3060,10 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
             for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
             printf("    valid right line = %d\n",valid_right_amount);
 
-            if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
-                left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
-            }
+            if(valid_left_amount > 1) left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap); //좌측 차선 기울기 계산
             else left_slope[0] = 0;
-
-            if(valid_right_amount > 1){                                          //우측 차선 기울기 계산
-                right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
-            }
+            if(valid_right_amount > 1) right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap); //우측 차선 기울기 계산
             else right_slope[0] = 0;
-            
             control_angle = (left_slope[0] + right_slope[0])*low_line_weight;        //차량 조향 기울기 계산
 
             printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
@@ -3114,8 +3108,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                       }
                   }
           }
-        //   if(left[y_high_start_line-i]>((imgResult->width/2)-high_tolerance)||right[y_high_start_line-i]<((imgResult->width/2)+high_tolerance))     //검출된 차선이 화면중앙부근에 있는경우, 아랫쪽차선까지 올수있도록 무시
-        //       break;
         }
 
         for(i=0;i<=valid_high_left_amount;i++){                        //좌측 차선 검출
@@ -3140,16 +3132,10 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
       for(i=0;i<valid_high_right_amount;i++)printf("%d ",right[i*line_gap]);
       printf("    valid high right line = %d\n",valid_high_right_amount);
 
-      if(valid_high_left_amount > 1){                                          //좌측 차선 기울기 계산
-          left_slope[0] = (float)(left[0] - left[(valid_high_left_amount-1)*line_gap])/(float)(valid_high_left_amount*line_gap);
-      }
+      if(valid_high_left_amount > 1) left_slope[0] = (float)(left[0] - left[(valid_high_left_amount-1)*line_gap])/(float)(valid_high_left_amount*line_gap); //우측 차선 기울기 계산
       else left_slope[0] = 0;
-
-      if(valid_high_right_amount > 1){                                          //우측 차선 기울기 계산
-          right_slope[0] = (float)(right[0] - right[(valid_high_right_amount-1)*line_gap])/(float)(valid_high_right_amount*line_gap);
-      }
+      if(valid_high_right_amount > 1)	right_slope[0] = (float)(right[0] - right[(valid_high_right_amount-1)*line_gap])/(float)(valid_high_right_amount*line_gap); //우측 차선 기울기 계산
       else right_slope[0] = 0;
-      
       control_angle = (left_slope[0] + right_slope[0])*high_line_weight;        //차량 조향 기울기 계산
 
       printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
@@ -3157,19 +3143,15 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
   
       if(abs(control_angle)>100)    //위쪽차선에서 과하게 꺾을경우, 방지 ; 코너에서 인코스로 들어오는걸 방지
         control_angle = 0;
-
     }
 
-
-    if (turn_left_max == true)                      //차량 조향각도 판별
-        angle = 2000;
-    else if (turn_right_max == true)
-        angle = 1000;
+	// 최종 조향각도 확정
+    if (turn_left_max == true) angle = 2000;
+    else if (turn_right_max == true) angle = 1000;
     else{
         angle = 1500 + control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
 		angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
     }
-    //SteeringServoControl_Write(angle);
 
     #ifdef SPEED_CONTROL
         if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
