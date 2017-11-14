@@ -39,7 +39,7 @@
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL     // To servo control(steering & camera position)
 #define IMGSAVE1
-#define straight_speed 200
+#define straight_speed 230
 #define curve_speed 130
 
 
@@ -2964,7 +2964,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                           continue;
                         break;
                     }
-                    if(k = low_line_width - 1){
+                    if(k == low_line_width - 1){
                       valid_left_amount++;
                       break;
                     }
@@ -2984,7 +2984,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                           continue;
                         break;
                     }
-                    if(k = low_line_width - 1){
+                    if(k == low_line_width - 1){
                       valid_right_amount++;
                       break;
                     }
@@ -3181,15 +3181,9 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     #ifdef ROI
         for(i=0;i<imgResult->widthStep;i++){
             imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
-            }
-        for(i=0;i<imgResult->widthStep;i++){
             imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
-			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
-			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
+			imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
+			imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
 			}
     #endif
 }
@@ -3504,10 +3498,10 @@ int main(int argc, char *argv[])
 	SpeedControlOnOff_Write(CONTROL);
 	//speed controller gain set            // PID range : 1~50 default : 20
 	//P-gain
-	gain = 20;
+	gain = 50;
 	SpeedPIDProportional_Write(gain);
 	//I-gain
-	gain = 20;
+	gain = 40;
 	SpeedPIDIntegral_Write(gain);
 	//D-gain
 	gain = 20;
