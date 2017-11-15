@@ -41,9 +41,9 @@
 //#define IMGSAVE1
 
 #define straight_speed 230
-#define curve_speed 120
+#define curve_speed 130
 
-//#define IMGSAVE
+#define IMGSAVE
 //#define LIGHT_BEEP
 //#define debug
 ////////////////////////////////////////////////////////////////////////////
@@ -3124,8 +3124,8 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     int high_line_width = 10;
 
     int line_gap = 5;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
-    int tolerance = 40; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
-    int high_tolerance = 60;
+    int tolerance = 60; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
+    int high_tolerance = 70;
 
     float low_line_weight = 320; // control angle weight
     float high_line_weight = 80;
@@ -3136,6 +3136,11 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     int right[240] = {imgResult->width-1};
     float left_slope[2] = {0.0};
     float right_slope[2] = {0.0};
+
+	int valid_left_sum = 0;
+	int valid_right_sum = 0;
+	int valid_left[20] = {0};
+	int valid_right[20] = {0};
 
     static bool max_turn_ready_left = false ;
     static bool max_turn_ready_right = false ;
@@ -3263,13 +3268,35 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     if (continue_turn_left == false && continue_turn_right == false){   //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
             printf("continue_turn_flag_all_off__3__\n");
 
-            if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
-                left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
+            for(i=0;i<=valid_left_amount;i++){                          //차선의 invalid value찾기 (좌측차선인데 기울기가 우측으로 안기울고 좌측으로 나오는 경우)
+				if(i==0)
+					valid_left[i] = left[0];
+				else {
+					if(left[i*line_gap]<left[(i-1)*line_gap]) break; //it is invalid!
+					else{
+						valid_left[i] = left[i*line_gap];
+						valid_left_sum++;
+					}
+				}
+            }
+			for(i=0;i<=valid_right_amount;i++){                          //차선의 invalid value찾기 (좌측차선인데 기울기가 우측으로 안기울고 좌측으로 나오는 경우)
+				if(i==0)
+					valid_right[i] = right[0];
+				else {
+					if(right[i*line_gap]<right[(i-1)*line_gap]) break; //it is invalid!
+					else{
+						valid_right[i] = right[i*line_gap];
+						valid_right_sum++;
+					}
+				}
+            }
+
+            if(valid_left_sum > 1){                                          //좌측 차선 기울기 계산
+                left_slope[0] = (float)(left[valid_left_sum]- left[0])/(float)(valid_left_sum*line_gap);
             }
             else left_slope[0] = 0;
-
-            if(valid_right_amount > 1){                                          //우측 차선 기울기 계산
-                right_slope[0] = (float)(right[0] - right[(valid_right_amount-1)*line_gap])/(float)(valid_right_amount*line_gap);
+            if(valid_right_sum > 1){                                          //우측 차선 기울기 계산
+                right_slope[0] = (float)(right[0] - right[valid_right_sum])/(float)(valid_right_sum*line_gap);
             }
             else right_slope[0] = 0;
             
