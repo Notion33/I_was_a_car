@@ -43,7 +43,7 @@
 #define straight_speed 230
 #define curve_speed 120
 
-//#define IMGSAVE
+#define IMGSAVE
 //#define LIGHT_BEEP
 //#define debug
 ////////////////////////////////////////////////////////////////////////////
@@ -598,7 +598,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 		stepU += pitchU[i];
 		stepV += pitchV[i];
 	}
-
+	printf("=================white_count = %d=========================\n", white_count);
 
 	NvMediaVideoSurfaceUnlock(capSurf);
 
@@ -1178,9 +1178,9 @@ int detectStop(IplImage* imgResult) {
 	return 0;
 	}
 	*/
-	if ((Stop_line() == 1&&stop_camera>1) || stop_camera > 4) { //stop_camera 의 계수 test따라 변경(최적화 만들기)
+	if ((Stop_line() == 1&&stop_camera>1) || stop_camera >= 3) { //stop_camera 의 계수 test따라 변경(최적화 만들기)
 		if (Stop_line() != 1 && stop_camera > 4) {
-			while (EncoderCounter_Read() < 100) {}
+			while (EncoderCounter_Read() < 300) {}
 		}
 		speed = 0;
 		stop_camera = 0;
@@ -1199,7 +1199,7 @@ int detectStop(IplImage* imgResult) {
 		speed = 50;
 
 		printf("==============white count =%d====================\n", white_count);
-		if (white_count > 1000) {//TODO 5cm에 대한 pixel수 잡히는 정도 측정
+		if (white_count > 650) {//TODO 5cm에 대한 pixel수 잡히는 정도 측정
 			Alarm_Write(ON);
 			usleep(1000);
 			stop_camera++;
@@ -1580,16 +1580,16 @@ int rotary() {
 #endif
 	IplImage *imgOrigin;
 	IplImage *imgResult;
-//	IplImage *imgResult1;
+	IplImage *imgResult1;
 
 	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
 	imgResult = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
-//	imgResult1 = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
+	imgResult1 = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);
 
 	//color = 5;//rotary frame2ipl
 
 	cvZero(imgResult);
-//	cvZero(imgResult1);
+	cvZero(imgResult1);
 
 	///////////////////////////////////////////////
 
