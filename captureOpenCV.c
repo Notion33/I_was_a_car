@@ -88,7 +88,7 @@ int third_right_detect = FALSE;
 int parking_space = 0;
 int encoder_speed = 50;
 
-bool distance_warmming = FALSE // distanceThread가 DistanceValue배열을 모두 채웠는지 확인용 flag. 처음시작시 배열이 모두 0이기에 잘못사용되는걸 막기위함.
+bool distance_warmming = FALSE; // distanceThread가 DistanceValue배열을 모두 채웠는지 확인용 flag. 처음시작시 배열이 모두 0이기에 잘못사용되는걸 막기위함.
 
 /////////////////////////////로터리에 필요한 #define 입니다
 #define CHANNEL1 1
