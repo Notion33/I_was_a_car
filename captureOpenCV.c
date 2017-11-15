@@ -1178,7 +1178,10 @@ int detectStop(IplImage* imgResult) {
 	return 0;
 	}
 	*/
-	if (Stop_line() == 1 || stop_camera > 10) { //stop_camera 의 계수 test따라 변경(최적화 만들기)
+	if ((Stop_line() == 1&&stop_camera>1) || stop_camera > 4) { //stop_camera 의 계수 test따라 변경(최적화 만들기)
+		if (Stop_line() != 1 && stop_camera > 4) {
+			while (EncoderCounter_Read() < 100) {}
+		}
 		speed = 0;
 		stop_camera = 0;
 		printf("stop!!!!!!\n");
@@ -1195,12 +1198,13 @@ int detectStop(IplImage* imgResult) {
 		Find_Center(imgResult);
 		speed = 50;
 
-		//printf("white count =%d\n", white_count);
-		if (white_count > 2000) {//TODO 5cm에 대한 pixel수 잡히는 정도 측정
+		printf("==============white count =%d====================\n", white_count);
+		if (white_count > 1000) {//TODO 5cm에 대한 pixel수 잡히는 정도 측정
 			Alarm_Write(ON);
 			usleep(1000);
 			stop_camera++;
-			printf("stop camera = %d\n", stop_camera);
+			EncoderCounter_Write(0);
+			printf("==================stop camera = %d==========================\n", stop_camera);
 		}
 		return 0;
 	}
@@ -3145,7 +3149,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     for(i = y_start_line ; i>y_end_line ; i=i-line_gap){
 	if (turn_right_max == true || max_turn_ready_right == true){        // max turn right시 우측부터 좌측차선 읽기 시작
 			j = imgResult->width - 1;
-            printf("sweeping starting point : right\n");
+            //printf("sweeping starting point : right\n");
         }
 		else if(turn_left_max == true || max_turn_ready_left == true){      // max turn left 위해 왼쪽부터 우측차선읽으면 좌측차선 검색 불필요
 			j = 0;
@@ -3153,7 +3157,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
         }
         else{                                                               // 평상시엔 중앙에서 시작
             j = (imgResult->width) / 2;
-            printf("sweeping starting point : center\n");
+           // printf("sweeping starting point : center\n");
         }
         for(; j>0 ; j--){                            //Searching the left line point
                 left[y_start_line-i] = j;
@@ -3173,7 +3177,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		}
 		if (turn_left_max == true || max_turn_ready_left == true){          // max turn left시 좌측부터 우측차선 읽기 시작
 			j = 0 ; 
-            printf("sweeping starting point : left\n");
+           // printf("sweeping starting point : left\n");
         }
 		else if(turn_right_max == true || max_turn_ready_right == true){      // max turn left 위해 왼쪽부터 우측차선읽으면 좌측차선 검색 불필요
 			j = imgResult->width - 1;
@@ -3181,7 +3185,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
         }
         else{                                                               // 평상시엔 중앙에서 시작
             j = (imgResult->width) / 2;
-            printf("sweeping starting point : center\n");
+           // printf("sweeping starting point : center\n");
         }
         for(; j<imgResult->width ; j++){             //Searching the right line point
                 right[y_start_line-i] = j;
