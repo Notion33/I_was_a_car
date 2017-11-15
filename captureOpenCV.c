@@ -1885,7 +1885,9 @@ int find_center_in_3way() {
 	char orgName[40];
 	char result_wy[40];
 	char result_obs[40];
-	char result_y[40];
+	char result_white[40];
+	char str[128];
+		
 
 	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
 	NvU64 ptime1, ptime2;
@@ -1899,12 +1901,12 @@ int find_center_in_3way() {
 	int cc = 0;
 
 	int white_on_right = 0;
-	int   left_white_count = 0;
-	int right_white_count = 0;
+	//int left_white_count = 0;
+	//int right_white_count = 0;
 
 	bool center_of_3way = false;
 	bool middle_of_3way = false;
-	bool ready_to_take_pic = false;
+	bool mode2_out_flag = false;
 
 	int desti_lane = 0;
 	int detect_object = 0;
@@ -1921,18 +1923,19 @@ int find_center_in_3way() {
 	IplImage* imgOrigin;
 	IplImage* imgResWY;            // TY add 6.27
 	IplImage* imgResOBS;            // TY add 6.27
-	IplImage* imgResY;            // TY add 6.27
-
+	IplImage* imgReswhite;            // TY add 6.27
+	CvFont font;
+		
 
 								  // cvCreateImage
 	imgOrigin = cvCreateImage(cvSize(RESIZE_WIDTH, RESIZE_HEIGHT), IPL_DEPTH_8U, 3);
 	imgResWY = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
 	imgResOBS = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
-	imgResY = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
+	imgReswhite = cvCreateImage(cvGetSize(imgOrigin), IPL_DEPTH_8U, 1);           // TY add 6.27
 
 	cvZero(imgResWY);          // TY add 6.27
 	cvZero(imgResOBS);
-	cvZero(imgResY);
+	cvZero(imgReswhite);
 
 	/*   when cannot be detected with binary image(when I have to use white, gray, black)
 	for(i = 50;i<200;i++){
@@ -1963,6 +1966,50 @@ int find_center_in_3way() {
 		pthread_mutex_unlock(&mutex);
 
 		//printf("Find_center in 3way\n\n");
+
+	/*	mode2
+
+	if white line process. -> go to 3_way
+		if mode2 on, 
+		white pixcel 이 오른쪽으로 갈때까지 좌/우회전 조향
+		if 오른쪽 일정범위 넘기면 플래그 지움
+	*/
+	if(mode2_out_flag == false){
+		printf("mode_out_flag = false \n");
+			
+			for (i = 50; i<200; i++) { // y location from 50 to 200 (0<y<240)
+				for (j = 160; j<320; j++) { // x location from 150 to 320 (0<x <320)
+					if (imgResWY->imageData[i*imgResWY->widthStep + j] == 255) //if white 
+						white_on_right++;	//white pixel in right
+				}
+			}
+
+		sprintf(str, "Image %d  whiteonright : %d", num, white_on_right);
+		writeonImage(imgResWY, str);
+		
+		sprintf(imgResWY, "imgsaved/imgResWY_%d.png", num);          // TY add 6.27
+		num++;
+	 cvSaveImage(imgResWY, imgOrigin, 0);
+			
+			if(white_on_right<1800){
+				printf("white_on_right = %d\n",white_on_right);
+			
+				SteeringServoControl_Write(2000);
+				DesireSpeed_Write(80); // turn left
+				white_on_right = 0;
+				continue;
+			}
+			else {
+				printf("white_on_right = %d\n",white_on_right);
+				DesireSpeed_Write(0);
+				Alarm_Write(ON);
+				sleep(1);
+				Alarm_Write(OFF);
+				mode2_out_flag = true;
+				continue;
+			}
+		}	
+
 		Find_Center(imgResWY);
 
 		DesireSpeed_Write(70);
@@ -2228,7 +2275,7 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 
 	else if (flag_tw == 10)
 	{
-		if (YELLOW_TW > Check_YL)
+		if (YELLOW_TW > Check_YL&&  position_now > 50 * weight_tw1)
 		{
 	#ifdef DEBUG_TW
 				printf("스톱!\n"); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
