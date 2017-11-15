@@ -38,12 +38,12 @@
 
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL     // To servo control(steering & camera position)
-#define IMGSAVE1
+//#define IMGSAVE1
 #define straight_speed 200
 #define curve_speed 130
 
 
-#define IMGSAVE
+//#define IMGSAVE 
 #define LIGHT_BEEP
 //#define debug
 ////////////////////////////////////////////////////////////////////////////
@@ -124,6 +124,7 @@ int DistanceValue[6][25];
 bool isOverLine = false;
 bool emergencyReturnFlag = true;
 bool distanceFlag = true;
+bool redCountFlag = true;
 
 typedef struct
 {
@@ -500,9 +501,9 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				white_count++;
 			}
 
-			if (v > 165 && j<50) { //빨간색
-				red_count++;
-			}
+			// if (v > 165 && j<50) { //빨간색
+			// 	red_count++;
+			// }
 
 			switch (color) {
 			case 1:   //  빨간색
@@ -602,11 +603,31 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 		stepV += pitchV[i];
 	}
 
+	//Red_Count Check
+	if(redCountFlag){
+		for (j = 0; j < resHeight; j+=2)
+		{
+			for (k = 0; k < resWidth; k+=2)
+			{
+				num = 3 * k + 3 * resWidth*(j);
+				y = img->imageData[num];
+				u = img->imageData[num + 1];
+				v = img->imageData[num + 2];
+
+				if (v > 165 && j<50) { //빨간색
+					red_count++;
+				}
+			}
+		}
+	}
+	
+
 
 	NvMediaVideoSurfaceUnlock(capSurf);
 
 	return 1;
 }
+
 
 
 static unsigned int CaptureThread(void *params)
@@ -658,7 +679,7 @@ static unsigned int CaptureThread(void *params)
 			break;
 		}
 
-		if (i % 3 == 0)                        // once in three loop = 10 Hz
+		if (i % 1 == 0)                        // once in three loop = 10 Hz
 			pthread_cond_signal(&cond);        // ControlThread() is called
 
 		pthread_mutex_unlock(&mutex);        // for ControlThread()
@@ -3321,7 +3342,7 @@ void ControlThread(void *unused){
 		}
 
 		//급정지면 무조건 정지!
-		if(red_count>280*10*0.4){
+		if(red_count>280*5*0.1){
 			printf("red_count!\n\n");
 			speed = 0;
 		} 
