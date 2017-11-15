@@ -39,8 +39,8 @@
 #define SERVO_CONTROL     // TY add 6.27
 #define SPEED_CONTROL     // To servo control(steering & camera position)
 #define IMGSAVE1
-#define straight_speed 200
-#define curve_speed 130
+#define straight_speed 100
+#define curve_speed 100
 
 
 #define IMGSAVE
@@ -120,7 +120,7 @@ int table_100[256];
 int table_208[256];
 int table_516[256];
 
-int DistanceValue[6][25];
+int DistanceValue[3][15];
 bool isOverLine = false;
 bool emergencyReturnFlag = true;
 bool distanceFlag = true;
@@ -2480,7 +2480,6 @@ int second_right_detect = FALSE;
 int third_right_detect = FALSE;
 
 int parking_space = 0;
-int sensor = 0;
 int encoder_speed = 50;
 
 int DistanceSort(int num)
@@ -2503,11 +2502,11 @@ int filteredIR(int num) // 필터링한 적외선 센서값
 {
 	int i;
     int sensorValue = 0;
-	for(i=0; i<25; i++)
+	for(i=0; i<15; i++)
 	{
 		sensorValue += DistanceValue[num-1][i];
 	}
-    sensorValue /= 25;
+    sensorValue /= 15;
     return sensorValue;
 }
 
@@ -2754,150 +2753,137 @@ void parallel_parking_left()
 
 void check_parking()
 { 
-		channel_leftNow = filteredIR(LEFT);
-		channel_rightNow = filteredIR(RIGHT);
-		difference_left = channel_leftNow - channel_leftPrev;
-		difference_right = channel_rightNow - channel_rightPrev;
-		channel_leftPrev = channel_leftNow;
-		channel_rightPrev = channel_rightNow;
-		printf("difference_left = %d\n", difference_left);
-		printf("difference_right = %d\n", difference_right);
+	channel_leftNow = filteredIR(LEFT);
+	channel_rightNow = filteredIR(RIGHT);
+	difference_left = channel_leftNow - channel_leftPrev;
+	difference_right = channel_rightNow - channel_rightPrev;
+	channel_leftPrev = channel_leftNow;
+	channel_rightPrev = channel_rightNow;
+	printf("difference_left = %d\n", difference_left);
+	printf("difference_right = %d\n", difference_right);
 	
-		if(first_left_detect == FALSE && difference_left >= 200)
+	if(first_left_detect == FALSE && difference_left >= 170)
+	{
+		printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_left);
+		while(difference_left>=50)
 		{
-			printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_left);
-			while(difference_left>=50)
-			{
-				channel_leftNow = filteredIR(LEFT);
-				difference_left = channel_leftNow - channel_leftPrev;
-				channel_leftPrev = channel_leftNow;
-				printf("difference_left = %d\n", difference_left);
-			}
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-			printf("\n\nFIRST_LEFT_DETECT\n\n\n");
-			first_left_detect = TRUE;
+			channel_leftNow = filteredIR(LEFT);
+			difference_left = channel_leftNow - channel_leftPrev;
+			channel_leftPrev = channel_leftNow;
+			printf("difference_left = %d\n", difference_left);
 		}
+		printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
+		printf("\n\nFIRST_LEFT_DETECT\n\n\n");
+		first_left_detect = TRUE;
+	}
 	
-		if(first_right_detect == FALSE && difference_right >= 200)
+	if(first_right_detect == FALSE && difference_right >= 170)
+	{
+		printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_right);
+		while(difference_right>=50)
 		{
-			printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_right);
-			while(difference_right>=50)
-			{
-				channel_rightNow = filteredIR(RIGHT);
-				difference_right = channel_rightNow - channel_rightPrev;
-				channel_rightPrev = channel_rightNow;
-				printf("difference_right = %d\n", difference_right);
-			}
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
-			printf("\n\nFIRST_RIGHT_DETECT\n\n\n");
-			first_right_detect = TRUE;
+			channel_rightNow = filteredIR(RIGHT);
+			difference_right = channel_rightNow - channel_rightPrev;
+			channel_rightPrev = channel_rightNow;
+			printf("difference_right = %d\n", difference_right);
 		}
+		printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
+		printf("\n\nFIRST_RIGHT_DETECT\n\n\n");
+		first_right_detect = TRUE;
+	}
 	
-		if(first_left_detect == TRUE && second_left_detect == FALSE && difference_left <= -300)
+	if(first_left_detect == TRUE && second_left_detect == FALSE && difference_left <= -300)
+	{
+		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_left);
+		while(difference_left<=-50)
 		{
-			printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_left);
-			while(difference_left<=-50)
-			{
-				channel_leftNow = filteredIR(LEFT);
-				difference_left = channel_leftNow - channel_leftPrev;
-				channel_leftPrev = channel_leftNow;
-				printf("difference_left = %d\n", difference_left);
-			}
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-			printf("\n\nSECOND_LEFT_DETECT\n\n\n");
-			second_left_detect = TRUE;
-			PositionControlOnOff_Write(UNCONTROL);
-			EncoderCounter_Write(0);
+			channel_leftNow = filteredIR(LEFT);
+			difference_left = channel_leftNow - channel_leftPrev;
+			channel_leftPrev = channel_leftNow;
+			printf("difference_left = %d\n", difference_left);
 		}
+		printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
+		printf("\n\nSECOND_LEFT_DETECT\n\n\n");
+		second_left_detect = TRUE;
+		EncoderCounter_Write(0);
+	}
 
-		if(first_left_detect == TRUE && second_left_detect == FALSE && difference_left >= 300)
+	if(first_right_detect == TRUE && second_right_detect == FALSE && difference_right <= -300)
+	{
+		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_right);
+		while(difference_right<=-50)
 		{
-			first_left_detect = FALSE;
+			channel_rightNow = filteredIR(RIGHT);
+			difference_right = channel_rightNow - channel_rightPrev;
+			channel_rightPrev = channel_rightNow;
+			printf("difference_right = %d\n", difference_right);
 		}
+		printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
+		printf("\n\nSECOND_RIGHT_DETECT\n\n\n");
+		second_right_detect = TRUE;
+		EncoderCounter_Write(0);
+	}
 
-		if(first_right_detect == TRUE && second_right_detect == FALSE && difference_right <= -300)
+	if(second_left_detect == TRUE && third_left_detect == FALSE && difference_left >= 170)
+	{
+		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_left);
+		while(difference_left>=50)
 		{
-			printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_right);
-			while(difference_right<=-50)
-			{
-				channel_rightNow = filteredIR(RIGHT);
-				difference_right = channel_rightNow - channel_rightPrev;
-				channel_rightPrev = channel_rightNow;
-				printf("difference_right = %d\n", difference_right);
-			}
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
-			printf("\n\nSECOND_RIGHT_DETECT\n\n\n");
-			second_right_detect = TRUE;
-			PositionControlOnOff_Write(UNCONTROL);
-			EncoderCounter_Write(0);
+			channel_leftNow = filteredIR(LEFT);
+			difference_left = channel_leftNow - channel_leftPrev;
+			channel_leftPrev = channel_leftNow;
+			printf("difference_left = %d\n", difference_left);
 		}
+		parking_space = EncoderCounter_Read();
+		printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
+		printf("\n\nTHIRD_LEFT_DETECT\n\n\n");
+		third_left_detect = TRUE;
+		printf("\n\n PARKING SPACE : %d", parking_space);
+			
+		//beep
+		Alarm_Write(ON);
+		usleep(50000);
+		Alarm_Write(OFF);
 
-		if(first_left_detect == TRUE && second_left_detect == FALSE && difference_right >= 300)
+		if(parking_space > 7000)
 		{
-			first_left_detect = FALSE;
+			parallel_parking_left();
 		}
-
-		if(second_left_detect == TRUE && third_left_detect == FALSE && difference_left >= 200)
+		else
 		{
-			printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_left);
-			while(difference_left>=50)
-			{
-				channel_leftNow = filteredIR(LEFT);
-				difference_left = channel_leftNow - channel_leftPrev;
-				channel_leftPrev = channel_leftNow;
-				printf("difference_left = %d\n", difference_left);
-			}
-			parking_space = EncoderCounter_Read();
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-			printf("\n\nTHIRD_LEFT_DETECT\n\n\n");
-			third_left_detect = TRUE;
-			printf("\n\n PARKING SPACE : %d", parking_space);
-			//beep
-			Alarm_Write(ON);
-			usleep(50000);
-			Alarm_Write(OFF);
-			if(parking_space > 7000)
-			{
-				parallel_parking_left();
-				//break;
-			}
-			else
-			{
-				vertical_parking_left();
-				//break;
-			}
+			vertical_parking_left();
 		}
+	}
 
-		if(second_right_detect == TRUE && third_right_detect == FALSE && difference_right >= 200)
+	if(second_right_detect == TRUE && third_right_detect == FALSE && difference_right >= 170)
+	{
+		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_right);
+		while(difference_right>=50)
 		{
-			printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_right);
-			while(difference_right>=50)
-			{
-				channel_rightNow = filteredIR(RIGHT);
-				difference_right = channel_rightNow - channel_rightPrev;
-				channel_rightPrev = channel_rightNow;
-				printf("difference_right = %d\n", difference_right);
-			}
-			parking_space = EncoderCounter_Read();
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
-			printf("\n\nTHIRD_RIGHT_DETECT\n\n\n");
-			third_right_detect = TRUE;
-			printf("\n\nPARKING SPACE : %d", parking_space);
-			//beep
-			Alarm_Write(ON);
-			usleep(50000);
-			Alarm_Write(OFF);
-			if(parking_space > 7000)
-			{
-				parallel_parking_right();
-				//break;
-			}
-			else
-			{
-				vertical_parking_right();
-				//break;
-			}
-		}	
+			channel_rightNow = filteredIR(RIGHT);
+			difference_right = channel_rightNow - channel_rightPrev;
+			channel_rightPrev = channel_rightNow;
+			printf("difference_right = %d\n", difference_right);
+		}
+		parking_space = EncoderCounter_Read();
+		printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
+		printf("\n\nTHIRD_RIGHT_DETECT\n\n\n");
+		third_right_detect = TRUE;
+		printf("\n\nPARKING SPACE : %d", parking_space);
+			
+		Alarm_Write(ON);
+		usleep(50000);
+		Alarm_Write(OFF);
+
+		if(parking_space > 7000)
+		{
+			parallel_parking_right();
+		}
+		else
+		{
+			vertical_parking_right();
+		}
+	}	
 }
 
 
@@ -2912,16 +2898,16 @@ void check_parking()
 /////////////////////////////////////  << 추후 조향값만 반환하고, 실제조향하는 함수를 따로 분리해주어야함.
 /////////////////////////////////////  빈공간에 원형만 선언해둠.
 ////////////////////////////////////////////////////////////////////////////////////////////
-void Find_Center(IplImage* imgResult)		//TY add 6.27
+void Find_Center(IplImage* imgResult)      //TY add 6.27
 {
-	int i=0;
+   int i=0;
     int j=0;
     int k=0;
 
-    int y_start_line = 150;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
-    int y_end_line = 130;
-    int y_high_start_line = 110;
-    int y_high_end_line = 90;
+    int y_start_line = 140;     //y_start_line과 y_end_line 차는 line_gap의 배수이어야 함.
+    int y_end_line = 120;
+    int y_high_start_line = 100;
+    int y_high_end_line = 80;
 
     int valid_left_amount = 0;
     int valid_right_amount = 0;
@@ -2938,73 +2924,99 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     int high_line_width = 10;
 
     int line_gap = 5;  //line by line 스캔시, lower line과 upper line의 차이는 line_gap px
-    int tolerance = 25; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
+    int tolerance = 40; // center pixel +- tolerance px 내에서 라인검출시 for문 종료 용도
     int high_tolerance = 60;
-    //int angle=1500;
+
     float low_line_weight = 320; // control angle weight
     float high_line_weight = 80;
     float control_angle = 0;
+   int high_ignore_angle = 100;
 
     int left[240] = {0};
     int right[240] = {imgResult->width-1};
     float left_slope[2] = {0.0};
     float right_slope[2] = {0.0};
 
+    static bool max_turn_ready_left = false ;
+    static bool max_turn_ready_right = false ;
+
     bool continue_turn_left = false;
     bool continue_turn_right = false;
 
+    printf("turn_left_max = %d , turn_right_max = %d\n",turn_left_max,turn_right_max);
+    printf("max_turn_ready_left = %d , max_turn_ready_right = %d\n",max_turn_ready_left,max_turn_ready_right);
+
     for(i = y_start_line ; i>y_end_line ; i=i-line_gap){
-		if (turn_right_max == true)
-			j = imgResult->width - 1;
-		else
-			j = (imgResult->width) / 2;
+   if (turn_right_max == true || max_turn_ready_right == true){        // max turn right시 우측부터 좌측차선 읽기 시작
+         j = imgResult->width - 1;
+            printf("sweeping starting point : right\n");
+        }
+      else if(turn_left_max == true || max_turn_ready_left == true){      // max turn left 위해 왼쪽부터 우측차선읽으면 좌측차선 검색 불필요
+         j = 0;
+            printf("left line searching skip!\n");
+        }
+        else{                                                               // 평상시엔 중앙에서 시작
+            j = (imgResult->width) / 2;
+            printf("sweeping starting point : center\n");
+        }
         for(; j>0 ; j--){                            //Searching the left line point
                 left[y_start_line-i] = j;
-                if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                if(imgResult->imageData[i*imgResult->widthStep + j] == whitepx){
                     for( k = 0 ; k < low_line_width ; k++){                     //차선이 line_width만큼 연속으로 나오는지 확인
                         if( j-k <= 0)
                           k = low_line_width - 1;
-                        else if(imgResult->imageData[i*imgResult->widthStep + j - k] == 255)
+                        else if(imgResult->imageData[i*imgResult->widthStep + j - k] == whitepx)
                           continue;
                         break;
                     }
-                    if(k = low_line_width - 1){
+                    if(k == low_line_width - 1){
                       valid_left_amount++;
                       break;
                     }
                 }
-		}
-		if (turn_left_max == true)
-			j = 0 ; 
-		else
-			j = (imgResult->width) / 2 ;
+      }
+      if (turn_left_max == true || max_turn_ready_left == true){          // max turn left시 좌측부터 우측차선 읽기 시작
+         j = 0 ; 
+            printf("sweeping starting point : left\n");
+        }
+      else if(turn_right_max == true || max_turn_ready_right == true){      // max turn left 위해 왼쪽부터 우측차선읽으면 좌측차선 검색 불필요
+         j = imgResult->width - 1;
+            printf("right line searching skip!\n");
+        }
+        else{                                                               // 평상시엔 중앙에서 시작
+            j = (imgResult->width) / 2;
+            printf("sweeping starting point : center\n");
+        }
         for(; j<imgResult->width ; j++){             //Searching the right line point
                 right[y_start_line-i] = j;
-                if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                if(imgResult->imageData[i*imgResult->widthStep + j] == whitepx){
                       for( k = 0 ; k < low_line_width ; k++){                   //차선이 line_width만큼 연속으로 나오는지 확인
                         if( j + k >= imgResult->widthStep)
                           k = low_line_width - 1;
-                        else if(imgResult->imageData[i*imgResult->widthStep + j + k] == 255)
+                        else if(imgResult->imageData[i*imgResult->widthStep + j + k] == whitepx)
                           continue;
                         break;
                     }
-                    if(k = low_line_width - 1){
+                    if(k == low_line_width - 1){
                       valid_right_amount++;
                       break;
                     }
                 }
         }
-        if(left[y_start_line-i]>((imgResult->width/2)-tolerance)||right[y_start_line-i]<((imgResult->width/2)+tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
-            if(valid_left_amount >= valid_right_amount && turn_left_max == false){
-            	printf("continue_turn_right set!\n");
+
+        if(left[y_start_line-i]>((imgResult->width/2)-tolerance)){     //검출된 차선이 화면중앙부근에 있는경우, 차선검출 종료후 반대방향으로 최대조향 flag set
+            if(turn_left_max == false){
+               printf("continue_turn_right set!\n");
                 continue_turn_right = true;
+                break;
             }
-            else if(valid_right_amount >= valid_left_amount && turn_right_max == false){
-            	printf("continue_turn_left set!\n");
+        }
+        else if(right[y_start_line-i]<((imgResult->width/2)+tolerance)){
+            if(turn_right_max == false){
+               printf("continue_turn_left set!\n");
                 continue_turn_left = true;
+                break;
             }
-            printf("valid_left_amount = %d , valid_right_amount = %d \n",valid_left_amount,valid_right_amount);
-            break;
         }
     }
 
@@ -3012,30 +3024,30 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
         printf("continue_turn_flag_off__1__\n");
         if(turn_left_max == true){                                  //2. 과다곡선인 경우, 차선이 정상검출범위내로 돌아올때까지 턴 유지
             for(i = imgResult->widthStep -1 ; i > (imgResult->width/2) + line_tolerance ; i--){
-            	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255){
-                	continue_turn_left = false;
-                	printf("continue_turn_flag_OFF__overCurve_left__\n");
+               if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == whitepx){
+                   continue_turn_left = false;
+                   printf("continue_turn_flag_OFF__overCurve_left__\n");
                     break;
                 }
                 else if (i == imgResult->width/2 + line_tolerance + 1){
-                	printf("continue_turn_flag_ON__overCurve_left__\n");
-                	continue_turn_left = true;
-                	break;
+                   printf("continue_turn_flag_ON__overCurve_left__\n");
+                   continue_turn_left = true;
+                   break;
                 }
             }
         }
         else if (turn_right_max == true){
             for(i = 0 ; i < (imgResult->width/2) - line_tolerance ; i++){
-            	if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == 255){
-                	continue_turn_right = false;
-                	printf("continue_turn_flag_OFF__2_right__i:%d\n",i);
+               if(imgResult->imageData[y_start_line*imgResult->widthStep + i] == whitepx){
+                   continue_turn_right = false;
+                   printf("continue_turn_flag_OFF__2_right__i:%d\n",i);
                     break;
                 }
                 else if (i == imgResult->width/2 - line_tolerance - 1){
-                	printf("continue_turn_flag_ON__2_right__\n");
-					continue_turn_right = true;
-                	break;
-				}
+                   printf("continue_turn_flag_ON__2_right__\n");
+               continue_turn_right = true;
+                   break;
+            }
             }
         }
     }
@@ -3056,14 +3068,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                     break;
                 }
             }
-
-            printf("\nleft line = ");
-            for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
-            printf("    valid left line = %d\n",valid_left_amount);
-            printf("right line = ");
-            for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
-            printf("    valid right line = %d\n",valid_right_amount);
-
             if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
                 left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
             }
@@ -3075,10 +3079,16 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
             else right_slope[0] = 0;
             
             control_angle = (left_slope[0] + right_slope[0])*low_line_weight;        //차량 조향 기울기 계산
-
-            printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
-            printf("Control_Angle_low : %f \n\n",control_angle);
         }
+
+            printf("\nleft line = ");
+            for(i=0;i<valid_left_amount;i++)printf("%d  ",left[i*line_gap]);
+            printf("    valid left line = %d\n",valid_left_amount);
+            printf("right line = ");
+            for(i=0;i<valid_right_amount;i++)printf("%d ",right[i*line_gap]);
+            printf("    valid right line = %d\n",valid_right_amount);
+            printf("left_slope : %f ,right_slope : %f      ",left_slope[0],right_slope[0]);
+            printf("Control_Angle_low : %f \n\n",control_angle);
 
     turn_left_max = continue_turn_left;             //현재 프레임에서 최대조향이라고 판단할 경우, 최대조향 전역변수 set.
     turn_right_max = continue_turn_right;
@@ -3088,11 +3098,11 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
         for(i = y_high_start_line ; i>y_high_end_line ; i=i-line_gap){
           for(j=(imgResult->width)/2 ; j>0 ; j--){                            //Searching the left line point
                   left[y_high_start_line-i] = j;
-                  if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                  if(imgResult->imageData[i*imgResult->widthStep + j] == whitepx){
                       for( k = 0 ; k < high_line_width ; k++){                     //차선이 line_width만큼 연속으로 나오는지 확인
                           if( j-k <= 0)
                             k = high_line_width - 1;
-                          else if(imgResult->imageData[i*imgResult->widthStep + j - k] == 255)
+                          else if(imgResult->imageData[i*imgResult->widthStep + j - k] == whitepx)
                             continue;
                           break;
                       }
@@ -3104,11 +3114,11 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
           }
           for(j=(imgResult->width)/2 ; j<imgResult->width ; j++){             //Searching the right line point
                   right[y_high_start_line-i] = j;
-                  if(imgResult->imageData[i*imgResult->widthStep + j] == 255){
+                  if(imgResult->imageData[i*imgResult->widthStep + j] == whitepx){
                         for( k = 0 ; k < high_line_width ; k++){                   //차선이 line_width만큼 연속으로 나오는지 확인
                           if( j + k >= imgResult->widthStep)
                             k = high_line_width - 1;
-                          else if(imgResult->imageData[i*imgResult->widthStep + j + k] == 255)
+                          else if(imgResult->imageData[i*imgResult->widthStep + j + k] == whitepx)
                             continue;
                           break;
                       }
@@ -3118,8 +3128,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                       }
                   }
           }
-        //   if(left[y_high_start_line-i]>((imgResult->width/2)-high_tolerance)||right[y_high_start_line-i]<((imgResult->width/2)+high_tolerance))     //검출된 차선이 화면중앙부근에 있는경우, 아랫쪽차선까지 올수있도록 무시
-        //       break;
         }
 
         for(i=0;i<=valid_high_left_amount;i++){                        //좌측 차선 검출
@@ -3156,14 +3164,28 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
       
       control_angle = (left_slope[0] + right_slope[0])*high_line_weight;        //차량 조향 기울기 계산
 
-      printf("left_slope : %f ,right_slope : %f   	",left_slope[0],right_slope[0]);
+      printf("left_slope : %f ,right_slope : %f      ",left_slope[0],right_slope[0]);
       printf("Control_Angle_high : %f \n\n",control_angle);
   
-      if(abs(control_angle)>100)    //위쪽차선에서 과하게 꺾을경우, 방지 ; 코너에서 인코스로 들어오는걸 방지
+      if(abs(control_angle)>high_ignore_angle){    //위쪽차선에서 과하게 꺾을경우, 방지 ; 코너에서 인코스로 들어오는걸 방지
+      if (control_angle > 0) {
+            max_turn_ready_left = true;
+            printf("max_turn_ready_left set!\n");
+        }
+      else {
+            max_turn_ready_right = true;
+            printf("max_turn_ready_right set!\n");
+       }
         control_angle = 0;
-
+      }
+      else{
+          if (max_turn_ready_left || max_turn_ready_right){
+          max_turn_ready_left = false;
+          max_turn_ready_right = false;
+          printf("max_turn_ready_flag clear!\n");
+          }
+      }
     }
-
 
     if (turn_left_max == true)                      //차량 조향각도 판별
         angle = 2000;
@@ -3171,9 +3193,8 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
         angle = 1000;
     else{
         angle = 1500 + control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
-		angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
+      angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
     }
-    //SteeringServoControl_Write(angle);
 
     #ifdef SPEED_CONTROL
         if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
@@ -3183,18 +3204,10 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     #endif
 
     #ifdef ROI
-        for(i=0;i<imgResult->widthStep;i++){
-            imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
-            }
-        for(i=0;i<imgResult->widthStep;i++){
-            imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
-			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
-			}
-			for(i=0;i<imgResult->widthStep;i++){
-				imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
-			}
+        for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_start_line*imgResult->widthStep + i] = 255;
+        for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_end_line*imgResult->widthStep + i] = 255;
+      for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
+      for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
     #endif
 }
 
@@ -3306,7 +3319,7 @@ void ControlThread(void *unused){
 			else {
 				printf("Error!! 0000000\n");
 				// 주차영역인지 확인
-				//check_parking();
+				check_parking();
 				printf("\n\nFind_Center!!\n\n");
 				Find_Center(imgResult);
 			}		
@@ -3315,7 +3328,7 @@ void ControlThread(void *unused){
 		//평상시 Find_Center 작동
 		else {
 			// 주차영역인지 확인
-			//check_parking();
+			check_parking();
 			printf("\n\nFind_Center!!\n\n");
 			Find_Center(imgResult);
 		}
@@ -3434,7 +3447,7 @@ void LineThread(void *unused)
 	}
 }
 
-void DistanceThread(void *unused) 
+void DistanceThread(void *unused) // 0: 왼쪽 1: 오른쪽 2: 후방
 {
 	dThreadTime = 0;
 	NvMediaTime pt1 = { 0 }, pt2 = { 0 };
@@ -3447,14 +3460,13 @@ void DistanceThread(void *unused)
 		GetTime(&pt1);
 		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
-		if(distanceFlag){
-			for(i=0; i<6; i++)
+		if(distanceFlag)
+		{
+			for(i=0; i<15; i++) 
 			{
-				for(j=0; j<25; j++)
-				{
-					DistanceValue[i][j] = DistanceSensor(i+1);
-					printf("DistanceValue[%d][%d] : %d\n", i+1, j+1, DistanceValue[i][j]);
-				}
+					DistanceValue[0][i] = DistanceSensor(5); // 왼쪽
+					DistanceValue[1][i] = DistanceSensor(3); // 오른쪽
+					DistanceValue[2][i] = DistanceSensor(4); // 후방
 			}
 		}
 		
@@ -3733,8 +3745,8 @@ int main(int argc, char *argv[])
 
 	printf("8. Control Thread\n");
 	pthread_create(&cntThread, NULL, &ControlThread, NULL);
-	pthread_create(&lineThread, NULL, &LineThread, NULL);
-	//pthread_create(&distanceThread, NULL, &DistanceThread, NULL);
+	// pthread_create(&lineThread, NULL, &LineThread, NULL);
+	pthread_create(&distanceThread, NULL, &DistanceThread, NULL);
 
 	printf("9. Wait for completion \n");
 	// Wait for completion
