@@ -3397,6 +3397,8 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     #ifdef SPEED_CONTROL
         if(angle<1200||angle>1800)      //직선코스의 속도와 곡선코스의 속도 다르게 적용
            speed = curve_speed;
+        else if(max_turn_ready_left || max_turn_ready_right)
+            speed = (straight_speed + curve_speed)/2;
         else
            speed = straight_speed;
     #endif
