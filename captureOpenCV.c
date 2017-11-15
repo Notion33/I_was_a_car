@@ -130,6 +130,8 @@ bool distance_warmming = FALSE // distanceThread가 DistanceValue배열을 모�
 //========================================
 
 FILE* f;
+FILE* fparking;
+FILE* fsensor;
 
 static NvMediaVideoSurface *capSurf = NULL;
 
@@ -2545,6 +2547,9 @@ int filteredIR(int num) // 필터링한 적외선 센서값
 		}
 		sensorValue /= 15;
 		return sensorValue;
+
+		fprintf(fsensor, "sensorValue: %d, %d", num, sensorValue);
+		fprintf(fsensor, "\n");
 	}
 	else
 		return 0; //초기 시작후, DistanceValue에 쓰레기값들이 있을때 Filtered_IR이 잘못된 값을 밷는걸 방지
@@ -3460,7 +3465,8 @@ int main(int argc, char *argv[])
 	int tol;
 	char byte = 0x80;
 
-	f = fopen("captureImage/sensorlog.txt","w");
+	fparking = fopen("captureImage/parkinglog.txt","w");
+	fsensor = fopen("captureImage/fsensor.txt", "w");
 
 	////////////////////////////////
 
@@ -3734,8 +3740,8 @@ int main(int argc, char *argv[])
 		CameraYServoControl_Write(angle);
 	#endif
 
-	fclose(f);
-
+	fclose(fparking);
+	fclose(fsensor);
 
 fail: // Run down sequence
 	// Destroy vip threads and stream start/done semaphores
