@@ -2811,6 +2811,8 @@ void check_parking()
 		difference_left = channel_leftNow - channel_leftPrev;
 		difference_right = channel_rightNow - channel_rightPrev;
 	}
+	fprintf(fdifferencial, "difference_left,right:	%d	%d", difference_left, difference_right);
+	fprintf(fdifferencial, "\n");
 	
 	channel_leftPrev = channel_leftNow;
 	channel_rightPrev = channel_rightNow;
@@ -2826,6 +2828,7 @@ void check_parking()
 	else if(left_flag == 1 && first_left_detect == FALSE && difference_left < 50){
 			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
 			printf("\n\nFIRST_LEFT_DETECT\n\n\n");
+			fprintf(fdifferencial, "FIRST_LEFT_DETECT\n");
 			EncoderCounter_Write(0);
 			first_left_detect = TRUE;
 	}
@@ -2836,6 +2839,7 @@ void check_parking()
 	else if(left_flag == 2 && first_left_detect == TRUE && second_left_detect == FALSE && difference_left > -50){
 			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
 			printf("\n\nSECOND_LEFT_DETECT\n\n\n");
+			fprintf(fdifferencial, "SECOND_LEFT_DETECT\n");
 			EncoderCounter_Write(0);
 			second_left_detect = TRUE;
 	}
@@ -2846,6 +2850,7 @@ void check_parking()
 	else if(left_flag == 3 && first_left_detect == TRUE && second_left_detect == TRUE && third_left_detect == FALSE && difference_left < 50){
 			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
 			printf("\n\nTHIRD_LEFT_DETECT\n\n\n");
+			fprintf(fdifferencial, "THIRD_LEFT_DETECT\n");
 			third_left_detect = TRUE;
 			left_flag = 4;
 	}
@@ -3466,6 +3471,7 @@ int main(int argc, char *argv[])
 
 	fparking = fopen("captureImage/parkinglog.txt","w");
 	fsensor = fopen("captureImage/fsensor.txt", "w");
+	fdifferencial = fopen("captureImage/fdifferencial.txt", "w");
 
 	////////////////////////////////
 
