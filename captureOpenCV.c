@@ -104,6 +104,31 @@ int red_count = 0;
 bool turn_left_max = false;         //TY add
 bool turn_right_max = false;
 
+//========================================주차모듈용 변수
+
+int channel_leftNow = 0;
+int channel_leftPrev = 0;
+int channel_rightNow = 0;
+int channel_rightPrev = 0;
+
+int difference_left = 0;
+int difference_right = 0;
+
+int first_left_detect = FALSE;
+int second_left_detect = FALSE;
+int third_left_detect = FALSE;
+
+int first_right_detect = FALSE;
+int second_right_detect = FALSE;
+int third_right_detect = FALSE;
+
+int parking_space = 0;
+int encoder_speed = 50;
+
+bool distance_warmming = FALSE // distanceThread가 DistanceValue배열을 모두 채웠는지 확인용 flag. 처음시작시 배열이 모두 0이기에 잘못사용되는걸 막기위함.
+
+//========================================
+
 FILE* f;
 
 static NvMediaVideoSurface *capSurf = NULL;
@@ -2485,60 +2510,44 @@ int flag_module(int flag, IplImage* imgResult) {//TODO : 구간 나가면 return
 // Code from HG Cha
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-int channel_leftNow = 0;
-int channel_leftPrev = 0;
-int channel_rightNow = 0;
-int channel_rightPrev = 0;
-
-int difference_left = 0;
-int difference_right = 0;
-
-int first_left_detect = FALSE;
-int second_left_detect = FALSE;
-int third_left_detect = FALSE;
-
-int first_right_detect = FALSE;
-int second_right_detect = FALSE;
-int third_right_detect = FALSE;
-
-int parking_space = 0;
-int encoder_speed = 50;
-
 int filteredIR(int num) // 필터링한 적외선 센서값
 {
 	int i;
 	int sensorValue = 0;
 
-	if(num == 5) // 왼쪽
-	{
-		for(i=0; i<15; i++)
-		{
-			sensorValue += DistanceValue[0][i];
+	if (distance_warmming){			//초기 시작후, DistanceValue에 쓰레기값들이 있을때 Filtered_IR이 잘못된 값을 밷는걸 방지
+		if(num == 5) {// 왼쪽
+			for(i=0; i<15; i++)
+			{
+				sensorValue += DistanceValue[0][i];
+			}
 		}
-	}
-	else if(num == 3) // 오른쪽
-	{
-		for(i=0; i<15; i++)
+		else if(num == 3) // 오른쪽
 		{
-			sensorValue += DistanceValue[1][i];
+			for(i=0; i<15; i++)
+			{
+				sensorValue += DistanceValue[1][i];
+			}
 		}
-	}
-	else if(num == 4) // 후방
-	{
-		for(i=0; i<15; i++)
+		else if(num == 4) // 후방
 		{
-			sensorValue += DistanceValue[2][i];
+			for(i=0; i<15; i++)
+			{
+				sensorValue += DistanceValue[2][i];
+			}
 		}
-	}
-	else if(num == 1) // 전방
-	{
-		for(i=0; i<15; i++)
+		else if(num == 1) // 전방
 		{
-			sensorValue += DistanceValue[3][i];
+			for(i=0; i<15; i++)
+			{
+				sensorValue += DistanceValue[3][i];
+			}
 		}
+		sensorValue /= 15;
+		return sensorValue;
 	}
-    sensorValue /= 15;
-    return sensorValue;
+	else
+		return 0; //초기 시작후, DistanceValue에 쓰레기값들이 있을때 Filtered_IR이 잘못된 값을 밷는걸 방지
 }
 
 void init_parking()
@@ -2784,143 +2793,79 @@ void parallel_parking_left()
 
 void check_parking()
 { 
+	static int left_flag = 0;
+	static bool channel_warmming
+	int encoder_parking = 0; //주차시 벽인식후 엔코더스텝수 이상 주행해도 벽이 추가로 검출이 안되는지 확인용 변수
+
 	channel_leftNow = filteredIR(LEFT);
 	channel_rightNow = filteredIR(RIGHT);
-	difference_left = channel_leftNow - channel_leftPrev;
-	difference_right = channel_rightNow - channel_rightPrev;
+
+	if(channel_leftNow != 0 && channel_leftPrev != 0 && channel_rightNow != 0 && channel_rightPrev != 0)	//차량 시작후, 채널초기값 0으로인해 difference_left,right 값이 잘못 표기됨을 방지
+		channel_warmming = TRUE;
+
+	if(channel_warmming){
+		difference_left = channel_leftNow - channel_leftPrev;
+		difference_right = channel_rightNow - channel_rightPrev;
+	}
+	
 	channel_leftPrev = channel_leftNow;
 	channel_rightPrev = channel_rightNow;
 	printf("difference_left = %d\n", difference_left);
 	printf("difference_right = %d\n", difference_right);
+	encoder_parking = EncoderCounter_Read();
 	
-	if(first_left_detect == FALSE && difference_left >= 170)
-	{
+	if(first_left_detect == FALSE && difference_left > 170){
 		printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_left);
-		while(difference_left>=50)
-		{
-			channel_leftNow = filteredIR(LEFT);
-			difference_left = channel_leftNow - channel_leftPrev;
-			channel_leftPrev = channel_leftNow;
-			printf("difference_left = %d\n", difference_left);
-		}
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-		printf("\n\nFIRST_LEFT_DETECT\n\n\n");
-		first_left_detect = TRUE;
-	}
-	
-	if(first_right_detect == FALSE && difference_right >= 170)
-	{
-		printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_right);
-		while(difference_right>=50)
-		{
-			channel_rightNow = filteredIR(RIGHT);
-			difference_right = channel_rightNow - channel_rightPrev;
-			channel_rightPrev = channel_rightNow;
-			printf("difference_right = %d\n", difference_right);
-		}
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
-		printf("\n\nFIRST_RIGHT_DETECT\n\n\n");
-		first_right_detect = TRUE;
-	}
-	
-	if(first_left_detect == TRUE && second_left_detect == FALSE && difference_left <= -300)
-	{
-		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_left);
-		while(difference_left<=-50)
-		{
-			channel_leftNow = filteredIR(LEFT);
-			difference_left = channel_leftNow - channel_leftPrev;
-			channel_leftPrev = channel_leftNow;
-			printf("difference_left = %d\n", difference_left);
-		}
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-		printf("\n\nSECOND_LEFT_DETECT\n\n\n");
-		second_left_detect = TRUE;
 		EncoderCounter_Write(0);
+		left_flag = 1;
 	}
-
-	if(first_right_detect == TRUE && second_right_detect == FALSE && difference_right <= -300)
-	{
-		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_right);
-		while(difference_right<=-50)
-		{
-			channel_rightNow = filteredIR(RIGHT);
-			difference_right = channel_rightNow - channel_rightPrev;
-			channel_rightPrev = channel_rightNow;
-			printf("difference_right = %d\n", difference_right);
-		}
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
-		printf("\n\nSECOND_RIGHT_DETECT\n\n\n");
-		second_right_detect = TRUE;
-		EncoderCounter_Write(0);
+	else if(left_flag == 1 && first_left_detect == FALSE && difference_left < 50){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
+			printf("\n\nFIRST_LEFT_DETECT\n\n\n");
+			EncoderCounter_Write(0);
+			first_left_detect = TRUE;
 	}
-
-	if(second_left_detect == TRUE && third_left_detect == FALSE && difference_left >= 170)
-	{
-		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_left);
-		while(difference_left>=50)
-		{
-			channel_leftNow = filteredIR(LEFT);
-			difference_left = channel_leftNow - channel_leftPrev;
-			channel_leftPrev = channel_leftNow;
-			printf("difference_left = %d\n", difference_left);
-		}
-		parking_space = EncoderCounter_Read();
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-		printf("\n\nTHIRD_LEFT_DETECT\n\n\n");
-		third_left_detect = TRUE;
+	else if(left_flag == 1 && first_left_detect == TRUE && second_left_detect == FALSE && difference_left < -300){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
+			left_flag = 2;
+	}
+	else if(left_flag == 2 && first_left_detect == TRUE && second_left_detect == FALSE && difference_left > -50){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
+			printf("\n\nSECOND_LEFT_DETECT\n\n\n");
+			EncoderCounter_Write(0);
+			second_left_detect = TRUE;
+	}
+	else if(left_flag == 2 && first_left_detect == TRUE && second_left_detect == TRUE && third_left_detect == FALSE && difference_left > 170){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
+			left_flag = 3;
+	}
+	else if(left_flag == 3 && first_left_detect == TRUE && second_left_detect == TRUE && third_left_detect == FALSE && difference_left < 50){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
+			printf("\n\nTHIRD_LEFT_DETECT\n\n\n");
+			third_left_detect = TRUE;
+			left_flag = 4;
+	}
+	else if(left_flag == 4){			//주차공간이라 인식한 경우, 주차시작
+		parking_space = encoder_parking;
 		printf("\n\n PARKING SPACE : %d", parking_space);
-			
-		//beep
 		CarLight_Write(ALL_ON);
     	usleep(100000);
     	CarLight_Write(ALL_OFF);
 		Alarm_Write(ON);
 		usleep(50000);
 		Alarm_Write(OFF);
-
 		if(parking_space > 7000)
-		{
 			parallel_parking_left();
-		}
 		else
-		{
 			vertical_parking_left();
-		}
 	}
-
-	if(second_right_detect == TRUE && third_right_detect == FALSE && difference_right >= 170)
-	{
-		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_right);
-		while(difference_right>=50)
-		{
-			channel_rightNow = filteredIR(RIGHT);
-			difference_right = channel_rightNow - channel_rightPrev;
-			channel_rightPrev = channel_rightNow;
-			printf("difference_right = %d\n", difference_right);
-		}
-		parking_space = EncoderCounter_Read();
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
-		printf("\n\nTHIRD_RIGHT_DETECT\n\n\n");
-		third_right_detect = TRUE;
-		printf("\n\nPARKING SPACE : %d", parking_space);
-		
-		CarLight_Write(ALL_ON);
-   	 	usleep(100000);
-  		CarLight_Write(ALL_OFF);
-		Alarm_Write(ON);
-		usleep(50000);
-		Alarm_Write(OFF);
-
-		if(parking_space > 7000)
-		{
-			parallel_parking_right();
-		}
-		else
-		{
-			vertical_parking_right();
-		}
-	}	
+	else if(encoder_parking > 12000){		//엔코더 스텝수가 12000이상 초과할 경우, 앞선 벽들 인식은 잘못 인식한걸로 간주하고 초기화.
+		left_flag = 0;
+		first_left_detect = FALSE;
+		second_left_detect = FALSE;
+		third_left_detect = FALSE;
+		printf("\n\n=================FLAG CLEAR!=================\n\n\n");
+	}
 }
 
 // 주차 함수 끝
@@ -3488,11 +3433,11 @@ void DistanceThread(void *unused) // 0: 왼쪽 1: 오른쪽 2: 후방 3: 전방
 					usleep(10000);
 			}
 		}
-		
 		GetTime(&pt2);
 		ptime2 = (NvU64)pt2.tv_sec * 1000000000LL + (NvU64)pt2.tv_nsec;
 		//printf("--------------------------------operation time=%llu.%09llu[s]\n", (ptime2 - ptime1) / 1000000000LL, (ptime2 - ptime1) % 1000000000LL);
 		dThreadTime += (ptime2 - ptime1) / 1000000000LL;
+		distance_warmming = TRUE;							//distanceThread가 DistanceValue배열을 모두 채웠는지 확인용 flag. 처음시작시 배열이 모두 0이기에 잘못사용되는걸 막기위함.
 	}	
 }
 
