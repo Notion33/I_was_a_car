@@ -3647,7 +3647,7 @@ void DistanceThread(void *unused)
 
 	while(1)
 	{
-		for(i=0; i<25; i++)
+		for(i=0; i<6; i++)
 		{
 			for(j=0; j<25; j++)
 			{
