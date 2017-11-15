@@ -43,7 +43,7 @@
 #define straight_speed 230
 #define curve_speed 120
 
-#define IMGSAVE
+//#define IMGSAVE
 //#define LIGHT_BEEP
 //#define debug
 ////////////////////////////////////////////////////////////////////////////
@@ -3262,19 +3262,17 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 
     if (continue_turn_left == false && continue_turn_right == false){   //1. 직선인 경우, 조향을 위한 좌우측 차선 검출 후 기울기 계산
             printf("continue_turn_flag_all_off__3__\n");
-            for(i=0;i<=valid_left_amount;i++){                        //좌측 차선 검출
-                if(left[i*line_gap]!=0){
-                    left_line_start = y_start_line - i * line_gap;
-                    left_line_end = y_start_line - (i + valid_left_amount) * line_gap;
-                    break;
+
+            for(i=0;i<=valid_left_amount;i++){                          //차선의 invalid value찾기 (좌측차선인데 기울기가 우측으로 안기울고 좌측으로 나오는 경우)
+                if(i!=0){
+                    if(left[i*line_gap]<left[(i-1)*line_gap]){ //it is invalid!
+                        break;
+                    }
+                    else{
+
+                    }
                 }
-            }
-            for(i=0;i<=valid_right_amount;i++){                        //우측 차선 검출
-                if(right[i*line_gap]!=imgResult->width-1){
-                    right_line_start = y_start_line - i * line_gap;
-                    right_line_end = y_start_line - (i + valid_right_amount) * line_gap;
-                    break;
-                }
+
             }
             if(valid_left_amount > 1){                                          //좌측 차선 기울기 계산
                 left_slope[0] = (float)(left[0] - left[(valid_left_amount-1)*line_gap])/(float)(valid_left_amount*line_gap);
@@ -3338,22 +3336,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
           }
 
         }
-
-        for(i=0;i<=valid_high_left_amount;i++){                        //좌측 차선 검출
-            if(left[i*line_gap]!=0){
-                left_line_start = y_high_start_line - i * line_gap;
-                left_line_end = y_high_start_line - (i + valid_high_left_amount) * line_gap;
-                break;
-            }
-        }
-        for(i=0;i<=valid_high_right_amount;i++){                        //우측 차선 검출
-            if(right[i*line_gap]!=imgResult->width-1){
-                right_line_start = y_high_start_line - i * line_gap;
-                right_line_end = y_high_start_line - (i + valid_right_amount) * line_gap;
-                break;
-            }
-        }
-
       printf("\nleft high line = ");
       for(i=0;i<valid_high_left_amount;i++)printf("%d  ",left[i*line_gap]);
       printf("    valid high left line = %d\n",valid_high_left_amount);
