@@ -40,8 +40,8 @@
 #define SPEED_CONTROL     // To servo control(steering & camera position)
 //#define IMGSAVE1
 
-#define straight_speed 230
-#define curve_speed 120
+int straight_speed = 230;
+int curve_speed = 120;
 
 //#define IMGSAVE
 //#define LIGHT_BEEP
@@ -3091,6 +3091,43 @@ void check_parking()
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////////////////
+// 시작신호
+void isStartSignal(){
+	int rightSensor, leftSensor;
+	int rightBuffer = 0;
+	int leftBuffer = 0;
+	int startThreshold = 3000;
+	int startBuffer = 20w;
+
+	straight_speed = 0;
+	curve_speed = 0;
+
+	while(1){
+		//rightSensor = filteredIR(RIGHT);
+		rightSensor = DistanceSensor(RIGHT);
+		//leftSensor = filteredIR(LEFT);
+		leftSensor = DistanceSensor(LEFT);
+		printf("Signal!!! Left : %d , Right : %d\n",leftSensor,rightSensor);
+		if(rightSensor > startThreshold){
+			rightBuffer++;
+		} else if(leftSensor > startThreshold){
+			leftBuffer++;
+		}
+		if(rightBuffer > startBuffer){
+			straight_speed = 230;
+			curve_speed = 120;
+			break;
+		} else if(leftBuffer > startBuffer){
+			straight_speed = 180;
+			curve_speed = 120;
+			break;
+		}
+	}
+}
+
+// 시작신호끝
+////////////////////////////////////////////////////////////////////////////////////////////
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -3430,6 +3467,8 @@ void ControlThread(void *unused){
 	channel_leftPrev = filteredIR(LEFT);
 	channel_rightPrev = filteredIR(RIGHT);
 
+	isStartSignal();
+
 	while (1)
 	{
 		pthread_mutex_lock(&mutex);
@@ -3631,7 +3670,7 @@ void DistanceThread(void *unused)
 
 	while(1)
 	{
-		for(i=0; i<25; i++)
+		for(i=0; i<6; i++)
 		{
 			for(j=0; j<25; j++)
 			{
@@ -3911,7 +3950,7 @@ int main(int argc, char *argv[])
 	printf("8. Control Thread\n");
 	pthread_create(&cntThread, NULL, &ControlThread, NULL);
 	//pthread_create(&lineThread, NULL, &LineThread, NULL);
-	//pthread_create(&distanceThread, NULL, &DistanceThread, NULL);
+	pthread_create(&distanceThread, NULL, &DistanceThread, NULL);
 
 	printf("9. Wait for completion \n");
 	// Wait for completion
