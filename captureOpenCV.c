@@ -2548,7 +2548,7 @@ int filteredIR(int num) // 필터링한 적외선 센서값
 		sensorValue /= 15;
 		return sensorValue;
 
-		fprintf(fsensor, "sensorValue: %d, %d", num, sensorValue);
+		fprintf(fsensor, "sensorValue:	%d	%d", num, sensorValue);
 		fprintf(fsensor, "\n");
 	}
 	else
