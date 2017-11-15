@@ -3147,9 +3147,13 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     printf("max_turn_ready_left = %d , max_turn_ready_right = %d\n",max_turn_ready_left,max_turn_ready_right);
 
     for(i = y_start_line ; i>y_end_line ; i=i-line_gap){
-	if (turn_right_max == true || max_turn_ready_right == true){        // max turn right시 우측부터 좌측차선 읽기 시작
+	    if (turn_right_max == true){        // max turn right시 우측부터 좌측차선 읽기 시작
 			j = imgResult->width - 1;
-            //printf("sweeping starting point : right\n");
+            printf("sweeping starting point : right\n");
+        }
+        else if(max_turn_ready_right == true){        // max turn right시 우측 3/4부터 좌측차선 읽기 시작
+			j = imgResult->width*3/4;
+            printf("sweeping starting point : 3/4 right\n");
         }
 		else if(turn_left_max == true || max_turn_ready_left == true){      // max turn left 위해 왼쪽부터 우측차선읽으면 좌측차선 검색 불필요
 			j = 0;
@@ -3157,7 +3161,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
         }
         else{                                                               // 평상시엔 중앙에서 시작
             j = (imgResult->width) / 2;
-           // printf("sweeping starting point : center\n");
+            printf("sweeping starting point : center\n");
         }
         for(; j>0 ; j--){                            //Searching the left line point
                 left[y_start_line-i] = j;
@@ -3175,9 +3179,13 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                     }
                 }
 		}
-		if (turn_left_max == true || max_turn_ready_left == true){          // max turn left시 좌측부터 우측차선 읽기 시작
+		if (turn_left_max == true){          // max turn left시 좌측부터 우측차선 읽기 시작
 			j = 0 ; 
-           // printf("sweeping starting point : left\n");
+            printf("sweeping starting point : left\n");
+        }
+        else if(max_turn_ready_left == true){        // max turn right시 좌측 1/4부터 좌측차선 읽기 시작
+			j = imgResult->width*1/4;
+            printf("sweeping starting point : 1/4 right\n");
         }
 		else if(turn_right_max == true || max_turn_ready_right == true){      // max turn left 위해 왼쪽부터 우측차선읽으면 좌측차선 검색 불필요
 			j = imgResult->width - 1;
@@ -3185,7 +3193,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
         }
         else{                                                               // 평상시엔 중앙에서 시작
             j = (imgResult->width) / 2;
-           // printf("sweeping starting point : center\n");
+            printf("sweeping starting point : center\n");
         }
         for(; j<imgResult->width ; j++){             //Searching the right line point
                 right[y_start_line-i] = j;
@@ -3328,6 +3336,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
                       }
                   }
           }
+
         }
 
         for(i=0;i<=valid_high_left_amount;i++){                        //좌측 차선 검출
@@ -3387,15 +3396,14 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
       }
     }
 
+
     if (turn_left_max == true)                      //차량 조향각도 판별
         angle = 2000;
     else if (turn_right_max == true)
         angle = 1000;
     else{
         angle = 1500 + control_angle ;                                  // Range : 1000(Right)~1500(default)~2000(Left)
-		angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;			// Bounding the angle range
-
-		printf("================= angle = %d ============================\n", angle);
+		angle = angle>2000? 2000 : angle<1000 ? 1000 : angle;           // Bounding the angle range
     }
 
     #ifdef SPEED_CONTROL
