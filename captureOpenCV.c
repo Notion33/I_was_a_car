@@ -794,7 +794,6 @@ static void CheckDisplayDevice(NvMediaVideoOutputDevice deviceType, NvMediaBool 
 }
 
 //  디버깅 이미지 생성
-#ifdef  IMGSAVE
 void writeonImage(IplImage* imgResult, char* str_info) {
 	char* str = str_info;
 
@@ -810,6 +809,7 @@ void writeonImage(IplImage* imgResult, char* str_info) {
 	//cvPutText(Mat&, string& ,textPoint, &font, cvScalar(255,255,255,0));
 
 }
+#ifdef  IMGSAVE
 
 CvPoint getEndPoint(int angle) {
 	CvPoint point;
@@ -1974,7 +1974,7 @@ int find_center_in_3way() {
 		white pixcel 이 오른쪽으로 갈때까지 좌/우회전 조향
 		if 오른쪽 일정범위 넘기면 플래그 지움
 	*/
-	if(mode2_out_flag == false){
+	/*if(mode2_out_flag == false){
 		printf("mode_out_flag = false \n");
 			
 			for (i = 50; i<200; i++) { // y location from 50 to 200 (0<y<240)
@@ -1984,12 +1984,12 @@ int find_center_in_3way() {
 				}
 			}
 
-		sprintf(str, "Image %d  whiteonright : %d", num, white_on_right);
-		writeonImage(imgResWY, str);
+		// sprintf(str, "Image %d  whiteonright : %d", num, white_on_right);
+		// writeonImage(imgResWY, str);
 		
-		sprintf(imgResWY, "imgsaved/imgResWY_%d.png", num);          // TY add 6.27
-		num++;
-	 cvSaveImage(imgResWY, imgOrigin, 0);
+		// sprintf(imgResWY, "imgsaved/imgResWY_%d.png", num);          // TY add 6.27
+		// num++;
+		//  cvSaveImage(imgResWY, imgOrigin, 0);
 			
 			if(white_on_right<1800){
 				printf("white_on_right = %d\n",white_on_right);
@@ -2009,7 +2009,7 @@ int find_center_in_3way() {
 				continue;
 			}
 		}	
-
+*/
 		Find_Center(imgResWY);
 
 		DesireSpeed_Write(70);
