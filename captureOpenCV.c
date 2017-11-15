@@ -104,6 +104,7 @@ int red_count = 0;
 bool turn_left_max = false;         //TY add
 bool turn_right_max = false;
 
+FILE* f;
 FILE* fparking;
 FILE* fsensor;
 
@@ -2776,97 +2777,57 @@ void check_parking()
 	printf("difference_left = %d\n", difference_left);
 	printf("difference_right = %d\n", difference_right);
 	
-	if(first_left_detect == FALSE && difference_left >= 170)
+	if(first_left_detect == FALSE && difference_left >= 100) // 첫번째 벽인식
 	{
-		printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_left);
-		while(difference_left>=50)
-		{
-			channel_leftNow = filteredIR(LEFT);
-			difference_left = channel_leftNow - channel_leftPrev;
-			channel_leftPrev = channel_leftNow;
-			printf("difference_left = %d\n", difference_left);
-		}
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
 		fprintf(fparking, "\n\nFIRST_LEFT_DETECT\n\n\n");
 		printf("\n\nFIRST_LEFT_DETECT\n\n\n");
 		first_left_detect = TRUE;
+		EncoderCounter_Write(0);
 	}
 	
-	if(first_right_detect == FALSE && difference_right >= 170)
+	if(first_right_detect == FALSE && difference_right >= 100)
 	{
-		printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_right);
-		while(difference_right>=50)
-		{
-			channel_rightNow = filteredIR(RIGHT);
-			difference_right = channel_rightNow - channel_rightPrev;
-			channel_rightPrev = channel_rightNow;
-			printf("difference_right = %d\n", difference_right);
-		}
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
 		fprintf(fparking, "\n\nFIRST_RIGHT_DETECT\n\n\n");
 		printf("\n\nFIRST_RIGHT_DETECT\n\n\n");
 		first_right_detect = TRUE;
+		EncoderCounter_Write(0);
 	}
 	
-	if(first_left_detect == TRUE && second_left_detect == FALSE && difference_left <= -300)
+	if(first_left_detect == TRUE && second_left_detect == FALSE && EncoderCounter_Read() <= 5000) // 두번째 벽인식
 	{
-		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_left);
-		while(difference_left<=-50)
+		if(difference_left <= -100)
 		{
-			channel_leftNow = filteredIR(LEFT);
-			difference_left = channel_leftNow - channel_leftPrev;
-			channel_leftPrev = channel_leftNow;
-			printf("difference_left = %d\n", difference_left);
+			second_left_detect = TRUE;
+			fprintf(fparking, "\n\nSECOND_LEFT_DETECT\n\n\n");
+			printf("\n\nSECOND_LEFT_DETECT\n\n\n");
+			EncoderCounter_Write(0);
 		}
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-		fprintf(fparking, "\n\nSECOND_LEFT_DETECT\n\n\n");
-		printf("\n\nSECOND_LEFT_DETECT\n\n\n");
-		second_left_detect = TRUE;
-		EncoderCounter_Write(0);
+	}
+	else if(first_left_detect == TRUE && second_left_detect == FALSE && EncoderCounter_Read () > 5000)
+	{
+		first_left_detect = FALSE;
 	}
 
-	if(first_right_detect == TRUE && second_right_detect == FALSE && difference_right <= -300)
+	if(first_right_detect == TRUE && second_right_detect == FALSE && EncoderCounter_Read() <= 5000)
 	{
-		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_right);
-		while(difference_right<=-50)
+		if(difference_right <= -100)
 		{
-			channel_rightNow = filteredIR(RIGHT);
-			difference_right = channel_rightNow - channel_rightPrev;
-			channel_rightPrev = channel_rightNow;
-			printf("difference_right = %d\n", difference_right);
+			second_right_detect = TRUE;
+			fprintf(fparking, "\n\nSECOND_RIGHT_DETECT\n\n\n");
+			printf("\n\nSECOND_RIGHT_DETECT\n\n\n");
+			EncoderCounter_Write(0);
 		}
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
-		fprintf(fparking, "\n\nSECOND_RIGHT_DETECT\n\n\n");
-		printf("\n\nSECOND_RIGHT_DETECT\n\n\n");
-		second_right_detect = TRUE;
-		EncoderCounter_Write(0);
+	}
+	else if(first_right_detect == TRUE && second_right_detect == FALSE && EncoderCounter_Read () > 5000)
+	{
+		first_right_detect = FALSE;
 	}
 
-	if(second_left_detect == TRUE && third_left_detect == FALSE && difference_left >= 170)
+	///////////////////////////
+	if(second_left_detect == TRUE && third_left_detect == FALSE && difference_left >= 100)
 	{
-		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_left);
-		while(difference_left>=50)
-		{
-			channel_leftNow = filteredIR(LEFT);
-			difference_left = channel_leftNow - channel_leftPrev;
-			channel_leftPrev = channel_leftNow;
-			printf("difference_left = %d\n", difference_left);
-		}
-		parking_space = EncoderCounter_Read();
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-		fprintf(fparking, "\n\nTHIRD_LEFT_DETECT\n\n\n");
-		printf("\n\nTHIRD_LEFT_DETECT\n\n\n");
 		third_left_detect = TRUE;
-		printf("\n\n PARKING SPACE : %d", parking_space);
-			
-		//beep
-		CarLight_Write(ALL_ON);
-    	usleep(100000);
-    	CarLight_Write(ALL_OFF);
-		Alarm_Write(ON);
-		usleep(50000);
-		Alarm_Write(OFF);
-
+		parking_space = EncoderCounter_Read();
 		if(parking_space > 7000)
 		{
 			parallel_parking_left();
@@ -2877,30 +2838,10 @@ void check_parking()
 		}
 	}
 
-	if(second_right_detect == TRUE && third_right_detect == FALSE && difference_right >= 170)
+	if(second_right_detect == TRUE && third_left_detect == FALSE && difference_right >= 100)
 	{
-		printf("\n\n-------------jumped under the threshold by %d-------------\n", difference_right);
-		while(difference_right>=50)
-		{
-			channel_rightNow = filteredIR(RIGHT);
-			difference_right = channel_rightNow - channel_rightPrev;
-			channel_rightPrev = channel_rightNow;
-			printf("difference_right = %d\n", difference_right);
-		}
-		parking_space = EncoderCounter_Read();
-		printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
-		fprintf(fparking, "\n\nTHIRD_RIGHT_DETECT\n\n\n");
-		printf("\n\nTHIRD_RIGHT_DETECT\n\n\n");
 		third_right_detect = TRUE;
-		printf("\n\nPARKING SPACE : %d", parking_space);
-		
-		CarLight_Write(ALL_ON);
-   	 	usleep(100000);
-  		CarLight_Write(ALL_OFF);
-		Alarm_Write(ON);
-		usleep(50000);
-		Alarm_Write(OFF);
-
+		parking_space = EncoderCounter_Read();
 		if(parking_space > 7000)
 		{
 			parallel_parking_right();
@@ -2909,7 +2850,7 @@ void check_parking()
 		{
 			vertical_parking_right();
 		}
-	}	
+	}
 }
 
 // 주차 함수 끝
