@@ -2546,10 +2546,9 @@ int filteredIR(int num) // 필터링한 적외선 센서값
 			}
 		}
 		sensorValue /= 15;
-		return sensorValue;
-
 		fprintf(fsensor, "sensorValue:	%d	%d", num, sensorValue);
 		fprintf(fsensor, "\n");
+		return sensorValue;
 	}
 	else
 		return 0; //초기 시작후, DistanceValue에 쓰레기값들이 있을때 Filtered_IR이 잘못된 값을 밷는걸 방지
