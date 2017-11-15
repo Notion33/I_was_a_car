@@ -133,6 +133,8 @@ static NvMediaVideoSurface *capSurf = NULL;
 pthread_cond_t      cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t     mutex = PTHREAD_MUTEX_INITIALIZER;
 
+int dThreadTime = 0;
+
 int table_298[256];
 int table_409[256];
 int table_100[256];
