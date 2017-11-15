@@ -1246,13 +1246,13 @@ int detect_signal(IplImage* imgResult) {//return 1 : 신호등  return 2 회전�
 	}
 
 
-#ifdef IMGSAVE1
-	sprintf(fileName1, "captureImage/signal_detectResult%d.png", num);
-	//sprintf(fileName2, "captureImage/signal_detectCanny%d.png", num);
-	num++;
-	cvSaveImage(fileName1, imgResult, 0);
-	//cvSaveImage(fileName2, canny_img, 0);
-#endif
+	#ifdef IMGSAVE1
+		sprintf(fileName1, "captureImage/signal_detectResult%d.png", num);
+		//sprintf(fileName2, "captureImage/signal_detectCanny%d.png", num);
+		num++;
+		cvSaveImage(fileName1, imgResult, 0);
+		//cvSaveImage(fileName2, canny_img, 0);
+	#endif
 	if (pass > 2) {
 
 		if (seqCircle->total > 0) {
@@ -1391,13 +1391,13 @@ int Traffic_Light(IplImage* imgResult) {//TODO cvHoughCircle matadata test  //TO
 		color++;
 	}
 
-#ifdef IMGSAVE1
-	sprintf(fileName1, "captureImage/imgResultcany%d.png", num);
-	//sprintf(fileName2, "captureImage/imgCannylight%d.png", num);
-	num++;
-	cvSaveImage(fileName1, imgResult, 0);
-	//cvSaveImage(fileName2, canny_img, 0);
-#endif
+	#ifdef IMGSAVE1
+		sprintf(fileName1, "captureImage/imgResultcany%d.png", num);
+		//sprintf(fileName2, "captureImage/imgCannylight%d.png", num);
+		num++;
+		cvSaveImage(fileName1, imgResult, 0);
+		//cvSaveImage(fileName2, canny_img, 0);
+	#endif
 
 	/*for (x = start_x; x < end_x; x++) {
 	for (y = start_y; y < end_y; y++) {
@@ -1572,12 +1572,12 @@ int rotary() {
 	double pixshadow = 0;//장애물 그림자 pixel
 	int i, j, k = 0;//for loop
 					//////////////////////////////////////////////////
-#ifdef IMGSAVE
-	char fileName[60];
-	char fileName1[60];
-	char fileName2[60];
-	int num = 0;
-#endif
+	#ifdef IMGSAVE
+		char fileName[60];
+		char fileName1[60];
+		char fileName2[60];
+		int num = 0;
+	#endif
 	IplImage *imgOrigin;
 	IplImage *imgResult;
 	IplImage *imgResult1;
@@ -1594,9 +1594,9 @@ int rotary() {
 	///////////////////////////////////////////////
 
 
-#ifdef debug
-	printf(" rotary started :D :D:D:D:D:D:D:D:D:D\n\n");
-#endif
+	#ifdef debug
+		printf(" rotary started :D :D:D:D:D:D:D:D:D:D\n\n");
+	#endif
 
 	angle = 2000;                       // Range : 600(Right)~1500(default)~2400(Left)
 	CameraXServoControl_Write(angle);
@@ -1611,20 +1611,20 @@ int rotary() {
 		Frame2Ipl(imgOrigin, imgResult, 0);
 
 		pthread_mutex_unlock(&mutex);
-#ifdef IMGSAVE
-		cvZero(imgResult1);
-		for (i = 0; i<240; i++)
-			for (j = 0; j<320; j++) {
-				if (imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] >= SHADOWYMIN && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] <= SHADOWYMAX && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] >= SHADOWUMIN && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] <= SHADOWUMAX && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2] >= SHADOWVMIN && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2] <= SHADOWVMAX)imgResult1->imageData[i * 320 + j] = 255;
-			}
-		sprintf(fileName, "captureImage/imgOriginforRot%d.png", num);
-		sprintf(fileName1, "captureImage/imgResultforRotDriving%d.png", num);          // TY add 6.27
-		sprintf(fileName2, "captureImage/imgResultRotBlockDetect%d.png", num);
-		num++;
-		cvSaveImage(fileName, imgOrigin, 0);
-		cvSaveImage(fileName1, imgResult, 0);
-		cvSaveImage(fileName2, imgResult1, 0);
-#endif
+	#ifdef IMGSAVE
+			cvZero(imgResult1);
+			for (i = 0; i<240; i++)
+				for (j = 0; j<320; j++) {
+					if (imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] >= SHADOWYMIN && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] <= SHADOWYMAX && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] >= SHADOWUMIN && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] <= SHADOWUMAX && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2] >= SHADOWVMIN && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2] <= SHADOWVMAX)imgResult1->imageData[i * 320 + j] = 255;
+				}
+			sprintf(fileName, "captureImage/imgOriginforRot%d.png", num);
+			sprintf(fileName1, "captureImage/imgResultforRotDriving%d.png", num);          // TY add 6.27
+			sprintf(fileName2, "captureImage/imgResultRotBlockDetect%d.png", num);
+			num++;
+			cvSaveImage(fileName, imgOrigin, 0);
+			cvSaveImage(fileName1, imgResult, 0);
+			cvSaveImage(fileName2, imgResult1, 0);
+	#endif
 		if (!Departure) {
 			pixOutRange = 0;
 
@@ -1633,11 +1633,11 @@ int rotary() {
 					if (imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] >= SHADOWYMIN && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3] <= SHADOWYMAX && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] >= SHADOWUMIN && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 1] <= SHADOWUMAX && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2] >= SHADOWVMIN && imgOrigin->imageData[(i*RESIZE_WIDTH + j) * 3 + 2] <= SHADOWVMAX)pixOutRange++;
 			pixOutRange = (double)(pixOutRange / ((OUTRANGEMAXX - OUTRANGEMINX) * (OUTRANGEMAXY - OUTRANGEMINY)));
 
-#ifdef debug
-			printf("waitingnow\n");
-			printf("pixInRange : %10lf\t", pixInRange);
-			printf("pixOutRange : %10lf\n", pixOutRange);
-#endif
+	#ifdef debug
+				printf("waitingnow\n");
+				printf("pixInRange : %10lf\t", pixInRange);
+				printf("pixOutRange : %10lf\n", pixOutRange);
+	#endif
 
 			if (pixOutRange<0.003) {
 				Departure = true;
@@ -1652,9 +1652,9 @@ int rotary() {
 			}
 		}
 		else {//출발 신호 받음 : Departure = True
-#ifdef debug
-			printf("running now IsDetected : %d, CourseOut : %d\n\n", IsDetected, CourseOut);
-#endif
+	#ifdef debug
+				printf("running now IsDetected : %d, CourseOut : %d\n\n", IsDetected, CourseOut);
+	#endif
 			cnt = 0;
 			maxcnt = 0;
 			if (!CourseOut) {//courseout이 True이고 화면에 장애물 픽셀 안잡히면 탈출(courseout은 우측화면에 흰픽셀 잡힌뒤 사라지면 true)
@@ -1682,10 +1682,10 @@ int rotary() {
 						if (maxcnt>12) {
 							IsDetected = true;
 							break;
-#ifdef IMGSAVE
-							sprintf(fileName1, "captureImage/error_signal.png");
-							cvSaveImage(fileName1, imgOrigin, 0);
-#endif
+	#ifdef IMGSAVE
+								sprintf(fileName1, "captureImage/error_signal.png");
+								cvSaveImage(fileName1, imgOrigin, 0);
+	#endif
 						}
 					}
 				}
@@ -1724,10 +1724,10 @@ int rotary() {
 				Alarm_Write(OFF);
 				return 0;
 			}
-#ifdef debug
-			printf("pixshadow : %lf\n", pixshadow);
-			printf("sensor : %d\n", data);
-#endif
+	#ifdef debug
+				printf("pixshadow : %lf\n", pixshadow);
+				printf("sensor : %d\n", data);
+	#endif
 
 			if (data>1000) { 
 				speed = 0; 
@@ -2142,16 +2142,16 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 		//speed = tw_straight_speed;
 		speed = 70;
 		flag_tw++;
-}
+	}
 
 	else if (flag_tw == 2)
 	{
 		if (position_now > 10 * weight_tw1)
 			flag_tw++; // flag 1 증가
 
-#ifdef DEBUG_TW
-		printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-#endif
+	#ifdef DEBUG_TW
+			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+	#endif
 	}
 
 	else if (flag_tw == 3)
@@ -2169,9 +2169,9 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 		if (position_now >  45 * weight_tw)
 			flag_tw++; // flag 1 증가
 
-#ifdef DEBUG_TW
-		printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-#endif
+	#ifdef DEBUG_TW
+			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+	#endif
 	}
 
 	else if (flag_tw == 5)
@@ -2189,9 +2189,9 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 		if (position_now > 30 * weight_tw1)
 			flag_tw++; // flag 1 증가
 
-#ifdef DEBUG_TW
-		printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-#endif
+	#ifdef DEBUG_TW
+			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+	#endif
 	}
 
 	else if (flag_tw == 7)
@@ -2209,9 +2209,9 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 		if (position_now > 45 * weight_tw)
 			flag_tw++; // flag 1 증가
 
-#ifdef DEBUG_TW
-		printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-#endif
+	#ifdef DEBUG_TW
+			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+	#endif
 	}
 
 	else if (flag_tw == 9)
@@ -2230,9 +2230,9 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 	{
 		if (YELLOW_TW > Check_YL)
 		{
-#ifdef DEBUG_TW
-			printf("스톱!\n"); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-#endif
+	#ifdef DEBUG_TW
+				printf("스톱!\n"); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+	#endif
 
 			flag_YL++;
 			flag_tw = 0;
@@ -2351,9 +2351,9 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 		if (position_now > 45 * weight_tw)
 			flag_tw++; // flag 1 증가
 
-#ifdef DEBUG_TW
-		printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-#endif
+	#ifdef DEBUG_TW
+			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+	#endif
 	}
 
 	else if (flag_tw == 13)
@@ -2371,9 +2371,9 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 		if (position_now > 35 * weight_tw1)
 			flag_tw++; // flag 1 증가
 
-#ifdef DEBUG_TW
-		printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-#endif
+	#ifdef DEBUG_TW
+			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+	#endif
 	}
 
 	else if (flag_tw == 15)
@@ -2391,9 +2391,9 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 		if (position_now > 45 * weight_tw)
 			flag_tw++; // flag 1 증가
 
-#ifdef DEBUG_TW
-		printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-#endif
+	#ifdef DEBUG_TW
+			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+	#endif
 	}
 
 	else if (flag_tw == 17)
@@ -2411,9 +2411,9 @@ int Threeway_hardcoding(IplImage* imgResult, int turn)
 		if (position_now > 35 * weight_tw1)
 			flag_tw++; // flag 1 증가
 		speed = 0;
-#ifdef DEBUG_TW
-		printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-#endif
+	#ifdef DEBUG_TW
+			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+	#endif
 	}
 
 
@@ -3394,7 +3394,6 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
       }
     }
 
-
     if (turn_left_max == true)                      //차량 조향각도 판별
         angle = 2000;
     else if (turn_right_max == true)
@@ -3561,7 +3560,7 @@ void ControlThread(void *unused){
 		DesireSpeed_Write(speed);
 		//===================================
 		//  LOG 파일 작성
-        writeLog(i);
+        //writeLog(i);
         //===================================
 		// 조향과 속도처리는 한 프레임당 마지막에 한번에 처리
 
