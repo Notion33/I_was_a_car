@@ -2114,490 +2114,459 @@ int find_center_in_3way() {
 	return desti_lane;
 }
 
+int check_3way()
+{ 
+   int channel_leftNow = 0;
+   int channel_leftPrev = 0;
+   int channel_rightNow = 0;
+   int channel_rightPrev = 0;
+   
+   int difference_left = 0;
+   int difference_right = 0;
+
+   channel_leftNow = filteredIR(LEFT);
+   channel_rightNow = filteredIR(RIGHT);
+   difference_left = channel_leftNow - channel_leftPrev;
+   difference_right = channel_rightNow - channel_rightPrev;
+   channel_leftPrev = channel_leftNow;
+   channel_rightPrev = channel_rightNow;
+   printf("difference_left = %d\n", difference_left);
+   printf("difference_right = %d\n", difference_right);
+   
+   if(difference_left > 120 && difference_left < 250) return 1;
+   else if (difference_left > - 300 && difference_left < - 120) return 2;
+
+   if (difference_right > 120 && difference_right < 250) return 3;
+   else if (difference_right > -300 && difference_right < -120) return 4;
+
+}
+
 int Threeway_hardcoding(IplImage* imgResult, int turn)
 {
-	int tw_speed;
-	int tw_straight_speed = 115;
-	int tw_curve_speed = 65;
-	static int flag_sensor = 0;
-	static bool Detector_YL = false;
+   int tw_speed;
+   int tw_straight_speed = 115;
+   int tw_curve_speed = 65;
+   static int flag_sensor = 0;
+   //static bool Detector_YL = false;
 
-	int data = 0;
-	int channel;
-	//int angle;
-	int tw_angle;
-	int weight_tw = 100;//곡선 encoder weight
-	int weight_tw1 = 80;//직진 encoder weight
-	int t = turn;
-	static int flag_tw = 1;//3차선 전용 flag
-	static int flag_YL = 0;//3차선 노란색 검출 flag
+   int data = 0;
+   int channel;
+   //int angle;
+   int tw_angle;
+   int weight_tw = 100;//곡선 encoder weight
+   int weight_tw1 = 80;//직진 encoder weight
+   int t = turn;
+   static int flag_tw = 1;//3차선 전용 flag
+   static int flag_YL = 0;//3차선 노란색 검출 flag
 
-	int x = 0, y = 0; //x 축 및 y 축
-	int height_y = 240; // frame2IPL y축 
-	int width_x = 320; // frame2IPL x축 
-	int YELLOW_TW = 0; // 3차선 노란선 검출용 변수
-	int Check_YL = height_y * width_x / 9 * 0.1; // 9분의 1 ROI 를 기준으로 10퍼센트이상 노란선 검출 시 멈추게 해주는 check 변수   
-												 //853
-	unsigned char status;
-	unsigned char gain;
-	int position_now = 0;
-	int position_zero = 0;
-	int tol;
+   int x = 0, y = 0; //x 축 및 y 축
+   int height_y = 240; // frame2IPL y축 
+   int width_x = 320; // frame2IPL x축 
+   int YELLOW_TW = 0; // 3차선 노란선 검출용 변수
+   int Check_YL = height_y * width_x / 9 * 0.1; // 9분의 1 ROI 를 기준으로 10퍼센트이상 노란선 검출 시 멈추게 해주는 check 변수   
+   //853
+   unsigned char status;
+   unsigned char gain;
+   int position_now = 0;
+   int position_zero = 0;
+   int tol;
 
-	bool FindLine = false;
+   bool FindLine = false;
 
-	int tempval = 0;
-	int iririr = 0;
+   //int tempval = 0;
+   //int iririr = 0;
 
-	color = 4;//주행 코드를 위한 threshhold 값 변경
+   color = 4;//주행 코드를 위한 threshhold 값 변경
 
-			  //총 픽셀은 320 *240 = 76800
-			  //총 픽셀은 320 *240 = 76800
-	for (y = height_y / 3; y <= height_y / 3 * 2; y++)
-	{
-		for (x = width_x / 3; x <= width_x / 3 * 2; x++)
-		{
-			if (imgResult->imageData[y * width_x + x] == whitepx)//Find white pixels
-			{
-				YELLOW_TW++;
-			}
-		}
-	}
-
-	printf("YELLOW_TW = %d\n", YELLOW_TW);
-	//947
-
-
-
-	//CarControlInit();
-	//SpeedControlOnOff_Write(CONTROL);
-	//PositionControlOnOff_Write(UNCONTROL);
-	//DesireSpeed_Write(tw_straight_speed);
-
-	//gain = 20;
-	//PositionProportionPoint_Write(gain);
-
-	position_now = EncoderCounter_Read();      //EncoderCounter_Read()값은 다른함수에서 받아올예정.
-											   //따라서 바로 받아와서 쓸 수 있도록 position_now로 사용.
-
-
-	if (flag_tw == 1)
-	{
-		EncoderCounter_Write(position_zero);
-		tw_angle = 1500;//직진
-		angle = tw_angle;
-		//speed = tw_straight_speed;
-		speed = 70;
-		flag_tw++;
-	}
-
-	else if (flag_tw == 2)
-	{
-		if (position_now > 10 * weight_tw1)
-			flag_tw++; // flag 1 증가
-
-	#ifdef DEBUG_TW
-			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-	#endif
-	}
-
-	else if (flag_tw == 3)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500 - t * 430;//오른쪽 조향 1100, 왼쪽 조향 1900; 이것은 t값에 따라 바뀜!! 아래 설명 생략
-		angle = tw_angle;
-		speed = tw_curve_speed;
-
-		flag_tw++;
+           //총 픽셀은 320 *240 = 76800
+           //총 픽셀은 320 *240 = 76800
+   for (y = height_y / 3; y <= height_y / 3 * 2; y++)
+   {
+      for (x = width_x / 3; x <= width_x / 3 * 2; x++)
+      {
+         if (imgResult->imageData[y * width_x + x] == whitepx)//Find white pixels
+         {
+            YELLOW_TW++;
+         }
+      }
    }
 
-	else if (flag_tw == 4)
-	{
-		if (position_now >  45 * weight_tw)
-			flag_tw++; // flag 1 증가
+   printf("YELLOW_TW = %d\n", YELLOW_TW);
+   //947
 
-	#ifdef DEBUG_TW
-			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-	#endif
-	}
 
-	else if (flag_tw == 5)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500;//직진
-		angle = tw_angle;
-		speed = tw_straight_speed;
 
-		flag_tw++;
+   //CarControlInit();
+   //SpeedControlOnOff_Write(CONTROL);
+   //PositionControlOnOff_Write(UNCONTROL);
+   //DesireSpeed_Write(tw_straight_speed);
+
+   //gain = 20;
+   //PositionProportionPoint_Write(gain);
+
+   position_now = EncoderCounter_Read();      //EncoderCounter_Read()값은 다른함수에서 받아올예정.
+                                    //따라서 바로 받아와서 쓸 수 있도록 position_now로 사용.
+
+
+   if (flag_tw == 1)
+   {
+      EncoderCounter_Write(position_zero);
+      tw_angle = 1500;//직진
+      angle = tw_angle;
+      //speed = tw_straight_speed;
+      speed = 70;
+      flag_tw++;
    }
 
-	else if (flag_tw == 6)
-	{
-		if (position_now > 30 * weight_tw1)
-			flag_tw++; // flag 1 증가
+   else if (flag_tw == 2)
+   {
+      if (position_now > 10 * weight_tw1)
+         flag_tw++; // flag 1 증가
 
-	#ifdef DEBUG_TW
-			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-	#endif
-	}
-
-	else if (flag_tw == 7)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500 + t * 430;//왼쪽 조향  1900, 오른쪽 조향 1100; 위와 똑같은 이론
-		angle = tw_angle;
-		speed = tw_curve_speed;
-
-		flag_tw++;
+#ifdef DEBUG_TW
+      printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+#endif
    }
 
-	else if (flag_tw == 8)
-	{
-		if (position_now > 45 * weight_tw)
-			flag_tw++; // flag 1 증가
+   else if (flag_tw == 3)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500 - t * 430;//오른쪽 조향 1100, 왼쪽 조향 1900; 이것은 t값에 따라 바뀜!! 아래 설명 생략
+      angle = tw_angle;
+      speed = tw_curve_speed;
 
-	#ifdef DEBUG_TW
-			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-	#endif
-	}
+      flag_tw++;
+   }
 
-	else if (flag_tw == 9)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500;//직진
-		angle = tw_angle;
-		speed = tw_straight_speed;
-		flag_tw++;
-	}
+   else if (flag_tw == 4)
+   {
+      if (position_now >  45 * weight_tw)
+         flag_tw++; // flag 1 증가
 
+#ifdef DEBUG_TW
+      printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+#endif
+   }
 
+   else if (flag_tw == 5)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500;//직진
+      angle = tw_angle;
+      speed = tw_straight_speed;
 
+      flag_tw++;
+   }
 
-	else if (flag_tw == 10)
-	{
-		if (YELLOW_TW > Check_YL&&  position_now > 50 * weight_tw1)
-		{
-	#ifdef DEBUG_TW
-				printf("스톱!\n"); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-	#endif
+   else if (flag_tw == 6)
+   {
+      if (position_now > 30 * weight_tw1)
+         flag_tw++; // flag 1 증가
 
-			flag_YL++;
-			flag_tw = 0;
-			DesireSpeed_Write(0);
-			Alarm_Write(ON);
-			usleep(2000000);
-		}
+#ifdef DEBUG_TW
+      printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+#endif
+   }
 
-		/*else if (t == -1 || t == 1)
-		{
-		if (t == 1){
-		for(iririr=0;iririr<30;iririr++){
-		tempval += DistanceSensor(5);
-		}
-		tempval = tempval / 30;
-		printf("\n ===Distance = %d=====", tempval);
-		if(flag_sensor==0){
-		printf("flag_sensor = %d\n", flag_sensor);
-		if (tempval>1036 && tempval<1717) //12cm ~ 25cm 거리 센서 측정
-		Detector_YL = true;
-		Alarm_Write(ON);
-		}
-		}
-		else if (t== -1){
-		for(iririr=0;iririr<30;iririr++){
-		tempval += DistanceSensor(3);
-		}
-		tempval = tempval / 30;
-		printf("\n ===Distance = %d=====", tempval);
+   else if (flag_tw == 7)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500 + t * 430;//왼쪽 조향  1900, 오른쪽 조향 1100; 위와 똑같은 이론
+      angle = tw_angle;
+      speed = tw_curve_speed;
 
-		if (flag_sensor = 0)
-		{
-		printf("flag_sensor = %d\n", flag_sensor);
-		if (tempval>896 && tempval<1897){ //12cm ~ 25cm 거리 센서 측정
-		Detector_YL = true;
-		Alarm_Write(ON);
-		}
-		}
-		}
-		}*/
+      flag_tw++;
+   }
 
-		/*else if (t == -1 || t == 1) //flag_sensor = 0 ;
-		{
-		if (t == 1){
-		for(iririr=0;iririr<30;iririr++){
-		tempval += DistanceSensor(5);
-		}
-		tempval = tempval / 30;
-		printf("\n ===Distance = %d=====", tempval);
+   else if (flag_tw == 8)
+   {
+      if (position_now > 45 * weight_tw)
+         flag_tw++; // flag 1 증가
 
-		if (flag_sensor = 1)
-		{
-		printf("flag_sensor = %d\n", flag_sensor);
-		if ((tempval>908 && tempval<1036)||(tempval<2460 && tempval>1717))
-		{
-		flag_sensor++;
-		flag_tw++;
-		Alarm_Write(ON);
-		}
-		}
-		else if(flag_sensor==0)
-		{
-		printf("flag_sensor = %d\n", flag_sensor);
-		if (tempval>1036 && tempval<1717) //12cm ~ 25cm 거리 센서 측정
-		flag_sensor++;
-		Alarm_Write(ON);
-		}
-		}
-		else if (t== -1){
-		for(iririr=0;iririr<30;iririr++){
-		tempval += DistanceSensor(3);
-		}
-		tempval = tempval / 30;
-		printf("\n ===Distance = %d=====", tempval);
+#ifdef DEBUG_TW
+      printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+#endif
+   }
 
-		if (flag_sensor = 1)
-		{
-		printf("flag_sensor = %d\n", flag_sensor);
-		if ((tempval>613 && tempval<896)||(tempval<2727 && tempval>1897))
-		{
-		flag_sensor++;
-		flag_tw++;
-		Alarm_Write(ON);
-		}
-		}
-		else if(flag_sensor==0)
-		{
-		printf("flag_sensor = %d\n", flag_sensor);
-		if (tempval>896 && tempval<1897) //12cm ~ 25cm 거리 센서 측정
-		flag_sensor++;
-		Alarm_Write(ON);
-		}
-		}
-		}*/
-
-		printf("Turn Turn HyunDAE~~~~!!!\n");
-		Find_Center(imgResult);
-		printf("angle : %d, speed : %d\n", angle, speed);
-		speed = tw_straight_speed;
-
-	}
+   else if (flag_tw == 9)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500;//직진
+      angle = tw_angle;
+      speed = tw_straight_speed;
+      flag_tw++;
+   }
 
 
-	else if (flag_tw == 11)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500 + t * 450;//왼쪽 조향  1900, 오른쪽 조향 1100; 위와 똑같은 이론
-		angle = tw_angle;
-		speed = tw_curve_speed;
-
-		flag_tw++;
-	}
-
-	else if (flag_tw == 12)
-	{
-		if (position_now > 45 * weight_tw)
-			flag_tw++; // flag 1 증가
-
-	#ifdef DEBUG_TW
-			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-	#endif
-	}
-
-	else if (flag_tw == 13)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500;//직진
-		angle = tw_angle;
-		speed = tw_straight_speed;
-
-		flag_tw++;
-	}
-
-	else if (flag_tw == 14)
-	{
-		if (position_now > 35 * weight_tw1)
-			flag_tw++; // flag 1 증가
-
-	#ifdef DEBUG_TW
-			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-	#endif
-	}
-
-	else if (flag_tw == 15)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500 - t * 450;//오른쪽 조향 1100, 왼쪽 조향 1900; 이것은 t값에 따라 바뀜!! 아래 설명 생략
-		angle = tw_angle;
-		speed = tw_curve_speed;
-
-		flag_tw++;
-	}
-
-	else if (flag_tw == 16)
-	{
-		if (position_now > 45 * weight_tw)
-			flag_tw++; // flag 1 증가
-
-	#ifdef DEBUG_TW
-			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-	#endif
-	}
-
-	else if (flag_tw == 17)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500;//직진
-		angle = tw_angle;
-		speed = tw_straight_speed;
-
-		flag_tw++;
-	}
-
-	else if (flag_tw == 18)
-	{
-		if (position_now > 35 * weight_tw1)
-			flag_tw++; // flag 1 증가
-		speed = 0;
-	#ifdef DEBUG_TW
-			printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
-	#endif
-	}
 
 
-	else if (flag_YL == 1)//후진
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500;
-		angle = tw_angle;
-		speed = -70;
+   else if (flag_tw == 10)
+   {
+      if (YELLOW_TW > Check_YL && position_now > 100 * weight_tw1)
+      {
+      #ifdef DEBUG_TW
+         printf("스톱!\n"); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+      #endif
+         printf("==position now = %d==\n",position_now);
+         flag_YL++;
+         flag_tw = 0;
+         DesireSpeed_Write(0);
+         Alarm_Write(ON);
+         usleep(2000000);
+      }
 
-		flag_YL++;
-	}
+      
+      else if (t == -1 || t == 1) //flag_sensor = 0 ;
+      {
+      if (t == 1){
+         if (flag_sensor = 1)
+         {
+            printf("flag_sensor = %d\n", flag_sensor);         
+            if (check_3way() == 2)
+            {
+               flag_sensor++;
+               flag_tw++;
+               Alarm_Write(ON);
+            }
+         }
+         else if(flag_sensor==0)
+         {
+            printf("flag_sensor = %d\n", flag_sensor);
+            if (check_3way() == 1) //12cm ~ 25cm 거리 센서 측정
+            flag_sensor++;
+            Alarm_Write(ON);
+         }
+      }
+      else if (t== -1){
+         
+         if (flag_sensor = 1)
+         {
+            printf("flag_sensor = %d\n", flag_sensor);         
+            if (check_3way() == 4)
+            {
+               flag_sensor++;
+               flag_tw++;
+               Alarm_Write(ON);
+            }
+         }
+         else if(flag_sensor==0)
+         {
+            printf("flag_sensor = %d\n", flag_sensor);
+            if (check_3way() == 3)
+            flag_sensor++;
+            Alarm_Write(ON);
+         }
+      }
+   }
 
-	else if (flag_YL == 2)//후진 엔코더 적용
-	{
-		if (position_now < -(70 * weight_tw1))
-			flag_YL++;
-	}
+         printf("Turn Turn HyunDAE~~~~!!!\n");
+         Find_Center(imgResult);
+         printf("angle : %d, speed : %d\n", angle, speed);
+         speed = tw_straight_speed;
 
-	else if (flag_YL == 3)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500 + t * 450;
-		angle = tw_angle;
-		speed = tw_curve_speed;
+   }
 
-		flag_YL++;
-	}
+   else if (flag_tw == 11)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500 + t * 450;//왼쪽 조향  1900, 오른쪽 조향 1100; 위와 똑같은 이론
+      angle = tw_angle;
+      speed = tw_curve_speed;
 
-	else if (flag_YL == 4)
-	{
-		if (position_now > 30 * weight_tw)
-			flag_YL++;
-	}
+      flag_tw++;
+   }
 
-	else if (flag_YL == 5)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500;
-		angle = tw_angle;
-		speed = tw_straight_speed;
+   else if (flag_tw == 12)
+   {
+      if (position_now > 45 * weight_tw)
+         flag_tw++; // flag 1 증가
 
-		flag_YL++;
-	}
+#ifdef DEBUG_TW
+      printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+#endif
+   }
 
-	else if (flag_YL == 6)
-	{
-		if (position_now > 20 * weight_tw1)
-			flag_YL++;
-	}
+   else if (flag_tw == 13)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500;//직진
+      angle = tw_angle;
+      speed = tw_straight_speed;
 
-	else if (flag_YL == 7)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500 - t * 450;
-		angle = tw_angle;
-		speed = tw_curve_speed;
+      flag_tw++;
+   }
 
-		flag_YL++;
-	}
+   else if (flag_tw == 14)
+   {
+      if (position_now > 35 * weight_tw1)
+         flag_tw++; // flag 1 증가
 
-	else if (flag_YL == 8)
-	{
-		if (position_now > 45 * weight_tw)
-			flag_YL++;
-	}
+#ifdef DEBUG_TW
+      printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+#endif
+   }
 
-	else if (flag_YL == 9)
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500;
-		angle = tw_angle;
-		speed = tw_curve_speed; // 마지막 단계 속도 줄이기
+   else if (flag_tw == 15)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500 - t * 450;//오른쪽 조향 1100, 왼쪽 조향 1900; 이것은 t값에 따라 바뀜!! 아래 설명 생략
+      angle = tw_angle;
+      speed = tw_curve_speed;
 
-		flag_YL++;
-	}
+      flag_tw++;
+   }
 
-	else if (flag_YL == 10)
-	{
-		if (position_now > 10 * weight_tw1)
-			flag_YL++;
-	}
-	else if (flag_YL == 11)//후진
-	{
-		EncoderCounter_Write(position_zero);//엔코더 초기화
-		tw_angle = 1500;
-		angle = tw_angle;
-		speed = -70;
+   else if (flag_tw == 16)
+   {
+      if (position_now > 45 * weight_tw)
+         flag_tw++; // flag 1 증가
 
-		flag_YL++;
-	}
+#ifdef DEBUG_TW
+      printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+#endif
+   }
 
-	else if (flag_YL == 12)//후진 엔코더 적용
-	{
-		if (position_now < -(10 * weight_tw1))
-			flag_YL++;
-	}
+   else if (flag_tw == 17)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500;//직진
+      angle = tw_angle;
+      speed = tw_straight_speed;
 
-	else if (flag_tw == 19 || flag_YL == 13)
-	{
-		speed = 0;
-		DesireSpeed_Write(speed);
-		printf("I gonna stop \n");
-		color = 0;
-		return 1;
-	}
-	return 0;
+      flag_tw++;
+   }
+
+   else if (flag_tw == 18)
+   {
+      if (position_now > 35 * weight_tw1)
+         flag_tw++; // flag 1 증가
+      speed = 0;
+#ifdef DEBUG_TW
+      printf("EncoderCounter_Read() = %d\n", EncoderCounter_Read()); // EncoderCounter_Read를 쓰면 느려지니 디버깅할떄만 쓰기
+#endif
+   }
+
+   else if (flag_tw == 19)//후진
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500;
+      angle = tw_angle;
+      speed = -70;
+
+      flag_tw++;
+   }
+
+   else if (flag_YL == 20)//후진 엔코더 적용
+   {
+      if (position_now < -(10 * weight_tw1))
+         flag_tw++;
+   }
+
+   else if (flag_YL == 1)//후진
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500;
+      angle = tw_angle;
+      speed = -70;
+
+      flag_YL++;
+   }
+
+   else if (flag_YL == 2)//후진 엔코더 적용
+   {
+      if (position_now < -(70 * weight_tw1))
+         flag_YL++;
+   }
+
+   else if (flag_YL == 3)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500 + t * 450;
+      angle = tw_angle;
+      speed = tw_curve_speed;
+
+      flag_YL++;
+   }
+
+   else if (flag_YL == 4)
+   {
+      if (position_now > 30 * weight_tw)
+         flag_YL++;
+   }
+
+   else if (flag_YL == 5)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500;
+      angle = tw_angle;
+      speed = tw_straight_speed;
+
+      flag_YL++;
+   }
+
+   else if (flag_YL == 6)
+   {
+      if (position_now > 20 * weight_tw1)
+         flag_YL++;
+   }
+
+   else if (flag_YL == 7)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500 - t * 450;
+      angle = tw_angle;
+      speed = tw_curve_speed;
+
+      flag_YL++;
+   }
+
+   else if (flag_YL == 8)
+   {
+      if (position_now > 45 * weight_tw)
+         flag_YL++;
+   }
+
+   else if (flag_YL == 9)
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500;
+      angle = tw_angle;
+      speed = tw_curve_speed; // 마지막 단계 속도 줄이기
+
+      flag_YL++;
+   }
+
+   else if (flag_YL == 10)
+   {
+      if (position_now > 10 * weight_tw1)
+         flag_YL++;
+   }
+   else if (flag_YL == 11)//후진
+   {
+      EncoderCounter_Write(position_zero);//엔코더 초기화
+      tw_angle = 1500;
+      angle = tw_angle;
+      speed = -70;
+
+      flag_YL++;
+   }
+
+   else if (flag_YL == 12)//후진 엔코더 적용
+   {
+      if (position_now < -(10 * weight_tw1))
+         flag_YL++;
+   }
+
+   else if (flag_tw == 21 || flag_YL == 13)
+   {
+      speed = 0;
+      DesireSpeed_Write(speed);
+      printf("I gonna stop \n");
+      color = 0;
+      return 1;
+   }
+   return 0;
 }
-//총 픽셀은 320 *240 = 76800
-/*	Check_YL = false;
-for (i = 110; i<170; i++) {//detect whether it is stopline
-for (j = 0; j<120; j++) {
-if (imgResult->imageData[i * 320 + j] == whitepx) {//whitepixel
-for (k = 0; k<200; k++) { //check successive 200 white pixels
-if (!imgResult->imageData[i * 320 + j + k] == whitepx) break;
-if (k == 199)FindLine = true;
-}
-j = j + k;
-if (FindLine)break;
-}
-}
-if (FindLine) { YELLOW_TW++; printf("\n%d", i); }
-else YELLOW_TW = 0;
-if (YELLOW_TW == 3) {
-Check_YL = true;
-Alarm_Write(ON);
-sleep(1);
-Alarm_Write(OFF);
-}
-
-FindLine = false;
-}
-
-
-
-printf("YELLOW_TW = %d \n ", YELLOW_TW);
-*/
 
 //flag에 따른 모듈 변화(1 = 회전교차로 2 = 3way 3 = 신호등)
 //TODO flag 유지 or 함수가 끝났으면 flag = 0 으로 바꿔주기
