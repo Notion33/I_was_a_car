@@ -1739,7 +1739,7 @@ int rotary(){
            printf("waitingnow\n");
            printf("pixInRange : %10lf\n",pixInRange);
 
-           if(pixOutRange<0.003&&pixInRange>0.2){
+           if(pixOutRange<0.005&&pixInRange>0.1){//out 0.003  did well
                Departure = true;
                // Alarm_Write(ON);
                // usleep(500);
