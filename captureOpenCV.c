@@ -42,6 +42,10 @@
 
 #define straight_speed 150
 #define curve_speed 100
+#define hill_speed 500    //언덕 탈출스피드
+int low_speed_count = 0;
+int second_count = 0;
+int climing_hill_flag = 0;
 
 //#define IMGSAVE
 //#define LIGHT_BEEP
@@ -1269,7 +1273,7 @@ int detectStop(IplImage* imgResult) {
 	*/
 	if ((Stop_line() == 1&&stop_camera>1) || stop_camera >= 3) { //stop_camera 의 계수 test따라 변경(최적화 만들기)
 		if (Stop_line() != 1 && stop_camera > 4) {
-			while (EncoderCounter_Read() < 400) {}
+			while (EncoderCounter_Read() < 500) {}
 		}
 		speed = 0;
 		stop_camera = 0;
@@ -3125,6 +3129,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     float high_line_weight = 80;
     float control_angle = 0;
 	int high_ignore_angle = 100;
+	int low_speed_invest = 0;
 
     int left[240] = {0};
     int right[240] = {imgResult->width-1};
@@ -3132,7 +3137,8 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
     float right_slope[2] = {0.0};
 
     static bool max_turn_ready_left = false ;
-    static bool max_turn_ready_right = false ;
+	static bool max_turn_ready_right = false ;
+	static int twice_count;
 
     bool continue_turn_left = false;
     bool continue_turn_right = false;
@@ -3377,6 +3383,30 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
             speed = (straight_speed + curve_speed)/2;
         else
            speed = straight_speed;
+		
+		low_speed_invest = DesireSpeed_Read();
+		   
+        if(low_speed_invest<10 && low_speed_invest > -10)
+            low_speed_count++;
+        else{
+			low_speed_count = 0;
+			second_count = 0;
+		}
+        if(climing_hill_flag){
+            if(low_speed_invest>150 && EncoderCounter_Read() > 20000){
+				climing_hill_flag = FALSE;
+				second_count = 0;
+			}
+            else{
+				speed = hill_speed;
+				low_speed_count = 0;
+				second_count++;
+			}
+        }
+        if(low_speed_count > 10 || second_count > 30){
+            hill_sequence();
+            EncoderCounter_Write(0); 
+        }
     #endif
 
     #ifdef ROI
@@ -3385,6 +3415,27 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 		for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_high_start_line*imgResult->widthStep + i] = 255;
 		for(i=0;i<imgResult->widthStep;i++) imgResult->imageData[y_high_end_line*imgResult->widthStep + i] = 255;
     #endif
+}
+
+void hill_sequence(){
+	int hill_step = 0;
+	int hill_first_step = -14000;
+	int hill_second_step = -16000;
+
+    EncoderCounter_Write(0);  
+	SteeringServoControl_Write(1500);	
+	if (second_count)
+		hill_step = hill_second_step;
+	else
+		hill_step = hill_first_step;
+
+	while(EncoderCounter_Read() > hill_step)
+		DesireSpeed_Write(-encoder_speed);
+	Alarm_Write(ON);
+	usleep(300000);
+	Alarm_Write(OFF);
+	climing_hill_flag = TRUE;
+	second_count = 0;
 }
 
 
@@ -3488,8 +3539,8 @@ void ControlThread(void *unused){
 
 		//흰색 인식 후 점선(3차선)인지 정지선인지 판단
 		else if (white_count > 500) {//2000bef for test down 
-			speed = 60;
-			DesireSpeed_Write(speed);
+			//speed = 60;
+			//DesireSpeed_Write(speed);
 			module_process = white_line_process(imgOrigin);
 			//3차선
 			if (module_process == 2) {
@@ -3524,7 +3575,8 @@ void ControlThread(void *unused){
 		} 
 		
 		SteeringServoControl_Write(angle);
-		DesireSpeed_Write(speed);
+        DesireSpeed_Write(speed);
+        printf("DesireSpeed : %d, RealSpeed = %d\n",speed,DesireSpeed_Read());
 		//===================================
 		//  LOG 파일 작성
         //writeLog(i);
@@ -3725,10 +3777,10 @@ int main(int argc, char *argv[])
 	gain = 50;
 	SpeedPIDProportional_Write(gain);
 	//I-gain
-	gain = 40;
+	gain = 50;
 	SpeedPIDIntegral_Write(gain);
 	//D-gain
-	gain = 20;
+	gain = 50;
 	SpeedPIDDifferential_Write(gain);
 	//speed set
 	speed = 0;
