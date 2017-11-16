@@ -1104,7 +1104,7 @@ int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way,
     cvSaveImage(fileName, imgResult1, 0);
     #endif           // TY add 6.27   
 
-    for(i = 50;i<210;i++){//detect whether it is stopline
+    for(i = 80;i<210;i++){//detect whether it is stopline
        if(!(imgOrigin->imageData[(i*320+160)*3]>WHITEY && imgOrigin->imageData[(i*320+160)*3+1]>WHITEU)){
           i+=3;
           cnt = 0;
@@ -1126,7 +1126,7 @@ int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way,
                     j = j + k;
             }
         }
-        if(cnt==2)
+        if(cnt==3)
            return 1;//if whiteline ==3
     }
     cnt = 0;
@@ -1733,7 +1733,7 @@ int rotary(){
            
            for(i = INRANGEMINY;i<INRANGEMAXY;i++)
               for(j = INRANGEMINX;j<INRANGEMAXX;j++)
-                 if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] >= SHADOWYMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] <= SHADOWYMAX )pixOutRange++;
+                 if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] >= SHADOWYMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] <= SHADOWYMAX )pixInRange++;
            pixInRange = (double)(pixInRange/((INRANGEMAXX - INRANGEMINX) * (INRANGEMAXY - INRANGEMINY)));
            
 
@@ -1743,7 +1743,7 @@ int rotary(){
            printf("waitingnow\n");
            printf("pixInRange : %10lf\n",pixInRange);
 
-           if(pixOutRange<0.003&&pixInRange>0.2){
+           if(pixOutRange<0.005&&pixInRange>0.1){//out 0.003  did well
                Departure = true;
                // Alarm_Write(ON);
                // usleep(500);
