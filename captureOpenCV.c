@@ -46,6 +46,7 @@
 int low_speed_count = 0;
 int second_count = 0;
 int climing_hill_flag = 0;
+int HILLDISABLE = 0;
 
 //#define IMGSAVE
 //#define LIGHT_BEEP
@@ -3403,7 +3404,7 @@ void Find_Center(IplImage* imgResult)		//TY add 6.27
 				second_count++;
 			}
         }
-        if(low_speed_count > 10 || second_count > 30){
+        if((low_speed_count > 10 || second_count > 30)&& !HILLDISABLE){
             hill_sequence();
             EncoderCounter_Write(0); 
         }
@@ -3567,10 +3568,11 @@ void ControlThread(void *unused){
 			printf("\n\nFind_Center!!\n\n");
 			Find_Center(imgResult);
 		}
-
+		HILLDISABLE = 0;
 		//급정지면 무조건 정지!
-		if(red_count>280*10*0.4){
+		if(red_count>280*10*0.2){
 			printf("red_count!\n\n");
+			HILLDISABLE = 1;
 			speed = 0;
 		} 
 		
