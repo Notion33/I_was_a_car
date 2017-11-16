@@ -1122,7 +1122,7 @@ int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way,
                     j = j + k;
             }
         }
-        if(cnt==2)
+        if(cnt==3)
            return 1;//if whiteline ==3
     }
     cnt = 0;
@@ -1729,7 +1729,7 @@ int rotary(){
            
            for(i = INRANGEMINY;i<INRANGEMAXY;i++)
               for(j = INRANGEMINX;j<INRANGEMAXX;j++)
-                 if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] >= SHADOWYMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] <= SHADOWYMAX )pixOutRange++;
+                 if(imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] >= SHADOWYMIN && imgOrigin->imageData[(i*RESIZE_WIDTH+j)*3] <= SHADOWYMAX )pixInRange++;
            pixInRange = (double)(pixInRange/((INRANGEMAXX - INRANGEMINX) * (INRANGEMAXY - INRANGEMINY)));
            
 
