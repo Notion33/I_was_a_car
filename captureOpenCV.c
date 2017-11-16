@@ -1100,7 +1100,7 @@ int white_line_process(IplImage* imgOrigin){//return 1: stopline, return 2:3way,
     cvSaveImage(fileName, imgResult1, 0);
     #endif           // TY add 6.27   
 
-    for(i = 50;i<210;i++){//detect whether it is stopline
+    for(i = 80;i<210;i++){//detect whether it is stopline
        if(!(imgOrigin->imageData[(i*320+160)*3]>WHITEY && imgOrigin->imageData[(i*320+160)*3+1]>WHITEU)){
           i+=3;
           cnt = 0;
