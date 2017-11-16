@@ -586,7 +586,7 @@ static int Frame2Ipl(IplImage* img, IplImage* imgResult, int color)
 				break;
 
 			case 6:   //  장애물 창환
-				if (y > 150 && u >135 && u<180 && v>112 && v<133) {
+				if (y > 150) {
 					// 흰색으로 -> 실제 흰색&노랑
 					imgResult->imageData[bin_num] = (char)255;
 				}
@@ -1878,7 +1878,7 @@ int detect_obstacle2(IplImage* imgResult) { //resultimage 입력받아서, 처�
 
 	onethird.x = 80; onethird.y = 120;
 
-	twothird.x = 240; twothird.y = 200;
+	twothird.x = 220; twothird.y = 200;
 
 	endROI.x = 320; endROI.y = 200;
 	// end ROI 
@@ -2044,7 +2044,7 @@ int find_center_in_3way() {
 		GetTime(&pt1);
 		ptime1 = (NvU64)pt1.tv_sec * 1000000000LL + (NvU64)pt1.tv_nsec;
 
-		Frame2Ipl(imgOrigin, imgResWY, 4); //wymix
+		Frame2Ipl(imgOrigin, imgResWY, 7); //wymix
 
 		pthread_mutex_unlock(&mutex);
 
@@ -2094,7 +2094,7 @@ int find_center_in_3way() {
 		}	
 */
 ////////////////////////////////////////
-		sprintf(result_white, "imgsaved/result_white_%d.png", num);          // TY add 6.27
+		sprintf(result_white, "imgsaved/fc_3way_%d.png", num);          // TY add 6.27
 		num++;
 		
 		cvSaveImage(result_white, imgResWY, 0);
@@ -2106,7 +2106,6 @@ int find_center_in_3way() {
 
 	//	sprintf(result_wy, "imgsaved/wymix_%d.png", num);          // TY add 6.27
 	//	cvSaveImage(result_wy, imgResWY, 0);
-		num++;
 
 		if (center_flag == false) {
 			enc_val = EncoderCounter_Read();
