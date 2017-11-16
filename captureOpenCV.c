@@ -2719,6 +2719,7 @@ void check_parking()
 		printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_right);
 		EncoderCounter_Write(0);
 		right_flag = 1;
+		speed = 60;
 	}
 	else if(right_flag == 1 && first_right_detect == FALSE && difference_right < 30){
 			printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
@@ -2749,10 +2750,8 @@ void check_parking()
 			printf("\n\nTHIRD_right_DETECT\n\n\n");
 			third_right_detect = TRUE;
 			right_flag = 4;
-			speed = 60;
-			while(1){
-				DesireSpeed_Write(0);
-			}
+			DesireSpeed_Write(0);
+			usleep(100000);
 	}
 	else if(right_flag == 4){			//주차공간이라 인식한 경우, 주차시작
 		parking_space = encoder_parking;
@@ -3117,7 +3116,6 @@ void ControlThread(void *unused){
 		CameraYServoControl_Write(angle);
 	*/
 
-	channel_leftPrev = filteredIR(LEFT);
 	channel_rightPrev = filteredIR(RIGHT);
 
 	while (1)
@@ -3132,9 +3130,8 @@ void ControlThread(void *unused){
 
 		pthread_mutex_unlock(&mutex);
 
-		check_parking();
-		printf("\n\nFind_Center!!\n\n");
 		Find_Center(imgResult);
+		check_parking();
 
 		SteeringServoControl_Write(angle);
 		DesireSpeed_Write(speed);
