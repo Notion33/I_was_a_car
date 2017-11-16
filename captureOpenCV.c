@@ -3012,59 +3012,58 @@ void parallel_parking_left()
 
 void check_parking()
 { 
-	static int left_flag = 0;
+	static int right_flag = 0;
 	static bool channel_warmming = FALSE ;
+	static int parking_flag = 0;
 	int encoder_parking = 0; //주차시 벽인식후 엔코더스텝수 이상 주행해도 벽이 추가로 검출이 안되는지 확인용 변수
 
-	channel_leftNow = filteredIR(LEFT);
 	channel_rightNow = filteredIR(RIGHT);
 
-	if(channel_leftNow != 0 && channel_leftPrev != 0 && channel_rightNow != 0 && channel_rightPrev != 0)	//차량 시작후, 채널초기값 0으로인해 difference_left,right 값이 잘못 표기됨을 방지
+	if( channel_rightNow != 0 && channel_rightPrev != 0)	//차량 시작후, 채널초기값 0으로인해 difference_left,right 값이 잘못 표기됨을 방지
 		channel_warmming = TRUE;
 
-	if(channel_warmming){
-		difference_left = channel_leftNow - channel_leftPrev;
+	if(channel_warmming)
 		difference_right = channel_rightNow - channel_rightPrev;
-	}
 	
-	channel_leftPrev = channel_leftNow;
 	channel_rightPrev = channel_rightNow;
-	printf("difference_left = %d\n", difference_left);
 	printf("difference_right = %d\n", difference_right);
 	encoder_parking = EncoderCounter_Read();
 	
-	if(first_left_detect == FALSE && difference_left > 170){
-		printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_left);
+	if(first_right_detect == FALSE && difference_right > 100){
+		printf("\n\n-------------jumped over the threshold by %d-------------\n", difference_right);
 		EncoderCounter_Write(0);
-		left_flag = 1;
+		right_flag = 1;
 	}
-	else if(left_flag == 1 && first_left_detect == FALSE && difference_left < 50){
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-			printf("\n\nFIRST_LEFT_DETECT\n\n\n");
+	else if(right_flag == 1 && first_right_detect == FALSE && difference_right < 30){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
+			printf("\n\nFIRST_right_DETECT\n\n\n");
 			EncoderCounter_Write(0);
-			first_left_detect = TRUE;
+			first_right_detect = TRUE;
 	}
-	else if(left_flag == 1 && first_left_detect == TRUE && second_left_detect == FALSE && difference_left < -300){
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-			left_flag = 2;
+	else if(right_flag == 1 && first_right_detect == TRUE && second_right_detect == FALSE && difference_right < -60){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
+			right_flag = 2;
 	}
-	else if(left_flag == 2 && first_left_detect == TRUE && second_left_detect == FALSE && difference_left > -50){
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-			printf("\n\nSECOND_LEFT_DETECT\n\n\n");
+	else if(right_flag == 2 && first_right_detect == TRUE && second_right_detect == FALSE && difference_right > -30){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
+			printf("\n\nSECOND_right_DETECT\n\n\n");
 			EncoderCounter_Write(0);
-			second_left_detect = TRUE;
+			second_right_detect = TRUE;
 	}
-	else if(left_flag == 2 && first_left_detect == TRUE && second_left_detect == TRUE && third_left_detect == FALSE && difference_left > 170){
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-			left_flag = 3;
+	else if(right_flag == 2 && first_right_detect == TRUE && second_right_detect == TRUE && third_right_detect == FALSE && difference_right > 60){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
+			right_flag = 3;
 	}
-	else if(left_flag == 3 && first_left_detect == TRUE && second_left_detect == TRUE && third_left_detect == FALSE && difference_left < 50){
-			printf("\n\n-------------escaped the loop by %d-------------\n", difference_left);
-			printf("\n\nTHIRD_LEFT_DETECT\n\n\n");
-			third_left_detect = TRUE;
-			left_flag = 4;
+	else if(right_flag == 3 && first_right_detect == TRUE && second_right_detect == TRUE && third_right_detect == FALSE && difference_right < 30){
+			printf("\n\n-------------escaped the loop by %d-------------\n", difference_right);
+			printf("\n\nTHIRD_right_DETECT\n\n\n");
+			third_right_detect = TRUE;
+			right_flag = 4;
+			while(1){
+				DesireSpeed_Write(0);
+			}
 	}
-	else if(left_flag == 4){			//주차공간이라 인식한 경우, 주차시작
+	else if(right_flag == 4){			//주차공간이라 인식한 경우, 주차시작
 		parking_space = encoder_parking;
 		printf("\n\n PARKING SPACE : %d", parking_space);
 		CarLight_Write(ALL_ON);
@@ -3073,16 +3072,18 @@ void check_parking()
 		Alarm_Write(ON);
 		usleep(50000);
 		Alarm_Write(OFF);
-		if(parking_space > 7000)
-			parallel_parking_left();
-		else
-			vertical_parking_left();
+		if(parking_flag == 0){
+			parallel_parking_right();
+			parking_flag = 0;
+		}
+		else if(parking_flag == 1)
+			vertical_parking_right();
 	}
 	else if(encoder_parking > 12000){		//엔코더 스텝수가 12000이상 초과할 경우, 앞선 벽들 인식은 잘못 인식한걸로 간주하고 초기화.
-		left_flag = 0;
-		first_left_detect = FALSE;
-		second_left_detect = FALSE;
-		third_left_detect = FALSE;
+		right_flag = 0;
+		first_right_detect = FALSE;
+		second_right_detect = FALSE;
+		third_right_detect = FALSE;
 		printf("\n\n=================FLAG CLEAR!=================\n\n\n");
 	}
 }
@@ -3554,7 +3555,7 @@ void ControlThread(void *unused){
 			else {
 				printf("Error!! 0000000\n");
 				// 주차영역인지 확인
-				//check_parking();
+				check_parking();
 				printf("\n\nFind_Center!!\n\n");
 				Find_Center(imgResult);
 				speed = 60;
@@ -3564,7 +3565,7 @@ void ControlThread(void *unused){
 		//평상시 Find_Center 작동
 		else {
 			// 주차영역인지 확인
-			//check_parking();
+			check_parking();
 			printf("\n\nFind_Center!!\n\n");
 			Find_Center(imgResult);
 		}
